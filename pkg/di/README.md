@@ -22,9 +22,8 @@ Exemplo básico:
 
 	func  main() {
 	
-	dependencies  := []interface{}{NewFoo}
     app  :=  di.NewContainer()
-    app.AddDependencies(dependencies)
+    app.AddDependencies(NewFoo)
     app.StartApp(InitializeAPP)
     }
     

@@ -9,16 +9,12 @@ import (
 
 func Test_Global_Injection_Bean_not_found(t *testing.T) {
 	a := di.NewContainer()
-	// Criação de um array de funções de diferentes tipos
-	funcs := []interface{}{GlobalBeanString, globalBeanInt}
-	a.AddGlobalDependencies(funcs)
+	a.AddGlobalDependencies(GlobalBeanString, globalBeanInt)
 	assert.Panics(t, func() { a.StartApp(GlobalInitializeAPP) })
 }
 
 func Test_Global_Injection_Success(t *testing.T) {
 	a := di.NewContainer()
-	// Criação de um array de funções de diferentes tipos
-	funcs := []interface{}{globalBeanFloat32, GlobalBeanString, globalBeanInt}
-	a.AddGlobalDependencies(funcs)
+	a.AddGlobalDependencies(globalBeanFloat32, GlobalBeanString, globalBeanInt)
 	assert.NotPanics(t, func() { a.StartApp(GlobalInitializeAPP) })
 }

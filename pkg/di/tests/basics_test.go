@@ -9,16 +9,12 @@ import (
 
 func Test_Bean_not_found(t *testing.T) {
 	a := di.NewContainer()
-	// Criação de um array de funções de diferentes tipos
-	funcs := []interface{}{beanInt}
-	a.AddDependencies(funcs)
+	a.AddDependencies(beanInt)
 	assert.Panics(t, func() { a.StartApp(InitializeAPP) })
 }
 
 func Test_Success(t *testing.T) {
 	a := di.NewContainer()
-	// Criação de um array de funções de diferentes tipos
-	funcs := []interface{}{beanInt, beanFloat32}
-	a.AddDependencies(funcs)
+	a.AddDependencies(beanInt, beanFloat32)
 	assert.NotPanics(t, func() { a.StartApp(InitializeAPP) })
 }

@@ -3,6 +3,7 @@ package di
 import (
 	"fmt"
 	"log"
+	"maps"
 	"reflect"
 )
 
@@ -11,21 +12,23 @@ type Container struct {
 }
 
 func NewContainer() Container {
-	return Container{}
+	return Container{
+		dependencies: make(map[string]DependencyBean),
+	}
 }
 
-func (c *Container) AddDependencies(deps []interface{}) {
+func (c *Container) AddDependencies(deps ...interface{}) {
 	// Gera o array com as dependencias
 	ReflectTypeArray := generateDependenciesArray(deps, false)
 	c.checkingNameUnit(ReflectTypeArray)
-	c.dependencies = ReflectTypeArray
+	maps.Copy(c.dependencies, ReflectTypeArray)
 }
 
-func (c *Container) AddGlobalDependencies(deps []interface{}) {
+func (c *Container) AddGlobalDependencies(deps ...interface{}) {
 	// Gera o array com as dependencias
 	ReflectTypeArray := generateDependenciesArray(deps, true)
 	c.checkingNameUnit(ReflectTypeArray)
-	c.dependencies = ReflectTypeArray
+	maps.Copy(c.dependencies, ReflectTypeArray)
 }
 
 func (f *Container) StartApp(startFunc interface{}) {
@@ -50,7 +53,7 @@ func (c *Container) getDependencyConstructorArgs(dependency DependencyBean) []re
 	args := []reflect.Value{}
 	fmt.Printf("constructor: %s, number of parameters: %d\n", dependency.Name, len(dependency.ParamTypes))
 	for position, paramType := range dependency.ParamTypes {
-		
+
 		// Check if trhe variadic param
 		if dependency.IsVariadic {
 			if position == (len(dependency.ParamTypes) - 1) {
