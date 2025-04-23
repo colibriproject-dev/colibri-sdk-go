@@ -1,10 +1,11 @@
 package sqlDB
 
 import (
+	"context"
 	"time"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/test"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/test"
 )
 
 const (
@@ -30,13 +31,14 @@ type Dog struct {
 }
 
 func InitializeSqlDBTest() {
+	ctx := context.Background()
 	basePath := test.MountAbsolutPath(test.DATABASE_ENVIRONMENT_PATH)
 
 	test.InitializeSqlDBTest()
-	pc := test.UsePostgresContainer()
+	pc := test.UsePostgresContainer(ctx)
 
 	if err := pc.Dataset(basePath, "schema.sql"); err != nil {
-		logging.Fatal(err.Error())
+		logging.Fatal(ctx).Err(err)
 	}
 
 	datasets := []string{"clear-database.sql", "add-users.sql", "add-contacts.sql", "add-dogs.sql"}

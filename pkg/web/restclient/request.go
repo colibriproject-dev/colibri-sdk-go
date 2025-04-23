@@ -14,14 +14,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/database/cacheDB"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/database/cacheDB"
 )
 
 const (
-	request_ctx_is_empty    string = "context is empty"
-	request_client_is_empty string = "client is empty"
-	request_method_is_empty string = "http method is empty"
+	requestCtxIsEmpty    string = "context is empty"
+	requestClientIsEmpty string = "client is empty"
+	requestMethodIsEmpty string = "http method is empty"
+	retriesWarnMsg       string = "[%dx] call to the url '%s'. status code = %d | general error: %v | response error: %v"
 )
 
 // Request struct for http requests
@@ -65,7 +66,9 @@ func (req Request[T, E]) Call() (response ResponseData[T, E]) {
 
 		time.Sleep(req.getSleepDuration())
 		if req.Client.retries != 0 {
-			logging.Warn("[%dx] call to the url '%s'. status code = %d | general error: %v | response error: %v", execution+1, req.getUrl(), response.StatusCode(), response.Error(), response.ErrorBody())
+			logging.
+				Warn(req.Ctx).
+				Msgf(retriesWarnMsg, execution+1, req.getUrl(), response.StatusCode(), response.Error(), response.ErrorBody())
 		}
 	}
 
@@ -78,15 +81,15 @@ func (req Request[T, E]) Call() (response ResponseData[T, E]) {
 // Returns an error.
 func (rc *Request[T, E]) validate() error {
 	if rc.Ctx == nil {
-		return errors.New(request_ctx_is_empty)
+		return errors.New(requestCtxIsEmpty)
 	}
 
 	if rc.Client == nil {
-		return errors.New(request_client_is_empty)
+		return errors.New(requestClientIsEmpty)
 	}
 
 	if rc.HttpMethod == "" {
-		return errors.New(request_method_is_empty)
+		return errors.New(requestMethodIsEmpty)
 	}
 
 	return nil

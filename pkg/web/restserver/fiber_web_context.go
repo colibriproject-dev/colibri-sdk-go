@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/security"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/validator"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/security"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/validator"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -110,7 +110,10 @@ func (f *fiberWebContext) EmptyResponse(statusCode int) {
 
 func (f *fiberWebContext) Redirect(url string, statusCode int) {
 	if err := f.ctx.Redirect(url, statusCode); err != nil {
-		logging.Error("Could not set set redirect %s %d: %v", url, statusCode, err)
+		logging.
+			Error(f.Context()).
+			Err(err).
+			Msgf("Could not set set redirect %s %d", url, statusCode)
 	}
 }
 

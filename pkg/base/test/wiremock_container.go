@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/google/uuid"
@@ -24,11 +24,13 @@ type WiremockContainer struct {
 	wContainer        testcontainers.Container
 	configPath        string
 	instancePort      int
+	ctx               context.Context
 }
 
-func UseWiremockContainer(configPath string) *WiremockContainer {
+func UseWiremockContainer(ctx context.Context, configPath string) *WiremockContainer {
 	if wiremockContainerInstance == nil {
 		wiremockContainerInstance = newWiremockContainer(configPath)
+		wiremockContainerInstance.ctx = ctx
 		wiremockContainerInstance.start()
 	}
 	return wiremockContainerInstance
@@ -57,18 +59,18 @@ func newWiremockContainer(configPath string) *WiremockContainer {
 
 func (c *WiremockContainer) start() {
 	var err error
-	ctx := context.Background()
-	c.wContainer, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+	c.wContainer, err = testcontainers.GenericContainer(c.ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: *c.wContainerRequest,
 		Started:          true,
 	})
 	if err != nil {
-		logging.Fatal(err.Error())
+		logging.Fatal(c.ctx).Err(err)
 	}
 
-	runningPort, _ := c.wContainer.MappedPort(ctx, wiremockSvcPort)
+	runningPort, _ := c.wContainer.MappedPort(c.ctx, wiremockSvcPort)
 	c.instancePort = runningPort.Int()
-	logging.Info("Test wiremock started at port: %s", runningPort.Port())
+
+	logging.Info(c.ctx).Msgf("Test wiremock started at port: %s", runningPort.Port())
 }
 
 func (c *WiremockContainer) Port() int {

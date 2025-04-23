@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/types"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/types"
 )
 
 const (

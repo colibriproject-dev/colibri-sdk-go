@@ -3,7 +3,7 @@ package cloud
 import (
 	"testing"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/config"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,5 +32,27 @@ func TestInitialize(t *testing.T) {
 		assert.NotNil(t, instance)
 		assert.NotNil(t, instance.aws)
 		assert.NotNil(t, GetAwsSession())
+	})
+
+	t.Run("Should initialize FIREBASE with local enviroment", func(t *testing.T) {
+		config.ENVIRONMENT = config.ENVIRONMENT_DEVELOPMENT
+		config.CLOUD = config.CLOUD_FIREBASE
+
+		Initialize()
+
+		assert.NotNil(t, instance)
+		assert.NotNil(t, instance.firebase)
+		assert.NotNil(t, GetFirebaseSession())
+	})
+
+	t.Run("Should initialize FIREBASE with cloud enviroment", func(t *testing.T) {
+		config.ENVIRONMENT = config.ENVIRONMENT_PRODUCTION
+		config.CLOUD = config.CLOUD_FIREBASE
+
+		Initialize()
+
+		assert.NotNil(t, instance)
+		assert.NotNil(t, instance.firebase)
+		assert.NotNil(t, GetFirebaseSession())
 	})
 }

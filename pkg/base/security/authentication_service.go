@@ -3,8 +3,8 @@ package security
 import (
 	"context"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
 )
 
 const (
@@ -23,12 +23,17 @@ type authenticationService interface {
 var instance authenticationService
 
 func InitializeAuthenticationService() {
+	if instance != nil {
+		logging.Info(context.Background()).Msg("Authentication service already connected")
+		return
+	}
+
 	switch config.CLOUD {
 	case config.CLOUD_FIREBASE:
 		instance = newFirebaseAuthenticationService()
 	}
 
-	logging.Info("Authentication service connected")
+	logging.Info(context.Background()).Msg("Authentication service connected")
 }
 
 func GetUser(ctx context.Context, id string) (*User, error) {

@@ -8,8 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/cloud"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/cloud"
 )
 
 type awsStorage struct {
@@ -23,15 +22,11 @@ type awsStorage struct {
 // No parameters.
 // Returns a pointer to the awsStorage instance.
 func newAwsStorage() *awsStorage {
-	var s awsStorage
-	s.s3Service = s3.New(cloud.GetAwsSession())
-	if _, err := s.s3Service.ListBuckets(nil); err != nil {
-		logging.Fatal("An error occurred when trying to connect to the storage provider. Error: %s", err)
+	return &awsStorage{
+		s3Service:  s3.New(cloud.GetAwsSession()),
+		uploader:   s3manager.NewUploader(cloud.GetAwsSession()),
+		downloader: s3manager.NewDownloader(cloud.GetAwsSession()),
 	}
-
-	s.uploader = s3manager.NewUploader(cloud.GetAwsSession())
-	s.downloader = s3manager.NewDownloader(cloud.GetAwsSession())
-	return &s
 }
 
 // downloadFile downloads a file from the storage provider.

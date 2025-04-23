@@ -8,7 +8,7 @@ import (
 	"os"
 
 	gcp_storage "cloud.google.com/go/storage"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
 )
 
 type gcpStorage struct {
@@ -20,9 +20,11 @@ type gcpStorage struct {
 // No parameters.
 // Returns a pointer to gcpStorage.
 func newGcpStorage() *gcpStorage {
-	client, err := gcp_storage.NewClient(context.Background())
+	ctx := context.Background()
+
+	client, err := gcp_storage.NewClient(ctx)
 	if err != nil {
-		logging.Fatal(connection_error, err)
+		logging.Fatal(ctx).Err(err).Msg(connectionError)
 	}
 
 	return &gcpStorage{client}

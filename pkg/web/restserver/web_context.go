@@ -4,7 +4,7 @@ import (
 	"context"
 	"mime/multipart"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/security"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/security"
 )
 
 // Error is the structure from default error response

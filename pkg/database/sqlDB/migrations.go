@@ -1,12 +1,13 @@
 package sqlDB
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"os"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -20,9 +21,9 @@ const (
 	migrationIgnoringMsg              string = "Ignoring migration because env variable SQL_DB_MIGRATION is set to false"
 	migrationEnvNotSetUsingDefaultMsg string = "Migration env variable %s is not set, using default value %s"
 	migrationStartingMsg              string = "Starting migration execution"
-	migrationCouldNotConnectDBMsg     string = "Could not connect to database for migration: %v"
+	migrationCouldNotConnectDBMsg     string = "Could not connect to database for migration"
 	migrationExecutingInfoMsg         string = "Executing migration on path: %s"
-	migrationExecutionWithErrorMsg    string = "An error when executing database migration: %v"
+	migrationExecutionWithErrorMsg    string = "An error when executing database migration"
 	migrationFinalizedMsg             string = "Migration finalized successfully"
 )
 
@@ -33,7 +34,7 @@ const (
 // Returns an error if there is a failure during migration execution.
 func executeDatabaseMigration(instance *sql.DB) error {
 	if !config.SQL_DB_MIGRATION {
-		logging.Info(migrationIgnoringMsg)
+		logging.Info(context.Background()).Msg(migrationIgnoringMsg)
 		return nil
 	}
 
@@ -42,22 +43,22 @@ func executeDatabaseMigration(instance *sql.DB) error {
 		sourceUrl = migrationDefaultPath
 	}
 
-	logging.Info(migrationStartingMsg)
+	logging.Info(context.Background()).Msg(migrationStartingMsg)
 	driver, err := postgres.WithInstance(instance, &postgres.Config{})
 	if err != nil {
-		logging.Error(migrationCouldNotConnectDBMsg, err)
+		logging.Error(context.Background()).Err(err).Msg(migrationCouldNotConnectDBMsg)
 		return err
 	}
 
-	logging.Info(migrationExecutingInfoMsg, sourceUrl)
+	logging.Info(context.Background()).Msgf(migrationExecutingInfoMsg, sourceUrl)
 	migrateDatabaseInstance, _ := migrate.NewWithDatabaseInstance("file://"+sourceUrl, config.SQL_DB_NAME, driver)
 	if migrateDatabaseInstance != nil {
 		if err = migrateDatabaseInstance.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-			logging.Error(migrationExecutionWithErrorMsg, err)
+			logging.Error(context.Background()).Err(err).Msg(migrationExecutionWithErrorMsg)
 			return err
 		}
 	}
 
-	logging.Info(migrationFinalizedMsg)
+	logging.Info(context.Background()).Msg(migrationFinalizedMsg)
 	return nil
 }

@@ -3,11 +3,10 @@ package test
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/go-connections/nat"
@@ -76,15 +75,15 @@ func (c *LocalstackContainer) start() {
 		Started:          true,
 	})
 	if err != nil {
-		logging.Fatal(err.Error())
+		logging.Fatal(c.ctx).Err(err)
 	}
 
 	localstackPort, err := c.lsContainer.MappedPort(c.ctx, localstackSvcPort)
 	if err != nil {
-		logging.Fatal(err.Error())
+		logging.Fatal(c.ctx).Err(err)
 	}
 
-	log.Printf("Test localstack started at port: %s", localstackPort)
+	logging.Info(c.ctx).Msgf("Test localstack started at port: %s", localstackPort)
 	c.setEnv(localstackPort)
 }
 

@@ -12,9 +12,9 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/net"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/monitoring"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/test"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/database/cacheDB"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/monitoring"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/test"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/database/cacheDB"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -49,7 +49,7 @@ var (
 func TestMain(m *testing.M) {
 	monitoring.Initialize()
 	test.InitializeCacheDBTest()
-	wiremock = test.UseWiremockContainer(test.MountAbsolutPath(test.WIREMOCK_ENVIRONMENT_PATH))
+	wiremock = test.UseWiremockContainer(context.Background(), test.MountAbsolutPath(test.WIREMOCK_ENVIRONMENT_PATH))
 	restClient = NewRestClient(&RestClientConfig{
 		Name:    "test-rest-client",
 		BaseURL: fmt.Sprintf("http://localhost:%d/users-api/v1", wiremock.Port()),

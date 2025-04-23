@@ -3,7 +3,6 @@ package config
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"strconv"
 
@@ -78,9 +77,6 @@ var (
 
 	PORT = 8080
 
-	LOG_LEVEL            = "info"
-	LOG_OUTPUT io.Writer = os.Stdout
-
 	CLOUD             = ""
 	CLOUD_HOST        = ""
 	CLOUD_REGION      = ""
@@ -125,10 +121,6 @@ func Load() error {
 	NEW_RELIC_LICENSE = os.Getenv(ENV_NEW_RELIC_LICENSE)
 	OTEL_EXPORTER_OTLP_ENDPOINT = os.Getenv(ENV_OTEL_EXPORTER_OTLP_ENDPOINT)
 	OTEL_EXPORTER_OTLP_HEADERS = os.Getenv(ENV_OTEL_EXPORTER_OTLP_HEADERS)
-
-	if logLevel := os.Getenv(ENV_LOG_LEVEL); logLevel != "" {
-		LOG_LEVEL = logLevel
-	}
 
 	if err := convertIntEnv(&PORT, ENV_PORT); err != nil {
 		return err

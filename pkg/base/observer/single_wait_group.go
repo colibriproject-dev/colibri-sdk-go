@@ -1,11 +1,12 @@
 package observer
 
 import (
+	"context"
 	"sync"
 	"time"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
 )
 
 var once sync.Once
@@ -14,11 +15,11 @@ var singleInstance *sync.WaitGroup
 func GetWaitGroup() *sync.WaitGroup {
 	if singleInstance == nil {
 		once.Do(func() {
-			logging.Debug("Creating single WaitGroup instance now.")
+			logging.Debug(context.Background()).Msg("Creating single WaitGroup instance now.")
 			singleInstance = &sync.WaitGroup{}
 		})
 	} else {
-		logging.Debug("Single WaitGroup instance already created.")
+		logging.Debug(context.Background()).Msg("Single WaitGroup instance already created.")
 	}
 
 	return singleInstance

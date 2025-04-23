@@ -3,12 +3,13 @@ package colibri_nr
 import (
 	"context"
 	"fmt"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
 	"net/http"
 	"net/url"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
+	colibri_monitoring_base "github.com/colibri-project-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
+
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
 
 	_ "github.com/newrelic/go-agent/v3/integrations/nrpq"
 	"github.com/newrelic/go-agent/v3/newrelic"
@@ -27,7 +28,10 @@ func StartNewRelicMonitoring() colibri_monitoring_base.Monitoring {
 		newrelic.ConfigDistributedTracerEnabled(true),
 	)
 	if err != nil {
-		logging.Fatal("An error occurred while loading the Monitoring provider. Error: %s", err)
+		logging.
+			Fatal(context.Background()).
+			Err(err).
+			Msg("an error occurred while loading the monitoring provider")
 	}
 
 	return &MonitoringNewRelic{app}

@@ -1,12 +1,13 @@
 package restserver
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/swagger"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -79,12 +80,12 @@ func (f *fiberWebServer) injectRoutes() {
 		fn := route.Function
 		beforeEnter := route.BeforeEnter
 
-		f.srv.Add(route.Method, routeUri, func(ctx *fiber.Ctx) error {
-			webContext := newFiberWebContext(ctx)
+		f.srv.Add(route.Method, routeUri, func(fctx *fiber.Ctx) error {
+			webContext := newFiberWebContext(fctx)
 			if beforeEnter != nil {
 				if err := beforeEnter(webContext); err != nil {
-					ctx.Status(err.StatusCode)
-					return ctx.JSON(Error{err.Err.Error()})
+					fctx.Status(err.StatusCode)
+					return fctx.JSON(Error{err.Err.Error()})
 				}
 			}
 
@@ -92,14 +93,16 @@ func (f *fiberWebServer) injectRoutes() {
 			return nil
 		})
 
-		logging.Info("Registered route [%7s] %s", route.Method, string(route.Prefix)+route.URI)
+		logging.
+			Info(context.Background()).
+			Msgf("Registered route [%7s] %s", route.Method, string(route.Prefix)+route.URI)
 	}
 }
 
 func (f *fiberWebServer) listenAndServe() error {
 	defer func() {
 		if p := recover(); p != nil {
-			logging.Error("panic recovering: %v", p)
+			logging.Error(context.Background()).Msgf("panic recovering: %v", p)
 		}
 	}()
 

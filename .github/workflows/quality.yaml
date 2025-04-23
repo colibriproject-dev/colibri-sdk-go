@@ -35,8 +35,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.organization=colibri-project-io
-            -Dsonar.projectKey=colibri-project-io_colibri-sdk-go
+            -Dsonar.organization=colibri-project-dev
+            -Dsonar.projectKey=colibri-project-dev_colibri-sdk-go
             -Dsonar.sources=.
             -Dsonar.exclusions=**/*_test.go,**/*.sql,**/*_mock.go,colibri.go
             -Dsonar.tests=.

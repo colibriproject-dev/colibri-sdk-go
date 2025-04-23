@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"firebase.google.com/go/auth"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/cloud"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/cloud"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
 )
 
 type firebaseAuthService struct {
@@ -15,7 +15,7 @@ type firebaseAuthService struct {
 func newFirebaseAuthenticationService() *firebaseAuthService {
 	auth, err := cloud.GetFirebaseSession().Auth(context.Background())
 	if err != nil {
-		logging.Fatal(connection_error, err)
+		logging.Fatal(context.Background()).Msgf(connection_error, err)
 	}
 
 	return &firebaseAuthService{auth}

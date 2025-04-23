@@ -2,6 +2,7 @@ fmt:
 	go fmt ./...
 
 mock:
+	find . -type f -name "*_mock.go" -exec rm -f {} \;
 	go generate -v ./...
 
 test: mock

@@ -1,12 +1,12 @@
 package restserver
 
 import (
+	"context"
 	"errors"
-	"log"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/observer"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/observer"
 )
 
 var (
@@ -53,8 +53,11 @@ func ListenAndServe() {
 	srv.injectRoutes()
 
 	observer.Attach(restObserver{})
-	logging.Info("Service '%s' running in %d port", "WEB-REST", config.PORT)
+	logging.Info(context.Background()).Msgf("Service '%s' running in %d port", "WEB-REST", config.PORT)
 	if err := srv.listenAndServe(); err != nil {
-		log.Fatalf("Error rest server: %v", err)
+		logging.
+			Fatal(context.Background()).
+			Err(err).
+			Msg("Error on trying to initialize rest server")
 	}
 }

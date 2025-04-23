@@ -6,12 +6,12 @@ import (
 	"os"
 	"sync"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/cloud"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/cloud"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/monitoring"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/observer"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/validator"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/monitoring"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/observer"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/validator"
 	"github.com/google/uuid"
 )
 
@@ -36,12 +36,12 @@ func InitializeBaseTest() {
 }
 
 func InitializeCacheDBTest() {
-	UseRedisContainer()
+	UseRedisContainer(context.Background())
 	loadConfig()
 }
 
 func InitializeSqlDBTest() {
-	UsePostgresContainer()
+	UsePostgresContainer(context.Background())
 	loadConfig()
 }
 

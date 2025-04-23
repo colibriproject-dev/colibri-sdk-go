@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/test"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/test"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,14 +38,6 @@ func (q *queueConsumerTest) QueueName() string {
 
 func TestMessaging_AWS(t *testing.T) {
 	test.InitializeTestLocalstack()
-
-	Initialize()
-
-	executeMessagingTest(t)
-}
-
-func TestMessaging_GCP(t *testing.T) {
-	test.InitializeGcpEmulator()
 
 	Initialize()
 

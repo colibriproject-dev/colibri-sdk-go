@@ -3,9 +3,12 @@ package colibri_otel
 import (
 	"context"
 	"fmt"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
+	"net/http"
+	"os"
+
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
+	colibri_monitoring_base "github.com/colibri-project-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
 	"go.nhat.io/otelsql"
 	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
@@ -17,8 +20,6 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
-	"net/http"
-	"os"
 )
 
 type MonitoringOpenTelemetry struct {
@@ -38,7 +39,7 @@ func StartOpenTelemetryMonitoring() colibri_monitoring_base.Monitoring {
 	client := otlptracehttp.NewClient()
 	exporter, err := otlptrace.New(context.Background(), client)
 	if err != nil {
-		logging.Fatal("Creating OTLP trace exporter: %v", err)
+		logging.Fatal(context.Background()).Msgf("Creating OTLP trace exporter: %v", err)
 	}
 
 	tracerProvider := sdktrace.NewTracerProvider(
@@ -48,7 +49,7 @@ func StartOpenTelemetryMonitoring() colibri_monitoring_base.Monitoring {
 	otel.SetTracerProvider(tracerProvider)
 
 	tracer := tracerProvider.Tracer(
-		"github.com/colibri-project-io/colibri-sdk-go",
+		"github.com/colibri-project-dev/colibri-sdk-go",
 		trace.WithInstrumentationVersion(contrib.SemVersion()),
 	)
 
@@ -120,7 +121,7 @@ func (m *MonitoringOpenTelemetry) GetSQLDBDriverName() string {
 		otelsql.WithSystem(semconv.DBSystemPostgreSQL),
 	)
 	if err != nil {
-		logging.Fatal("could not get sql db driver name: %v", err)
+		logging.Fatal(context.Background()).Msgf("could not get sql db driver name: %v", err)
 	}
 	return driverName
 }

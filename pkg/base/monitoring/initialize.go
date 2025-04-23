@@ -2,11 +2,12 @@ package monitoring
 
 import (
 	"context"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/config"
-	colibri_monitoring_base "github.com/colibri-project-io/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
-	colibri_nr "github.com/colibri-project-io/colibri-sdk-go/pkg/base/monitoring/colibri-nr"
-	colibri_otel "github.com/colibri-project-io/colibri-sdk-go/pkg/base/monitoring/colibri-otel"
 	"net/http"
+
+	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
+	colibri_monitoring_base "github.com/colibri-project-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
+	colibri_nr "github.com/colibri-project-dev/colibri-sdk-go/pkg/base/monitoring/colibri-nr"
+	colibri_otel "github.com/colibri-project-dev/colibri-sdk-go/pkg/base/monitoring/colibri-otel"
 )
 
 var instance colibri_monitoring_base.Monitoring
