@@ -28,8 +28,6 @@ func Initialize() {
 		instance.firebase = newFirebaseSession()
 	case config.CLOUD_GCP:
 		logging.Info(context.Background()).Msg("Initializing GCP")
-	case config.CLOUD_AZURE:
-		logging.Fatal(context.Background()).Msg("Not implemented yet")
 	}
 
 	logging.Info(context.Background()).Msg("Cloud provider connected")

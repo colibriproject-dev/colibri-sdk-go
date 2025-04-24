@@ -182,13 +182,6 @@ func TestCloud(t *testing.T) {
 		assert.Equal(t, CLOUD_AWS, CLOUD)
 	})
 
-	t.Run("Should configure with azure environment", func(t *testing.T) {
-		assert.NoError(t, os.Setenv(ENV_CLOUD, CLOUD_AZURE))
-
-		Load()
-		assert.Equal(t, CLOUD_AZURE, CLOUD)
-	})
-
 	t.Run("Should configure with gcp environment", func(t *testing.T) {
 		assert.NoError(t, os.Setenv(ENV_CLOUD, CLOUD_GCP))
 

@@ -48,7 +48,6 @@ const (
 	APP_TYPE_SERVICE              string = "service"
 	APP_TYPE_SERVERLESS           string = "serverless"
 	CLOUD_AWS                     string = "aws"
-	CLOUD_AZURE                   string = "azure"
 	CLOUD_GCP                     string = "gcp"
 	CLOUD_FIREBASE                string = "firebase"
 	SQL_DB_CONNECTION_URI_DEFAULT string = "host=%s port=%s user=%s password=%s dbname=%s application_name='%s' sslmode=%s"
@@ -114,7 +113,7 @@ func Load() error {
 	}
 
 	CLOUD = os.Getenv(ENV_CLOUD)
-	if !slices.Contains([]string{CLOUD_AWS, CLOUD_AZURE, CLOUD_GCP, CLOUD_FIREBASE}, CLOUD) {
+	if !slices.Contains([]string{CLOUD_AWS, CLOUD_GCP, CLOUD_FIREBASE}, CLOUD) {
 		return errors.New(error_cloud_not_configured)
 	}
 
