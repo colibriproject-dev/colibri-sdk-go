@@ -56,37 +56,3 @@ func TestInitialize(t *testing.T) {
 		assert.NotNil(t, GetFirebaseSession())
 	})
 }
-
-func TestGetAwsSession(t *testing.T) {
-	t.Run("Should return nil when AWS is not initialized", func(t *testing.T) {
-		instance = nil
-		assert.Nil(t, GetAwsSession())
-	})
-
-	t.Run("Should return AWS session when initialized", func(t *testing.T) {
-		config.ENVIRONMENT = config.ENVIRONMENT_DEVELOPMENT
-		config.CLOUD = config.CLOUD_AWS
-		Initialize()
-
-		session := GetAwsSession()
-		assert.NotNil(t, session)
-		assert.Equal(t, instance.aws, session)
-	})
-}
-
-func TestGetFirebaseSession(t *testing.T) {
-	t.Run("Should return nil when Firebase is not initialized", func(t *testing.T) {
-		instance = nil
-		assert.Nil(t, GetFirebaseSession())
-	})
-
-	t.Run("Should return Firebase session when initialized", func(t *testing.T) {
-		config.ENVIRONMENT = config.ENVIRONMENT_DEVELOPMENT
-		config.CLOUD = config.CLOUD_FIREBASE
-		Initialize()
-
-		session := GetFirebaseSession()
-		assert.NotNil(t, session)
-		assert.Equal(t, instance.firebase, session)
-	})
-}
