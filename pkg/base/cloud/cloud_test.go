@@ -20,6 +20,7 @@ func TestInitialize(t *testing.T) {
 
 		assert.NotNil(t, instance)
 		assert.NotNil(t, instance.aws)
+		assert.Nil(t, instance.firebase)
 		assert.NotNil(t, GetAwsSession())
 	})
 
@@ -31,6 +32,7 @@ func TestInitialize(t *testing.T) {
 
 		assert.NotNil(t, instance)
 		assert.NotNil(t, instance.aws)
+		assert.Nil(t, instance.firebase)
 		assert.NotNil(t, GetAwsSession())
 	})
 
@@ -41,6 +43,7 @@ func TestInitialize(t *testing.T) {
 		Initialize()
 
 		assert.NotNil(t, instance)
+		assert.Nil(t, instance.aws)
 		assert.NotNil(t, instance.firebase)
 		assert.NotNil(t, GetFirebaseSession())
 	})
@@ -52,7 +55,30 @@ func TestInitialize(t *testing.T) {
 		Initialize()
 
 		assert.NotNil(t, instance)
+		assert.Nil(t, instance.aws)
 		assert.NotNil(t, instance.firebase)
 		assert.NotNil(t, GetFirebaseSession())
+	})
+
+	t.Run("Should initialize GCP with local enviroment", func(t *testing.T) {
+		config.ENVIRONMENT = config.ENVIRONMENT_DEVELOPMENT
+		config.CLOUD = config.CLOUD_GCP
+
+		Initialize()
+
+		assert.NotNil(t, instance)
+		assert.Nil(t, instance.aws)
+		assert.Nil(t, instance.firebase)
+	})
+
+	t.Run("Should initialize GCP with cloud enviroment", func(t *testing.T) {
+		config.ENVIRONMENT = config.ENVIRONMENT_PRODUCTION
+		config.CLOUD = config.CLOUD_GCP
+
+		Initialize()
+
+		assert.NotNil(t, instance)
+		assert.Nil(t, instance.aws)
+		assert.Nil(t, instance.firebase)
 	})
 }

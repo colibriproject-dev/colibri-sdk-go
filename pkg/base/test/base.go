@@ -66,6 +66,7 @@ func InitializeGcpEmulator(path ...string) {
 	ctx := context.WithValue(context.Background(), gcpEmulatorID, uuid.New().String())
 	_ = UseGcpEmulatorContainer(ctx, getGcpEmulatorBasePath(path...))
 	loadConfig()
+	_ = os.Setenv(config.ENV_CLOUD, config.CLOUD_GCP)
 	config.CLOUD = config.CLOUD_GCP
 	cloud.Initialize()
 	m.Unlock()
