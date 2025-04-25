@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"cloud.google.com/go/pubsub"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 )
 
 type gcpMessaging struct {

@@ -12,9 +12,9 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/net"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/monitoring"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/test"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/database/cacheDB"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/test"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/database/cacheDB"
 	"github.com/stretchr/testify/assert"
 )
 

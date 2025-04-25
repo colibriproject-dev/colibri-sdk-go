@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/google/uuid"

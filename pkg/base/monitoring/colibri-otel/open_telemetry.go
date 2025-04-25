@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
-	colibri_monitoring_base "github.com/colibri-project-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
+	colibri_monitoring_base "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
 	"go.nhat.io/otelsql"
 	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
@@ -49,7 +49,7 @@ func StartOpenTelemetryMonitoring() colibri_monitoring_base.Monitoring {
 	otel.SetTracerProvider(tracerProvider)
 
 	tracer := tracerProvider.Tracer(
-		"github.com/colibri-project-dev/colibri-sdk-go",
+		"github.com/colibriproject-dev/colibri-sdk-go",
 		trace.WithInstrumentationVersion(contrib.SemVersion()),
 	)
 

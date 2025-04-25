@@ -1,7 +1,7 @@
 package validator
 
 import (
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/types"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/types"
 	form "github.com/go-playground/form/v4"
 	playValidator "github.com/go-playground/validator/v10"
 	"github.com/google/uuid"

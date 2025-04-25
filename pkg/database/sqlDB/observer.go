@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/observer"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
 )
 
 // sqlDBObserver is a struct for sql database observer.

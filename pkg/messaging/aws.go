@@ -8,8 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/cloud"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/cloud"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 )
 
 type sqsNotification struct {

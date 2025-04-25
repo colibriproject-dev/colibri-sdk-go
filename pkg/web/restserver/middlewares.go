@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/monitoring"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/security"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 )

@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/security"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/validator"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/validator"
 	"github.com/gofiber/fiber/v2"
 )
 

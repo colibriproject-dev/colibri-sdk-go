@@ -4,11 +4,11 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/monitoring"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/observer"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
 	_ "github.com/newrelic/go-agent/v3/integrations/nrpq"
 )
 

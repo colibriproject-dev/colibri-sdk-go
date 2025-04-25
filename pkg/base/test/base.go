@@ -6,12 +6,12 @@ import (
 	"os"
 	"sync"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/cloud"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/cloud"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/monitoring"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/observer"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/validator"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/validator"
 	"github.com/google/uuid"
 )
 

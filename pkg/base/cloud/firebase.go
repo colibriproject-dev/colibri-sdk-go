@@ -4,8 +4,8 @@ import (
 	"context"
 
 	firebase "firebase.google.com/go"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"google.golang.org/api/option"
 )
 

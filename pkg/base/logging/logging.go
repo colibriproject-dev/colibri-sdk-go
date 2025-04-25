@@ -10,7 +10,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 )
 
 type correlationID string

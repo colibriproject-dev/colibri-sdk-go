@@ -3,7 +3,7 @@ package validator
 import (
 	"testing"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/types"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/types"
 	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/assert"
 )

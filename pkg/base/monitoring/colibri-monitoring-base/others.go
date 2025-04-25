@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 )
 
 type others struct {

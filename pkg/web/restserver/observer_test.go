@@ -3,8 +3,8 @@ package restserver
 import (
 	"testing"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/observer"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/stretchr/testify/assert"

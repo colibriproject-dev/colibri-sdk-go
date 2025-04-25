@@ -3,9 +3,9 @@ package cacheDB
 import (
 	"context"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/observer"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
 	"github.com/go-redis/redis/v8"
 	"github.com/newrelic/go-agent/v3/integrations/nrredis-v8"
 )

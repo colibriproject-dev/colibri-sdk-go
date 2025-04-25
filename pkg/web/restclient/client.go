@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/mercari/go-circuitbreaker"
 	"github.com/newrelic/go-agent/v3/newrelic"
 )

@@ -5,8 +5,8 @@ import (
 
 	firebase "firebase.google.com/go"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 )
 
 // Cloud is a struct that contains the cloud settings.

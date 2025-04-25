@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"firebase.google.com/go/auth"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/cloud"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/cloud"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 )
 
 type firebaseAuthService struct {

@@ -1,4 +1,4 @@
-module github.com/colibri-project-dev/colibri-sdk-go
+module github.com/colibriproject-dev/colibri-sdk-go
 
 go 1.24
 

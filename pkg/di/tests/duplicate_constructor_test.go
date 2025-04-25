@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/di"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/di"
 	"github.com/stretchr/testify/assert"
 )
 

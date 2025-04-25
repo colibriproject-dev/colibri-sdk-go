@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -105,7 +105,7 @@ func TestLogging(t *testing.T) {
 			input    string
 			expected string
 		}{
-			{"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging.TestLogging", "logging.TestLogging"},
+			{"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging.TestLogging", "logging.TestLogging"},
 			{"(*Logging).AddParam", "Logging.AddParam"},
 			{"simpleFunction", "simpleFunction"},
 		}

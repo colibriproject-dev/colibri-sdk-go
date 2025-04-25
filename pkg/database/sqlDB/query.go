@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/database/cacheDB"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/database/cacheDB"
 )
 
 // Query is a struct for sql query

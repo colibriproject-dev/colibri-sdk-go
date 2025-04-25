@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/monitoring"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/observer"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/security"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
 )
 
 type consumer struct {

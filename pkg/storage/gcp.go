@@ -8,7 +8,7 @@ import (
 	"os"
 
 	gcp_storage "cloud.google.com/go/storage"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 )
 
 type gcpStorage struct {

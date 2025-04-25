@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/cloud"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/cloud"
 )
 
 type awsStorage struct {

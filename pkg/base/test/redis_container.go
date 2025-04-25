@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/docker/go-connections/nat"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"

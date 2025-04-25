@@ -14,7 +14,7 @@ Exemplo básico:
     package  main
     
     import (
-    "github.com/colibri-project-dev/colibri-sdk-go/pkg/di"
+    "github.com/colibriproject-dev/colibri-sdk-go/pkg/di"
     )
     
     type  Foo  struct {

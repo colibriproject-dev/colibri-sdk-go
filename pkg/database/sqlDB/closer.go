@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/colibri-project-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 )
 
 // closer closes the provided io.Closer interface and logs an error if closing fails.
