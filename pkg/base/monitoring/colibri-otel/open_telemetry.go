@@ -56,16 +56,16 @@ func StartOpenTelemetryMonitoring() colibri_monitoring_base.Monitoring {
 	return &MonitoringOpenTelemetry{tracer: tracer}
 }
 
-func (m *MonitoringOpenTelemetry) StartTransaction(ctx context.Context, name string) (interface{}, context.Context) {
+func (m *MonitoringOpenTelemetry) StartTransaction(ctx context.Context, name string) (any, context.Context) {
 	ctx, span := m.tracer.Start(ctx, name)
 	return span, ctx
 }
 
-func (m *MonitoringOpenTelemetry) EndTransaction(span interface{}) {
+func (m *MonitoringOpenTelemetry) EndTransaction(span any) {
 	span.(trace.Span).End()
 }
 
-func (m *MonitoringOpenTelemetry) StartWebRequest(ctx context.Context, header http.Header, path string, method string) (interface{}, context.Context) {
+func (m *MonitoringOpenTelemetry) StartWebRequest(ctx context.Context, header http.Header, path string, method string) (any, context.Context) {
 	attrs := []attribute.KeyValue{
 		semconv.HTTPMethodKey.String(method),
 		semconv.HTTPRequestContentLengthKey.String(header.Get("Content-Length")),
@@ -86,7 +86,7 @@ func (m *MonitoringOpenTelemetry) StartWebRequest(ctx context.Context, header ht
 	return span, ctx
 }
 
-func (m *MonitoringOpenTelemetry) StartTransactionSegment(ctx context.Context, name string, attributes map[string]string) interface{} {
+func (m *MonitoringOpenTelemetry) StartTransactionSegment(ctx context.Context, name string, attributes map[string]string) any {
 	_, span := m.tracer.Start(ctx, name)
 
 	kv := make([]attribute.KeyValue, 0, len(attributes))
@@ -98,15 +98,15 @@ func (m *MonitoringOpenTelemetry) StartTransactionSegment(ctx context.Context, n
 	return span
 }
 
-func (m *MonitoringOpenTelemetry) EndTransactionSegment(segment interface{}) {
+func (m *MonitoringOpenTelemetry) EndTransactionSegment(segment any) {
 	segment.(trace.Span).End()
 }
 
-func (m *MonitoringOpenTelemetry) GetTransactionInContext(ctx context.Context) interface{} {
+func (m *MonitoringOpenTelemetry) GetTransactionInContext(ctx context.Context) any {
 	return trace.SpanFromContext(ctx)
 }
 
-func (m *MonitoringOpenTelemetry) NoticeError(transaction interface{}, err error) {
+func (m *MonitoringOpenTelemetry) NoticeError(transaction any, err error) {
 	transaction.(trace.Span).RecordError(err)
 	transaction.(trace.Span).SetStatus(codes.Error, err.Error())
 }

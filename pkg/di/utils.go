@@ -32,7 +32,7 @@ func implementsInterface(structType reflect.Type, interfaceType reflect.Type) bo
 	return structType.Implements(interfaceType)
 }
 
-func generateDependenciesArray(funcs []interface{}, isGlobal bool) map[string]DependencyBean {
+func generateDependenciesArray(funcs []any, isGlobal bool) map[string]DependencyBean {
 	ReflectTypeArray := make(map[string]DependencyBean)
 	for _, fn := range funcs {
 		dep := generateDependencyBean(fn, isGlobal)
@@ -62,7 +62,7 @@ func getReturnType(fnType reflect.Type) reflect.Type {
 	}
 }
 
-func generateDependencyBean(fn interface{}, isGlobal bool) DependencyBean {
+func generateDependencyBean(fn any, isGlobal bool) DependencyBean {
 	fnType := reflect.TypeOf(fn)
 	fnValue := reflect.ValueOf(fn)
 	nameFunction := getFunctionName(fnValue)

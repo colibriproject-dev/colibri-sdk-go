@@ -10,7 +10,7 @@ import (
 // NullBoll for empty boolean field
 type NullBool sql.NullBool
 
-func (t *NullBool) Scan(value interface{}) error {
+func (t *NullBool) Scan(value any) error {
 	var i sql.NullBool
 	if err := i.Scan(value); err != nil {
 		return err

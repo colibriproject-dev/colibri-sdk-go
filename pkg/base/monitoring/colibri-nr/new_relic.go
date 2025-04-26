@@ -37,18 +37,18 @@ func StartNewRelicMonitoring() colibri_monitoring_base.Monitoring {
 	return &MonitoringNewRelic{app}
 }
 
-func (m *MonitoringNewRelic) StartTransaction(ctx context.Context, name string) (interface{}, context.Context) {
+func (m *MonitoringNewRelic) StartTransaction(ctx context.Context, name string) (any, context.Context) {
 	transaction := m.Application.StartTransaction(name)
 	ctx = newrelic.NewContext(ctx, transaction)
 
 	return transaction, ctx
 }
 
-func (m *MonitoringNewRelic) EndTransaction(transaction interface{}) {
+func (m *MonitoringNewRelic) EndTransaction(transaction any) {
 	transaction.(*newrelic.Transaction).End()
 }
 
-func (m *MonitoringNewRelic) setWebRequest(transaction interface{}, header http.Header, url *url.URL, method string) {
+func (m *MonitoringNewRelic) setWebRequest(transaction any, header http.Header, url *url.URL, method string) {
 	transaction.(*newrelic.Transaction).SetWebRequest(newrelic.WebRequest{
 		Header:    header,
 		URL:       url,
@@ -57,18 +57,18 @@ func (m *MonitoringNewRelic) setWebRequest(transaction interface{}, header http.
 	})
 }
 
-func (m *MonitoringNewRelic) StartWebRequest(ctx context.Context, header http.Header, path string, method string) (interface{}, context.Context) {
+func (m *MonitoringNewRelic) StartWebRequest(ctx context.Context, header http.Header, path string, method string) (any, context.Context) {
 	txn, ctx := m.StartTransaction(ctx, fmt.Sprintf("%s %s", method, path))
 	m.setWebRequest(txn, header, &url.URL{Path: path}, method)
 
 	return txn, ctx
 }
 
-func (m *MonitoringNewRelic) SetWebResponse(transaction interface{}, w http.ResponseWriter) http.ResponseWriter {
+func (m *MonitoringNewRelic) SetWebResponse(transaction any, w http.ResponseWriter) http.ResponseWriter {
 	return transaction.(*newrelic.Transaction).SetWebResponse(w)
 }
 
-func (m *MonitoringNewRelic) StartTransactionSegment(ctx context.Context, name string, attributes map[string]string) interface{} {
+func (m *MonitoringNewRelic) StartTransactionSegment(ctx context.Context, name string, attributes map[string]string) any {
 	transaction := m.GetTransactionInContext(ctx)
 	segment := transaction.(*newrelic.Transaction).StartSegment(name)
 
@@ -79,15 +79,15 @@ func (m *MonitoringNewRelic) StartTransactionSegment(ctx context.Context, name s
 	return segment
 }
 
-func (m *MonitoringNewRelic) EndTransactionSegment(segment interface{}) {
+func (m *MonitoringNewRelic) EndTransactionSegment(segment any) {
 	segment.(*newrelic.Segment).End()
 }
 
-func (m *MonitoringNewRelic) GetTransactionInContext(ctx context.Context) interface{} {
+func (m *MonitoringNewRelic) GetTransactionInContext(ctx context.Context) any {
 	return newrelic.FromContext(ctx)
 }
 
-func (m *MonitoringNewRelic) NoticeError(transaction interface{}, err error) {
+func (m *MonitoringNewRelic) NoticeError(transaction any, err error) {
 	transaction.(*newrelic.Transaction).NoticeError(err)
 }
 

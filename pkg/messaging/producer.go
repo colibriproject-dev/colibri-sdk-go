@@ -33,20 +33,15 @@ func (p *Producer) Publish(ctx context.Context, action string, message any) erro
 	}
 
 	msg := &ProviderMessage{
-		Id:      uuid.New(),
-		Origin:  config.APP_NAME,
-		Action:  action,
-		Message: message,
-	}
-
-	authContext := security.GetAuthenticationContext(ctx)
-	if authContext != nil {
-		msg.TenantId = authContext.GetTenantID()
-		msg.UserId = authContext.GetUserID()
+		ID:          uuid.New(),
+		Origin:      config.APP_NAME,
+		Action:      action,
+		Message:     message,
+		AuthContext: security.GetAuthenticationContext(ctx),
 	}
 
 	if err := instance.producer(ctx, p, msg); err != nil {
-		logging.Error(ctx).Err(err).Msgf(couldNotSendMsg, msg.Id, p.topic)
+		logging.Error(ctx).Err(err).Msgf(couldNotSendMsg, msg.ID, p.topic)
 		monitoring.NoticeError(txn, err)
 		return err
 	}

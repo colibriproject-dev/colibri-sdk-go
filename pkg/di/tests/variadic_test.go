@@ -28,7 +28,7 @@ func NewV(a string, s ...int) string {
 func Test_variadic(t *testing.T) {
 	a := di.NewContainer()
 	// Criação de um array de funções de diferentes tipos
-	funcs := []interface{}{newInt1, newInt2, newStringV}
+	funcs := []any{newInt1, newInt2, newStringV}
 	a.AddDependencies(funcs)
 	assert.NotPanics(t, func() { a.StartApp(NewV) })
 }

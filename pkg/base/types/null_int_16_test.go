@@ -94,4 +94,14 @@ func TestNullInt16(t *testing.T) {
 		assert.Equal(t, false, result.Valid)
 		assert.Equal(t, int16(0), result.Int16)
 	})
+
+	t.Run("Should handle null value in json", func(t *testing.T) {
+		var result NullInt16
+		err := result.UnmarshalJSON([]byte("null"))
+
+		assert.Nil(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, false, result.Valid)
+		assert.Equal(t, int16(0), result.Int16)
+	})
 }
