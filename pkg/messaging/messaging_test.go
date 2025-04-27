@@ -16,11 +16,10 @@ type userMessageTest struct {
 }
 
 const (
-	testTopicName        = "COLIBRI_PROJECT_USER_CREATE"
-	testQueueName        = "COLIBRI_PROJECT_USER_CREATE_APP_CONSUMER"
-	testFailTopicName    = "COLIBRI_PROJECT_FAIL_USER_CREATE"
-	testFailQueueName    = "COLIBRI_PROJECT_FAIL_USER_CREATE_APP_CONSUMER"
-	testFailDLQQueueName = "COLIBRI_PROJECT_FAIL_USER_CREATE_APP_CONSUMER_DLQ"
+	testTopicName     = "COLIBRI_PROJECT_USER_CREATE"
+	testQueueName     = "COLIBRI_PROJECT_USER_CREATE_APP_CONSUMER"
+	testFailTopicName = "COLIBRI_PROJECT_FAIL_USER_CREATE"
+	testFailQueueName = "COLIBRI_PROJECT_FAIL_USER_CREATE_APP_CONSUMER"
 )
 
 type queueConsumerTest struct {
