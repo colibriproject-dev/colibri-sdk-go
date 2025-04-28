@@ -98,4 +98,24 @@ func TestNullIsoDate(t *testing.T) {
 		assert.Equal(t, false, result.Valid)
 		assert.Equal(t, time.Time(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)), result.Time)
 	})
+
+	t.Run("Should return error when get value with a isoTime json", func(t *testing.T) {
+		var result NullIsoDate
+		err := result.UnmarshalJSON([]byte("\"10:20:30\""))
+
+		assert.NotNil(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, false, result.Valid)
+		assert.Equal(t, time.Time(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)), result.Time)
+	})
+
+	t.Run("Should handle null value in json", func(t *testing.T) {
+		var result NullIsoDate
+		err := result.UnmarshalJSON([]byte("null"))
+
+		assert.Nil(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, false, result.Valid)
+		assert.Equal(t, time.Time(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)), result.Time)
+	})
 }

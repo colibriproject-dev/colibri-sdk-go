@@ -20,6 +20,7 @@ func TestSortDirectionValidation(t *testing.T) {
 		{Direction: types.SortDirection("asc"), Expected: false},
 		{Direction: types.SortDirection("desc"), Expected: false},
 		{Direction: types.SortDirection("invalid"), Expected: false},
+		{Direction: types.SortDirection(""), Expected: false},
 	}
 
 	validate := validator.New()

@@ -10,7 +10,7 @@ import (
 // NullFloat64 for empty float field
 type NullFloat64 sql.NullFloat64
 
-func (t *NullFloat64) Scan(value interface{}) error {
+func (t *NullFloat64) Scan(value any) error {
 	var i sql.NullFloat64
 	if err := i.Scan(value); err != nil {
 		return err

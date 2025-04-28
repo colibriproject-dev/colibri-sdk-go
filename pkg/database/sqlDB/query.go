@@ -20,7 +20,7 @@ type Query[T any] struct {
 //
 // ctx: the context.Context for the query
 // query: the query string to execute
-// params: variadic interface{} for additional parameters
+// params: variadic any for additional parameters
 // Returns a pointer to Query struct
 func NewQuery[T any](ctx context.Context, query string, params ...any) *Query[T] {
 	return &Query[T]{ctx, nil, query, params}
@@ -31,7 +31,7 @@ func NewQuery[T any](ctx context.Context, query string, params ...any) *Query[T]
 // ctx: the context.Context for the query
 // cache: the cacheDB.Cache to store the query result
 // query: the query string to execute
-// params: variadic interface{} for additional parameters
+// params: variadic any for additional parameters
 // Returns a pointer to Query struct
 func NewCachedQuery[T any](ctx context.Context, cache *cacheDB.Cache[T], query string, params ...any) (q *Query[T]) {
 	return &Query[T]{ctx, cache, query, params}

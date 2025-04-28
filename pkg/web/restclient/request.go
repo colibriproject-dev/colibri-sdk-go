@@ -167,9 +167,9 @@ func (rc *Request[T, E]) processMultipartFields() (io.Reader, error) {
 // processField processes the field based on its type and performs the necessary actions accordingly.
 //
 // fieldName: the name of the field being processed (string).
-// contentField: the content of the field being processed (interface{}).
+// contentField: the content of the field being processed (any).
 // Returns an error if any issues occur during processing.
-func (rc *Request[T, E]) processField(fieldName string, contentField interface{}) error {
+func (rc *Request[T, E]) processField(fieldName string, contentField any) error {
 	if file, ok := contentField.(MultipartFile); ok {
 		part, err := rc.createFilePart(fieldName, file)
 		if err != nil {

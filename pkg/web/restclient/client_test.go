@@ -173,7 +173,7 @@ func TestPostWithMultipart(t *testing.T) {
 			Client:     restClient,
 			HttpMethod: http.MethodPost,
 			Path:       "/upload",
-			MultipartFields: map[string]interface{}{
+			MultipartFields: map[string]any{
 				"myfile": MultipartFile{
 					FileName:    "test.txt",
 					File:        UploadFile,
@@ -198,7 +198,7 @@ func TestPostWithMultipart(t *testing.T) {
 			Client:     restClient,
 			HttpMethod: http.MethodPost,
 			Path:       "/upload",
-			MultipartFields: map[string]interface{}{
+			MultipartFields: map[string]any{
 				"file": MultipartFile{
 					FileName: "test.txt",
 					File:     UploadFile,
@@ -221,7 +221,7 @@ func TestPostWithMultipart(t *testing.T) {
 			Ctx:        ctx,
 			Client:     restClient,
 			HttpMethod: http.MethodPost,
-			MultipartFields: map[string]interface{}{
+			MultipartFields: map[string]any{
 				"name":  "User 100",
 				"email": "user_100@email.com",
 			},
@@ -245,7 +245,7 @@ func TestPostWithMultipart(t *testing.T) {
 			Client:     restClient,
 			HttpMethod: http.MethodPost,
 			Path:       "/upload",
-			MultipartFields: map[string]interface{}{
+			MultipartFields: map[string]any{
 				"file": -1,
 			},
 		}.Call()

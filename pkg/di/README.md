@@ -22,7 +22,7 @@ Exemplo básico:
 
 	func  main() {
 	
-	dependencies  := []interface{}{NewFoo}
+	dependencies  := []any{NewFoo}
     app  :=  di.NewContainer()
     app.AddDependencies(dependencies)
     app.StartApp(InitializeAPP)

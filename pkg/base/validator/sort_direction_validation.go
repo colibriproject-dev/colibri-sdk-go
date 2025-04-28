@@ -6,10 +6,6 @@ import (
 )
 
 func sortDirectionValidation(fl validator.FieldLevel) bool {
-	direction, ok := fl.Field().Interface().(types.SortDirection)
-	if !ok {
-		return false
-	}
-
+	direction, _ := fl.Field().Interface().(types.SortDirection)
 	return direction.IsValid()
 }

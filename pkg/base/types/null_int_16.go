@@ -10,7 +10,7 @@ import (
 // NullInt16 for empty int16 field
 type NullInt16 sql.NullInt16
 
-func (t *NullInt16) Scan(value interface{}) error {
+func (t *NullInt16) Scan(value any) error {
 	var i sql.NullInt16
 	if err := i.Scan(value); err != nil {
 		return err

@@ -2,6 +2,7 @@ package security
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -28,6 +29,12 @@ func TestNewAuthenticationContext(t *testing.T) {
 	t.Run("Should return nil when context is nil", func(t *testing.T) {
 		result := GetAuthenticationContext(context.Background())
 		assert.Nil(t, result)
+	})
+
+	t.Run("Should return formatted string with tenant and user IDs", func(t *testing.T) {
+		authContext := NewAuthenticationContext(defaultTenantId, defaultUserId)
+		expected := fmt.Sprintf("tenantId: %s | userId: %s", defaultTenantId, defaultUserId)
+		assert.Equal(t, expected, authContext.String())
 	})
 
 	t.Run("Should get in context", func(t *testing.T) {

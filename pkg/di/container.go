@@ -14,21 +14,21 @@ func NewContainer() Container {
 	return Container{}
 }
 
-func (c *Container) AddDependencies(deps []interface{}) {
+func (c *Container) AddDependencies(deps []any) {
 	// Gera o array com as dependencias
 	ReflectTypeArray := generateDependenciesArray(deps, false)
 	c.checkingNameUnit(ReflectTypeArray)
 	c.dependencies = ReflectTypeArray
 }
 
-func (c *Container) AddGlobalDependencies(deps []interface{}) {
+func (c *Container) AddGlobalDependencies(deps []any) {
 	// Gera o array com as dependencias
 	ReflectTypeArray := generateDependenciesArray(deps, true)
 	c.checkingNameUnit(ReflectTypeArray)
 	c.dependencies = ReflectTypeArray
 }
 
-func (f *Container) StartApp(startFunc interface{}) {
+func (f *Container) StartApp(startFunc any) {
 
 	fmt.Println("Starting framework.....")
 	quantDep := len(f.dependencies)
@@ -50,7 +50,7 @@ func (c *Container) getDependencyConstructorArgs(dependency DependencyBean) []re
 	args := []reflect.Value{}
 	fmt.Printf("constructor: %s, number of parameters: %d\n", dependency.Name, len(dependency.ParamTypes))
 	for position, paramType := range dependency.ParamTypes {
-		
+
 		// Check if trhe variadic param
 		if dependency.IsVariadic {
 			if position == (len(dependency.ParamTypes) - 1) {

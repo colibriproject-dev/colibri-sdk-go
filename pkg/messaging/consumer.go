@@ -8,14 +8,13 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
-	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
 )
 
 type consumer struct {
 	sync.WaitGroup
 	queue string
 	fn    func(ctx context.Context, message *ProviderMessage) error
-	done  chan interface{}
+	done  chan any
 }
 
 type consumerObserver struct {
@@ -35,7 +34,7 @@ func NewConsumer(qc QueueConsumer) {
 		WaitGroup: sync.WaitGroup{},
 		queue:     qc.QueueName(),
 		fn:        qc.Consume,
-		done:      make(chan interface{}),
+		done:      make(chan any),
 	}
 
 	observer.Attach(consumerObserver{c: c})
@@ -49,9 +48,10 @@ func startListener(c *consumer) {
 		for {
 			msg := <-ch
 			ctx := context.Background()
-			security.NewAuthenticationContext(msg.TenantId, msg.UserId).SetInContext(ctx)
+			msg.AuthContext.SetInContext(ctx)
+
 			if err := c.fn(ctx, msg); err != nil {
-				logging.Error(ctx).Err(err).Msgf(couldNotProcessMsg, msg.Id)
+				logging.Error(ctx).Err(err).Msgf(couldNotProcessMsg, msg.ID)
 			}
 		}
 	}()

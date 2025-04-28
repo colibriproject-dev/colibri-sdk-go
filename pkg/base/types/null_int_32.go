@@ -10,7 +10,7 @@ import (
 // NullInt32 for empty int32 field
 type NullInt32 sql.NullInt32
 
-func (t *NullInt32) Scan(value interface{}) error {
+func (t *NullInt32) Scan(value any) error {
 	var i sql.NullInt32
 	if err := i.Scan(value); err != nil {
 		return err

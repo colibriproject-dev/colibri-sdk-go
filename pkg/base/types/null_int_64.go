@@ -10,7 +10,7 @@ import (
 // NullInt64 for empty int64 field
 type NullInt64 sql.NullInt64
 
-func (t *NullInt64) Scan(value interface{}) error {
+func (t *NullInt64) Scan(value any) error {
 	var i sql.NullInt64
 	if err := i.Scan(value); err != nil {
 		return err

@@ -75,7 +75,7 @@ func TestCache(t *testing.T) {
 	})
 
 	t.Run("Should return error when occurred error in json unmarshal on set data in cache", func(t *testing.T) {
-		invalid := map[string]interface{}{
+		invalid := map[string]any{
 			"invalid": make(chan int),
 		}
 

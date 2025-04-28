@@ -10,9 +10,9 @@ var (
 	ErrorInvalidValue = errors.New("invalid []byte value")
 )
 
-type JsonB map[string]interface{}
+type JsonB map[string]any
 
-func (t *JsonB) Scan(value interface{}) error {
+func (t *JsonB) Scan(value any) error {
 	result, valid := value.([]byte)
 	if !valid {
 		return ErrorInvalidValue

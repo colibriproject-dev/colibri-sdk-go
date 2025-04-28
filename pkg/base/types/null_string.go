@@ -10,7 +10,7 @@ import (
 // NullString for empty string field
 type NullString sql.NullString
 
-func (t *NullString) Scan(value interface{}) error {
+func (t *NullString) Scan(value any) error {
 	var i sql.NullString
 	if err := i.Scan(value); err != nil {
 		return err

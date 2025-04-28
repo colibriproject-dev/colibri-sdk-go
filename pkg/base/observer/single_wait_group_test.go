@@ -15,7 +15,7 @@ func TestGetWaitGroup(t *testing.T) {
 	}
 	wg := GetWaitGroup()
 
-	if _, ok := interface{}(wg).(*sync.WaitGroup); !ok {
+	if _, ok := any(wg).(*sync.WaitGroup); !ok {
 		t.Errorf("GetWaitGroup was incorrect, got: %T, want: *sync.WaitGroup.", wg)
 	}
 }
@@ -45,7 +45,7 @@ func TestWaitGroup(t *testing.T) {
 		t.Error("WaitRunningTimeout should return false, but it returned true.")
 	}
 
-	if _, ok := interface{}(wg1).(*sync.WaitGroup); !ok {
+	if _, ok := any(wg1).(*sync.WaitGroup); !ok {
 		t.Errorf("GetWaitGroup was incorrect, got: %T, want: *sync.WaitGroup.", wg1)
 	}
 
