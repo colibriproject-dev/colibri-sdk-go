@@ -11,7 +11,7 @@ import (
 // NullIsoDate for empty date field
 type NullIsoDate sql.NullTime
 
-func (t *NullIsoDate) Scan(value interface{}) error {
+func (t *NullIsoDate) Scan(value any) error {
 	var i sql.NullTime
 	if err := i.Scan(value); err != nil {
 		return err

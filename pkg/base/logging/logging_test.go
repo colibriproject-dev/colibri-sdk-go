@@ -1,83 +1,121 @@
-package logging_test
+package logging
 
 import (
 	"bytes"
-	"encoding/json"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
-	"github.com/stretchr/testify/assert"
+	"context"
+	"errors"
+	"log/slog"
+	"os"
 	"testing"
+
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/stretchr/testify/assert"
 )
 
-func captureOutput(f func()) (out map[string]any) {
-	var buf bytes.Buffer
-	config.LOG_OUTPUT = &buf
-	logging.InitializeLogger()
-	f()
-	_ = json.Unmarshal(buf.Bytes(), &out)
-	return
-}
-
 func TestLogging(t *testing.T) {
-	config.ENVIRONMENT = "test"
-	config.APP_NAME = "sdk-test"
-	config.APP_TYPE = "service"
+	var buf bytes.Buffer
+	logOutput = &buf
 
-	t.Run("Should logger info", func(t *testing.T) {
-		text := "Log info test"
+	config.ENVIRONMENT = config.ENVIRONMENT_TEST
+	ctx := context.Background()
+	ctx = InjectCorrelationIDInContext(ctx, "test-correlation-id")
 
-		output := captureOutput(func() {
-			logging.Info(text)
-		})
+	t.Run("Should initialize logger with default level when LOG_LEVEL is not set", func(t *testing.T) {
+		os.Unsetenv("LOG_LEVEL")
 
-		assert.Equal(t, text, output["msg"])
-		assert.Equal(t, "INFO", output["level"])
+		Initialize()
+
+		assert.NotNil(t, logger)
 	})
 
-	t.Run("Should logger fatal", func(t *testing.T) {
-		text := "Log fatal test"
+	t.Run("Should initialize logger with specified level when LOG_LEVEL is set", func(t *testing.T) {
+		os.Setenv("LOG_LEVEL", "debug")
 
-		assert.PanicsWithValue(t, text, func() { logging.Fatal(text) })
+		Initialize()
+
+		assert.NotNil(t, logger)
 	})
 
-	t.Run("Should logger error", func(t *testing.T) {
-		text := "Log error test"
+	t.Run("Should create logging instance with correlation ID when context has correlation ID", func(t *testing.T) {
+		log := Info(ctx)
 
-		output := captureOutput(func() {
-			logging.Error(text)
-		})
-
-		assert.Equal(t, text, output["msg"])
-		assert.Equal(t, "ERROR", output["level"])
+		assert.Equal(t, "test-correlation-id", log.correlationID)
 	})
 
-	t.Run("Should logger warn", func(t *testing.T) {
-		text := "Log warn test"
+	t.Run("Should add parameters to logging instance when AddParam is called", func(t *testing.T) {
+		log := Info(ctx).AddParam("testKey", "testValue")
 
-		output := captureOutput(func() {
-			logging.Warn(text)
-		})
-
-		assert.Equal(t, text, output["msg"])
-		assert.Equal(t, "WARN", output["level"])
+		assert.Equal(t, "testValue", log.params["testKey"])
 	})
-}
 
-func TestDebug(t *testing.T) {
-	config.APP_NAME = "sdk-test"
-	config.APP_TYPE = "service"
-	config.LOG_LEVEL = "debug"
+	t.Run("Should add error to logging instance when Err is called", func(t *testing.T) {
+		testErr := errors.New("test error")
 
-	logging.InitializeLogger()
+		log := Error(ctx).Err(testErr)
 
-	t.Run("Should logger debug", func(t *testing.T) {
-		text := "Log debug test"
+		assert.Equal(t, testErr, log.err)
+	})
 
-		output := captureOutput(func() {
-			logging.Debug(text)
+	t.Run("Should format message correctly when Msg is called", func(t *testing.T) {
+		Info(ctx).AddParam("test", "value").Msg("Test message 123")
+
+		output := buf.String()
+		assert.Contains(t, output, "Test message 123")
+		assert.Contains(t, output, "test=value")
+	})
+
+	t.Run("Should format message correctly when Msgf is called", func(t *testing.T) {
+		Info(ctx).AddParam("test", "value").Msgf("Test %s %d", "message", 456)
+
+		output := buf.String()
+		assert.Contains(t, output, "Test message 456")
+		assert.Contains(t, output, "test=value")
+	})
+
+	t.Run("Should panic when Fatal is called with Msg", func(t *testing.T) {
+		assert.Panics(t, func() {
+			Fatal(ctx).Msg("fatal message")
 		})
+	})
 
-		assert.Equal(t, text, output["msg"])
-		assert.Equal(t, "DEBUG", output["level"])
+	t.Run("Should return correct log level when parseLevel is called", func(t *testing.T) {
+		testCases := []struct {
+			input    string
+			expected slog.Level
+		}{
+			{"error", slog.LevelError},
+			{"warn", slog.LevelWarn},
+			{"warning", slog.LevelWarn},
+			{"debug", slog.LevelDebug},
+			{"info", slog.LevelInfo},
+			{"invalid", slog.LevelInfo},
+		}
+
+		for _, tc := range testCases {
+			t.Run("Should return "+tc.input+" level", func(t *testing.T) {
+				result := parseLevel(tc.input)
+
+				assert.EqualValues(t, tc.expected, result)
+			})
+		}
+	})
+
+	t.Run("Should clean function name correctly when cleanFunctionName is called", func(t *testing.T) {
+		testCases := []struct {
+			input    string
+			expected string
+		}{
+			{"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging.TestLogging", "logging.TestLogging"},
+			{"(*Logging).AddParam", "Logging.AddParam"},
+			{"simpleFunction", "simpleFunction"},
+		}
+
+		for _, tc := range testCases {
+			t.Run("Should clean "+tc.input, func(t *testing.T) {
+				result := cleanFunctionName(tc.input)
+
+				assert.EqualValues(t, tc.expected, result)
+			})
+		}
 	})
 }

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/types"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/types"
 )
 
 const (
@@ -19,7 +19,7 @@ type PageQuery[T any] struct {
 	ctx   context.Context
 	page  *types.PageRequest
 	query string
-	args  []interface{}
+	args  []any
 }
 
 // NewPageQuery creates a new pointer to PageQuery struct.
@@ -27,9 +27,9 @@ type PageQuery[T any] struct {
 // ctx: the context.Context for the query
 // page: the types.PageRequest for the query
 // query: the query string to execute
-// params: variadic interface{} for additional parameters
+// params: variadic any for additional parameters
 // Returns a pointer to PageQuery struct
-func NewPageQuery[T any](ctx context.Context, page *types.PageRequest, query string, params ...interface{}) *PageQuery[T] {
+func NewPageQuery[T any](ctx context.Context, page *types.PageRequest, query string, params ...any) *PageQuery[T] {
 	return &PageQuery[T]{ctx, page, query, params}
 }
 

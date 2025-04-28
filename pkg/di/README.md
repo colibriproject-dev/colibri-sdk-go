@@ -14,7 +14,7 @@ Exemplo básico:
     package  main
     
     import (
-    "github.com/colibri-project-io/colibri-sdk-go/pkg/di"
+    "github.com/colibriproject-dev/colibri-sdk-go/pkg/di"
     )
     
     type  Foo  struct {
@@ -22,7 +22,7 @@ Exemplo básico:
 
 	func  main() {
 	
-	dependencies  := []interface{}{NewFoo}
+	dependencies  := []any{NewFoo}
     app  :=  di.NewContainer()
     app.AddDependencies(dependencies)
     app.StartApp(InitializeAPP)

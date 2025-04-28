@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 )
 
 const (

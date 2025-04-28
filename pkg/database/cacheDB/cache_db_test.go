@@ -3,7 +3,7 @@ package cacheDB
 import (
 	"testing"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/test"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/test"
 	"github.com/stretchr/testify/assert"
 )
 

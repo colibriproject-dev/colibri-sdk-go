@@ -13,6 +13,7 @@ func TestValidator(t *testing.T) {
 	assert.NotNil(t, instance.validator)
 	assert.NotNil(t, instance.formDecoder)
 }
+
 func TestRegisterCustomValidation(t *testing.T) {
 	Initialize()
 	tag := "custom-validation"

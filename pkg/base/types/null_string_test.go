@@ -60,6 +60,7 @@ func TestNullString(t *testing.T) {
 
 		json, err := expected.MarshalJSON()
 		result := string(json)
+
 		assert.Nil(t, err)
 		assert.NotNil(t, result)
 		assert.Equal(t, "\"string test\"", result)
@@ -68,6 +69,7 @@ func TestNullString(t *testing.T) {
 	t.Run("Should get value with a valid json", func(t *testing.T) {
 		var result NullString
 		err := result.UnmarshalJSON([]byte("\"string test\""))
+
 		assert.Nil(t, err)
 		assert.NotNil(t, result)
 		assert.Equal(t, true, result.Valid)
@@ -77,7 +79,18 @@ func TestNullString(t *testing.T) {
 	t.Run("Should return error when get value with a invalid json", func(t *testing.T) {
 		var result NullString
 		err := result.UnmarshalJSON([]byte("invalid"))
+
 		assert.NotNil(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, false, result.Valid)
+		assert.Equal(t, "", result.String)
+	})
+
+	t.Run("Should handle null value in json", func(t *testing.T) {
+		var result NullString
+		err := result.UnmarshalJSON([]byte("null"))
+
+		assert.Nil(t, err)
 		assert.NotNil(t, result)
 		assert.Equal(t, false, result.Valid)
 		assert.Equal(t, "", result.String)

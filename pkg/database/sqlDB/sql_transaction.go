@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/transaction"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/transaction"
 )
 
 // SqlTxContextKey is the type of the context key for the transaction.
@@ -35,7 +35,7 @@ func NewTransaction(isolation ...sql.IsolationLevel) transaction.Transaction {
 		isolationLevel = isolation[0]
 	} else if len(isolation) > 1 {
 		isolationLevel = isolation[0]
-		logging.Warn(transactionIsolationWarnMsg)
+		logging.Warn(context.Background()).Msg(transactionIsolationWarnMsg)
 	}
 
 	return &sqlTransaction{isolation: isolationLevel}
@@ -68,19 +68,19 @@ func (t *sqlTransaction) ExecuteInInstance(ctx context.Context, instance *sql.DB
 	if err = fn(ctx); err != nil {
 		if rbErr := transaction.Rollback(); rbErr != nil {
 			fErr := fmt.Errorf(transactionRollbackErrorMsg, err, rbErr)
-			logging.Error("%v", fErr)
+			logging.Error(ctx).Err(fErr)
 			transactionChannel <- fErr
 			return fErr
 		}
 
-		logging.Error("%v", err)
+		logging.Error(ctx).Err(err)
 		transactionChannel <- err
 		return err
 	}
 
 	if err = transaction.Commit(); err != nil {
 		fErr := fmt.Errorf(transactionCommitErrorMsg, err)
-		logging.Error("%v", fErr)
+		logging.Error(ctx).Err(fErr)
 		transactionChannel <- fErr
 		return fErr
 	}
@@ -98,7 +98,7 @@ func (t *sqlTransaction) beginTransaction(ctx context.Context, instance *sql.DB)
 
 	if err != nil {
 		fErr := fmt.Errorf(transactionStartErrorMsg, err)
-		logging.Error("%v", fErr)
+		logging.Error(ctx).Err(fErr)
 		return nil, nil, fErr
 	}
 

@@ -1,3 +1,3 @@
-delete from users;
-delete from profiles;
-delete from contacts;
+DELETE FROM users;
+DELETE FROM profiles;
+DELETE FROM contacts;

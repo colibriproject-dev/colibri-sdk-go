@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/test"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/test"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -75,7 +75,7 @@ func TestCache(t *testing.T) {
 	})
 
 	t.Run("Should return error when occurred error in json unmarshal on set data in cache", func(t *testing.T) {
-		invalid := map[string]interface{}{
+		invalid := map[string]any{
 			"invalid": make(chan int),
 		}
 

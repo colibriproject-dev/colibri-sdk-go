@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/test"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/database/cacheDB"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/test"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/database/cacheDB"
 )
 
 func TestQueryWithoutInitialize(t *testing.T) {

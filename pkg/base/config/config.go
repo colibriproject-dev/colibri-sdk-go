@@ -3,7 +3,6 @@ package config
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"strconv"
 
@@ -49,7 +48,6 @@ const (
 	APP_TYPE_SERVICE              string = "service"
 	APP_TYPE_SERVERLESS           string = "serverless"
 	CLOUD_AWS                     string = "aws"
-	CLOUD_AZURE                   string = "azure"
 	CLOUD_GCP                     string = "gcp"
 	CLOUD_FIREBASE                string = "firebase"
 	SQL_DB_CONNECTION_URI_DEFAULT string = "host=%s port=%s user=%s password=%s dbname=%s application_name='%s' sslmode=%s"
@@ -77,9 +75,6 @@ var (
 	OTEL_EXPORTER_OTLP_HEADERS  = ""
 
 	PORT = 8080
-
-	LOG_LEVEL            = "info"
-	LOG_OUTPUT io.Writer = os.Stdout
 
 	CLOUD             = ""
 	CLOUD_HOST        = ""
@@ -118,17 +113,13 @@ func Load() error {
 	}
 
 	CLOUD = os.Getenv(ENV_CLOUD)
-	if !slices.Contains([]string{CLOUD_AWS, CLOUD_AZURE, CLOUD_GCP, CLOUD_FIREBASE}, CLOUD) {
+	if !slices.Contains([]string{CLOUD_AWS, CLOUD_GCP, CLOUD_FIREBASE}, CLOUD) {
 		return errors.New(error_cloud_not_configured)
 	}
 
 	NEW_RELIC_LICENSE = os.Getenv(ENV_NEW_RELIC_LICENSE)
 	OTEL_EXPORTER_OTLP_ENDPOINT = os.Getenv(ENV_OTEL_EXPORTER_OTLP_ENDPOINT)
 	OTEL_EXPORTER_OTLP_HEADERS = os.Getenv(ENV_OTEL_EXPORTER_OTLP_HEADERS)
-
-	if logLevel := os.Getenv(ENV_LOG_LEVEL); logLevel != "" {
-		LOG_LEVEL = logLevel
-	}
 
 	if err := convertIntEnv(&PORT, ENV_PORT); err != nil {
 		return err

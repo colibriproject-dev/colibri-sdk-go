@@ -94,4 +94,14 @@ func TestNullFloat64(t *testing.T) {
 		assert.Equal(t, false, result.Valid)
 		assert.Equal(t, 0.00, result.Float64)
 	})
+
+	t.Run("Should handle null value in json", func(t *testing.T) {
+		var result NullFloat64
+		err := result.UnmarshalJSON([]byte("null"))
+
+		assert.Nil(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, false, result.Valid)
+		assert.Equal(t, 0.00, result.Float64)
+	})
 }

@@ -6,12 +6,12 @@ import (
 	"os"
 	"sync"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/cloud"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/cloud"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/monitoring"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/observer"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/validator"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/validator"
 	"github.com/google/uuid"
 )
 
@@ -36,12 +36,12 @@ func InitializeBaseTest() {
 }
 
 func InitializeCacheDBTest() {
-	UseRedisContainer()
+	UseRedisContainer(context.Background())
 	loadConfig()
 }
 
 func InitializeSqlDBTest() {
-	UsePostgresContainer()
+	UsePostgresContainer(context.Background())
 	loadConfig()
 }
 
@@ -66,6 +66,7 @@ func InitializeGcpEmulator(path ...string) {
 	ctx := context.WithValue(context.Background(), gcpEmulatorID, uuid.New().String())
 	_ = UseGcpEmulatorContainer(ctx, getGcpEmulatorBasePath(path...))
 	loadConfig()
+	_ = os.Setenv(config.ENV_CLOUD, config.CLOUD_GCP)
 	config.CLOUD = config.CLOUD_GCP
 	cloud.Initialize()
 	m.Unlock()

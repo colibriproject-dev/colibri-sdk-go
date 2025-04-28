@@ -1,10 +1,11 @@
 package restclient
 
 import (
+	"context"
 	"net/http"
 	"time"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/mercari/go-circuitbreaker"
 	"github.com/newrelic/go-agent/v3/newrelic"
 )
@@ -12,6 +13,7 @@ import (
 const (
 	timeoutDefault           uint   = 1
 	restClientTransaction    string = "REST-CLIENT"
+	circuitBreakerMsg        string = "[%s] state changed: old [%s] -> new [%s]"
 	errServiceNotAvailable   string = "service not available"
 	errResponseWithEmptyBody string = "response returned with empty body and %d status code"
 )
@@ -44,6 +46,7 @@ func NewRestClient(config *RestClientConfig) *RestClient {
 	if config.Timeout == 0 {
 		config.Timeout = timeoutDefault
 	}
+
 	client := &http.Client{Timeout: time.Duration(config.Timeout) * time.Second}
 	client.Transport = newrelic.NewRoundTripper(client.Transport)
 	return &RestClient{
@@ -54,7 +57,9 @@ func NewRestClient(config *RestClientConfig) *RestClient {
 			circuitbreaker.WithOpenTimeout(time.Second*10),
 			circuitbreaker.WithTripFunc(circuitbreaker.NewTripFuncConsecutiveFailures(5)),
 			circuitbreaker.WithOnStateChangeHookFn(func(oldState, newState circuitbreaker.State) {
-				logging.Info("[%s] state changed: old [%s] -> new [%s]", config.Name, string(oldState), string(newState))
+				logging.
+					Info(context.Background()).
+					Msgf(circuitBreakerMsg, config.Name, string(oldState), string(newState))
 			}),
 		),
 	}

@@ -2,9 +2,6 @@ package restserver
 
 import (
 	"net/http"
-
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/config"
-	"golang.org/x/exp/slices"
 )
 
 // RoutePrefix is the type from default's routes
@@ -42,14 +39,12 @@ func addHealthCheckRoute() {
 }
 
 func addDocumentationRoute() {
-	if slices.Contains([]string{config.ENVIRONMENT_SANDBOX, config.ENVIRONMENT_DEVELOPMENT}, config.ENVIRONMENT) {
-		const route = "/api-docs"
-		srvRoutes = append(srvRoutes, Route{
-			URI:    route,
-			Method: http.MethodGet,
-			Function: func(ctx WebContext) {
-				ctx.ServeFile("./docs/swagger.json")
-			},
-		})
-	}
+	const route = "/api-docs"
+	srvRoutes = append(srvRoutes, Route{
+		URI:    route,
+		Method: http.MethodGet,
+		Function: func(ctx WebContext) {
+			ctx.ServeFile("./docs/swagger.json")
+		},
+	})
 }

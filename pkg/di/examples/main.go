@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/di"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/di"
 )
 
 type Repository struct {
@@ -37,7 +37,7 @@ type Controller struct {
 
 func main() {
 	// Criação de um array de funções de diferentes tipos
-	dependencies := []interface{}{newController, newService, newRepository}
+	dependencies := []any{newController, newService, newRepository}
 
 	app := di.NewContainer()
 

@@ -8,8 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/cloud"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/cloud"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 )
 
 type sqsNotification struct {
@@ -31,12 +31,11 @@ type awsMessaging struct {
 
 func newAwsMessaging() *awsMessaging {
 	var m awsMessaging
-
 	m.snsService = sns.New(cloud.GetAwsSession())
 	m.sqsService = sqs.New(cloud.GetAwsSession())
 
 	if _, err := m.snsService.ListTopics(nil); err != nil {
-		logging.Fatal(connection_error, err)
+		logging.Fatal(context.Background()).Err(err).Msg(connectionError)
 	}
 
 	return &m
@@ -61,9 +60,10 @@ func (m *awsMessaging) consumer(ctx context.Context, c *consumer) (chan *Provide
 				c.Done()
 				return
 			}
+
 			msgs, err := m.readMessages(ctx, queueUrl)
 			if err != nil {
-				logging.Error("Could not read messages from queue %s. Error: %v", c.queue, err)
+				logging.Error(ctx).Err(err).Msgf(couldNotReceiveMsg, c.queue)
 			}
 
 			if len(msgs.Messages) > 0 {
@@ -71,17 +71,18 @@ func (m *awsMessaging) consumer(ctx context.Context, c *consumer) (chan *Provide
 
 				var n sqsNotification
 				if err = json.Unmarshal([]byte(*msg.Body), &n); err != nil {
-					logging.Error(couldNotReadMsgBody, *msg.MessageId, c.queue, err)
+					logging.Error(ctx).Err(err).Msgf(couldNotReadMsgBody, *msg.MessageId, c.queue)
 				}
 
 				var pm ProviderMessage
 				if err = json.Unmarshal([]byte(n.Message), &pm); err != nil {
-					logging.Error(couldNotReadMsgBody, *msg.MessageId, c.queue, err)
-				} else {
-					pm.addOriginBrokerNotification(&n)
-					ch <- &pm
-					m.removeMessageFromQueue(ctx, queueUrl, msg)
+					logging.Error(ctx).Err(err).Msgf(couldNotReadMsgBody, *msg.MessageId, c.queue)
+					return
 				}
+
+				pm.addOriginBrokerNotification(&n)
+				ch <- &pm
+				m.removeMessageFromQueue(ctx, queueUrl, msg)
 			}
 		}
 	}()
@@ -105,18 +106,18 @@ func (m *awsMessaging) removeMessageFromQueue(ctx context.Context, queueResult *
 		QueueUrl:      queueResult.QueueUrl,
 		ReceiptHandle: msg.ReceiptHandle,
 	}); err != nil {
-		logging.Error("Could not delete message with id %s from queue %s. Error: %v", *msg.MessageId, *queueResult.QueueUrl, err)
+		logging.Error(ctx).Err(err).Msgf(couldNotDeleteMsg, *msg.MessageId, *queueResult.QueueUrl)
 	}
 }
 
 func (m *awsMessaging) getQueueUrl(ctx context.Context, queue string) *sqs.GetQueueUrlOutput {
 	queueResult, err := m.sqsService.GetQueueUrlWithContext(ctx, &sqs.GetQueueUrlInput{QueueName: aws.String(queue)})
 	if err != nil {
-		logging.Fatal("Could not connect to queue %s. Error: %v", queue, err)
+		logging.Fatal(ctx).Err(err).Msgf(couldNotConnectQueue, queue)
 	}
 
 	if queueResult.QueueUrl == nil {
-		logging.Fatal("Queue %s not found", queue)
+		logging.Fatal(ctx).Msgf(queueNotFound, queue)
 	}
 
 	return queueResult

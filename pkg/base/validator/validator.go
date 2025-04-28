@@ -1,7 +1,7 @@
 package validator
 
 import (
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/types"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/types"
 	form "github.com/go-playground/form/v4"
 	playValidator "github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -52,7 +52,7 @@ func registerUUIDCustomType() {
 
 // registerIsoDateCustomType registers a custom type function for ISO date parsing.
 //
-// It takes an array of strings as input parameters and returns an interface{} and an error.
+// It takes an array of strings as input parameters and returns an any and an error.
 func registerIsoDateCustomType() {
 	instance.formDecoder.RegisterCustomTypeFunc(func(vals []string) (any, error) {
 		return types.ParseIsoDate(vals[0])
@@ -61,7 +61,7 @@ func registerIsoDateCustomType() {
 
 // registerIsoTimeCustomType registers a custom type function for ISO time parsing.
 //
-// It takes an array of strings as input parameters and returns an interface{} and an error.
+// It takes an array of strings as input parameters and returns an any and an error.
 func registerIsoTimeCustomType() {
 	instance.formDecoder.RegisterCustomTypeFunc(func(vals []string) (any, error) {
 		return types.ParseIsoTime(vals[0])

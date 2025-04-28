@@ -1,11 +1,12 @@
 package observer
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 )
 
 type subject interface {
@@ -25,7 +26,7 @@ func Initialize() {
 
 	go func() {
 		sig := <-ch
-		logging.Warn("notify shutdown: %+v", sig)
+		logging.Warn(context.Background()).Msgf("notify shutdown: %+v", sig)
 		services.notify()
 	}()
 }

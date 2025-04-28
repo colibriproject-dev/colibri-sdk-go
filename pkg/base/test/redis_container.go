@@ -3,11 +3,10 @@ package test
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/docker/go-connections/nat"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
@@ -26,11 +25,13 @@ type RedisContainer struct {
 	redisContainerRequest *testcontainers.ContainerRequest
 	redisContainer        testcontainers.Container
 	redisClient           *redis.Client
+	ctx                   context.Context
 }
 
-func UseRedisContainer() *RedisContainer {
+func UseRedisContainer(ctx context.Context) *RedisContainer {
 	if redisContainerInstance == nil {
 		redisContainerInstance = newRedisContainer()
+		redisContainerInstance.ctx = ctx
 		redisContainerInstance.start()
 	}
 	return redisContainerInstance
@@ -51,25 +52,24 @@ func newRedisContainer() *RedisContainer {
 
 func (c *RedisContainer) start() {
 	var err error
-	ctx := context.Background()
-
-	c.redisContainer, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+	c.redisContainer, err = testcontainers.GenericContainer(c.ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: *c.redisContainerRequest,
 		Started:          true,
 	})
 	if err != nil {
-		logging.Fatal(err.Error())
+		logging.Fatal(c.ctx).Err(err)
 	}
 
-	testDbPort, err := c.redisContainer.MappedPort(ctx, testRedisSvcPort)
+	testDbPort, err := c.redisContainer.MappedPort(c.ctx, testRedisSvcPort)
 	if err != nil {
-		logging.Fatal(err.Error())
+		logging.Fatal(c.ctx).Err(err)
 	}
 
-	log.Printf("Test redis started at port: %s", testDbPort)
 	c.setRedisEnv(testDbPort)
 	opts := &redis.Options{Addr: fmt.Sprintf("localhost:%s", testDbPort.Port())}
 	c.redisClient = redis.NewClient(opts)
+
+	logging.Info(c.ctx).Msgf("Test redis started at port: %s", testDbPort)
 }
 
 func (c RedisContainer) setRedisEnv(port nat.Port) {

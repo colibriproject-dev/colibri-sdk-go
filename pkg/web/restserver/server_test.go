@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/security"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/test"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/web/restclient"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/test"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/web/restclient"
 	"github.com/stretchr/testify/assert"
 )
 

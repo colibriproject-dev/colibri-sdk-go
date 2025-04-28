@@ -3,7 +3,7 @@ package validator
 import (
 	"testing"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/types"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/types"
 	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/assert"
 )
@@ -20,6 +20,7 @@ func TestSortDirectionValidation(t *testing.T) {
 		{Direction: types.SortDirection("asc"), Expected: false},
 		{Direction: types.SortDirection("desc"), Expected: false},
 		{Direction: types.SortDirection("invalid"), Expected: false},
+		{Direction: types.SortDirection(""), Expected: false},
 	}
 
 	validate := validator.New()

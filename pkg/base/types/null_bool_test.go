@@ -94,4 +94,14 @@ func TestNullBool(t *testing.T) {
 		assert.Equal(t, false, result.Valid)
 		assert.Equal(t, false, result.Bool)
 	})
+
+	t.Run("Should handle null value in json", func(t *testing.T) {
+		var result NullBool
+		err := result.UnmarshalJSON([]byte("null"))
+
+		assert.Nil(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, false, result.Valid)
+		assert.Equal(t, false, result.Bool)
+	})
 }

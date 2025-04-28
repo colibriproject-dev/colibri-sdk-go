@@ -9,12 +9,12 @@ on:
 jobs:
   test:
     name: quality
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.22'
+          go-version: '1.24'
 
       - name: Checkout
         uses: actions/checkout@v3
@@ -29,16 +29,15 @@ jobs:
           make test
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarqube-scan-action@v5
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.organization=colibri-project-io
-            -Dsonar.projectKey=colibri-project-io_colibri-sdk-go
+            -Dsonar.organization=colibri-project-dev
+            -Dsonar.projectKey=colibri-project-dev_colibri-sdk-go
             -Dsonar.sources=.
-            -Dsonar.exclusions=**/*_test.go,**/*.sql,**/*_mock.go,colibri.go
+            -Dsonar.exclusions=**/*_test.go,**/*.sql,**/*_mock.go,colibri.go,development-environment/**,pkg/di/examples/**
             -Dsonar.tests=.
             -Dsonar.test.inclusions=**/*_test.go
-            -Dsonar.go.coverage.reportPaths=/github/workspace/coverage.txt
+            -Dsonar.go.coverage.reportPaths=coverage.txt

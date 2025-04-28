@@ -10,16 +10,16 @@ import (
 type Statement struct {
 	ctx   context.Context
 	query string
-	args  []interface{}
+	args  []any
 }
 
 // NewStatement creates a new pointer to Statement struct.
 //
 // ctx: the context.Context for the statement
 // query: the query string for the statement
-// params: variadic interface{} for additional parameters
+// params: variadic any for additional parameters
 // Returns a pointer to Statement struct
-func NewStatement(ctx context.Context, query string, params ...interface{}) *Statement {
+func NewStatement(ctx context.Context, query string, params ...any) *Statement {
 	return &Statement{ctx, query, params}
 }
 

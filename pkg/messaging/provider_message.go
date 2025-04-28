@@ -2,20 +2,33 @@ package messaging
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/validator"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/validator"
 	"github.com/google/uuid"
 )
 
 type ProviderMessage struct {
-	Id       uuid.UUID   `json:"id"`
-	Origin   string      `json:"origin"`
-	Action   string      `json:"action"`
-	TenantId string      `json:"tenantId"`
-	UserId   string      `json:"userId"`
-	Message  interface{} `json:"message"`
-	n        interface{}
+	ID          uuid.UUID                       `json:"id"`
+	Origin      string                          `json:"origin"`
+	Action      string                          `json:"action"`
+	Message     any                             `json:"message"`
+	AuthContext *security.AuthenticationContext `json:"authenticationContext"`
+	n           any
+}
+
+// NewProviderMessage returns a new ProviderMessage
+func NewProviderMessage(ctx context.Context, action string, message any) *ProviderMessage {
+	return &ProviderMessage{
+		ID:          uuid.New(),
+		Origin:      config.APP_NAME,
+		Action:      action,
+		Message:     message,
+		AuthContext: security.GetAuthenticationContext(ctx),
+	}
 }
 
 // String convert struct into json string
@@ -26,7 +39,7 @@ func (msg *ProviderMessage) String() string {
 }
 
 // DecodeAndValidateMessage transform interface into ProviderMessage and validate the struct
-func (msg *ProviderMessage) DecodeAndValidateMessage(model interface{}) error {
+func (msg *ProviderMessage) DecodeAndValidateMessage(model any) error {
 	if err := msg.DecodeMessage(model); err != nil {
 		return err
 	}
@@ -35,7 +48,7 @@ func (msg *ProviderMessage) DecodeAndValidateMessage(model interface{}) error {
 }
 
 // DecodeMessage transform interface into ProviderMessage
-func (msg *ProviderMessage) DecodeMessage(model interface{}) error {
+func (msg *ProviderMessage) DecodeMessage(model any) error {
 	buf := new(bytes.Buffer)
 
 	if err := json.NewEncoder(buf).Encode(msg.Message); err != nil {
@@ -50,6 +63,6 @@ func (msg *ProviderMessage) DecodeMessage(model interface{}) error {
 }
 
 // addOriginBrokerNotification add reference of origin broker message to send dlq if an error occurs
-func (msg *ProviderMessage) addOriginBrokerNotification(n interface{}) {
+func (msg *ProviderMessage) addOriginBrokerNotification(n any) {
 	msg.n = n
 }

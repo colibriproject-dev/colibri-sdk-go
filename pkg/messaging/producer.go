@@ -2,13 +2,11 @@ package messaging
 
 import (
 	"context"
-	"errors"
-	"runtime/debug"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/config"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/monitoring"
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/security"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
 	"github.com/google/uuid"
 )
 
@@ -17,44 +15,33 @@ type Producer struct {
 }
 
 func NewProducer(topicName string) *Producer {
+	if instance == nil {
+		logging.Fatal(context.Background()).Msg(messagingNotInitialized)
+	}
+
 	return &Producer{topicName}
 }
 
 func (p *Producer) Publish(ctx context.Context, action string, message any) error {
-	if instance == nil {
-		return errors.New("messaging has not been initialized. add in main.go `messaging.Initialize()`")
-	}
 	txn := monitoring.GetTransactionInContext(ctx)
 
-	defer func() {
-		if r := recover(); r != nil {
-			logging.Error("panic recovering publish topic %s: \n%s", p.topic, string(debug.Stack()))
-			monitoring.NoticeError(txn, r.(error))
-		}
-	}()
-
 	if txn != nil {
-		segment := monitoring.StartTransactionSegment(ctx, messaging_producer_transaction, map[string]string{
+		segment := monitoring.StartTransactionSegment(ctx, messagingProducerTransaction, map[string]string{
 			"topic": p.topic,
 		})
 		defer monitoring.EndTransactionSegment(segment)
 	}
 
 	msg := &ProviderMessage{
-		Id:      uuid.New(),
-		Origin:  config.APP_NAME,
-		Action:  action,
-		Message: message,
-	}
-
-	authContext := security.GetAuthenticationContext(ctx)
-	if authContext != nil {
-		msg.TenantId = authContext.GetTenantID()
-		msg.UserId = authContext.GetUserID()
+		ID:          uuid.New(),
+		Origin:      config.APP_NAME,
+		Action:      action,
+		Message:     message,
+		AuthContext: security.GetAuthenticationContext(ctx),
 	}
 
 	if err := instance.producer(ctx, p, msg); err != nil {
-		logging.Error("Could not send message with id %s to topic %s. Error: %v", msg.Id, p.topic, err)
+		logging.Error(ctx).Err(err).Msgf(couldNotSendMsg, msg.ID, p.topic)
 		monitoring.NoticeError(txn, err)
 		return err
 	}

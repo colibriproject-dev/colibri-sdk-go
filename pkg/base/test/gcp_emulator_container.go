@@ -3,10 +3,9 @@ package test
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 
-	"github.com/colibri-project-io/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/go-connections/nat"
@@ -73,20 +72,20 @@ func (c *gcpEmulatorContainer) start() {
 		Started:          true,
 	})
 	if err != nil {
-		logging.Fatal(err.Error())
+		logging.Fatal(c.ctx).Err(err)
 	}
 
 	pubSubPort, err := c.lsContainer.MappedPort(c.ctx, gcpEmulatorPubSubSvcPort)
 	if err != nil {
-		logging.Fatal(err.Error())
+		logging.Fatal(c.ctx).Err(err)
 	}
 
 	storagePort, err := c.lsContainer.MappedPort(c.ctx, gcpEmulatorStorageSvcPort)
 	if err != nil {
-		logging.Fatal(err.Error())
+		logging.Fatal(c.ctx).Err(err)
 	}
 
-	log.Printf("Test gcp emulator started. Pub/Sub at %s and Storage at %s", pubSubPort, storagePort)
+	logging.Info(c.ctx).Msgf("Test gcp emulator started. Pub/Sub at %s and Storage at %s", pubSubPort, storagePort)
 	c.setEnv(pubSubPort, storagePort)
 }
 

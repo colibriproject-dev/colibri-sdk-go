@@ -11,7 +11,7 @@ import (
 // NullIsoTime for empty time field
 type NullIsoTime sql.NullTime
 
-func (t *NullIsoTime) Scan(value interface{}) error {
+func (t *NullIsoTime) Scan(value any) error {
 	var i sql.NullTime
 	if err := i.Scan(value); err != nil {
 		return err
