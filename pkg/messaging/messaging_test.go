@@ -3,6 +3,7 @@ package messaging
 import (
 	"context"
 	"fmt"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"testing"
 	"time"
 
@@ -16,11 +17,10 @@ type userMessageTest struct {
 }
 
 const (
-	testTopicName        = "COLIBRI_PROJECT_USER_CREATE"
-	testQueueName        = "COLIBRI_PROJECT_USER_CREATE_APP_CONSUMER"
-	testFailTopicName    = "COLIBRI_PROJECT_FAIL_USER_CREATE"
-	testFailQueueName    = "COLIBRI_PROJECT_FAIL_USER_CREATE_APP_CONSUMER"
-	testFailDLQQueueName = "COLIBRI_PROJECT_FAIL_USER_CREATE_APP_CONSUMER_DLQ"
+	testTopicName     = "COLIBRI_PROJECT_USER_CREATE"
+	testQueueName     = "COLIBRI_PROJECT_USER_CREATE_APP_CONSUMER"
+	testFailTopicName = "COLIBRI_PROJECT_FAIL_USER_CREATE"
+	testFailQueueName = "COLIBRI_PROJECT_FAIL_USER_CREATE_APP_CONSUMER"
 )
 
 type queueConsumerTest struct {
@@ -36,17 +36,33 @@ func (q *queueConsumerTest) QueueName() string {
 	return q.qName
 }
 
-func TestMessaging_AWS(t *testing.T) {
-	test.InitializeTestLocalstack()
+func TestMessaging(t *testing.T) {
+	t.Run("TestMessaging_GCP", func(t *testing.T) {
+		test.InitializeGcpEmulator()
+		Initialize()
+		executeMessagingTest(t)
+		t.Cleanup(func() {
+			instance = nil
+			logging.Info(context.Background()).Msg("Cleaning up GCP emulator")
+		})
+	})
 
-	Initialize()
-
-	executeMessagingTest(t)
+	t.Run("TestMessaging_AWS", func(t *testing.T) {
+		test.InitializeTestLocalstack()
+		Initialize()
+		executeMessagingTest(t)
+		t.Cleanup(func() {
+			instance = nil
+			logging.Info(context.Background()).Msg("Cleaning up AWS localstack")
+		})
+	})
 }
 
 func executeMessagingTest(t *testing.T) {
+
 	t.Run("Should return nil when process message with success", func(t *testing.T) {
 		chSuccess := make(chan string)
+
 		qc := queueConsumerTest{
 			fn: func(ctx context.Context, message *ProviderMessage) error {
 				chSuccess <- fmt.Sprintf("processing message: %v", message)
@@ -59,7 +75,12 @@ func executeMessagingTest(t *testing.T) {
 		NewConsumer(&qc)
 
 		model := userMessageTest{"User Name", "user@email.com"}
-		producer.Publish(context.Background(), "create", model)
+		if err := producer.Publish(context.Background(), "create", model); err != nil {
+			logging.Error(context.Background()).Err(err).Msg(
+				fmt.Sprintf("Error publishing message to topic %s", testTopicName),
+			)
+			t.Fatal(err)
+		}
 
 		timeout := time.After(2 * time.Second)
 		select {
@@ -85,7 +106,9 @@ func executeMessagingTest(t *testing.T) {
 		NewConsumer(&qc)
 
 		model := userMessageTest{"User Name", "user@email.com"}
-		producer.Publish(context.Background(), "create", model)
+		if err := producer.Publish(context.Background(), "create", model); err != nil {
+			t.Fatal(err)
+		}
 
 		timeout := time.After(2 * time.Second)
 		select {
