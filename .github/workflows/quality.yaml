@@ -37,7 +37,7 @@ jobs:
             -Dsonar.organization=colibri-project-dev
             -Dsonar.projectKey=colibri-project-dev_colibri-sdk-go
             -Dsonar.sources=.
-            -Dsonar.exclusions=**/*_test.go,**/*.sql,**/*_mock.go,colibri.go,development-environment/**,pkg/di/examples/**
+            -Dsonar.exclusions=**/*_test.go,**/*.sql,**/*_mock.go,colibri.go,development-environment/**,pkg/di/examples/**,**/test_*.go
             -Dsonar.tests=.
             -Dsonar.test.inclusions=**/*_test.go
             -Dsonar.go.coverage.reportPaths=coverage.txt
