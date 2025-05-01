@@ -31,7 +31,7 @@ func Initialize() {
 	}()
 }
 
-// Attach the subject on services observer
+// Attach the subject on service observer
 func Attach(o Observer) {
 	services.attach(o)
 }
@@ -44,7 +44,7 @@ func (s *service) attach(observer Observer) {
 	s.observers = append(s.observers, observer)
 }
 
-func (s service) notify() {
+func (s *service) notify() {
 	for _, observer := range s.observers {
 		observer.Close()
 	}
