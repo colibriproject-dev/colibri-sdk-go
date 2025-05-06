@@ -33,10 +33,12 @@ func AddRoutes(routes []Route) {
 	srvRoutes = append(srvRoutes, routes...)
 }
 
+// CustomAuthMiddleware add custom authentication middleware to the web server
 func CustomAuthMiddleware(fn CustomAuthenticationMiddleware) {
 	customAuth = fn
 }
 
+// Use add custom middleware to the web server
 func Use(m CustomMiddleware) {
 	customMiddlewares = append(customMiddlewares, m)
 }
