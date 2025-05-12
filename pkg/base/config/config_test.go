@@ -9,39 +9,36 @@ import (
 )
 
 const (
-	invalid_value              = "XYZ"
-	app_name_value             = "TEST APP NAME"
-	app_type_value             = "service"
-	new_relic_license_value    = "123456-abcdef-7890-ghi"
-	cloud_value                = "aws"
-	cloud_host_value           = "http://my-cloud-host-fake.com"
-	cloud_region_value         = "test-region"
-	cloud_secret_value         = "test-secret"
-	cloud_token_value          = "test-token"
-	cloud_disable_ssl_value    = "true"
-	port_value                 = "8081"
-	cache_uri_value            = "my-cache-fake:6379"
-	cache_password_value       = "my-cache-password"
-	sql_db_name_value          = "my-db-name"
-	sql_db_host_value          = "my-db-host"
-	sql_db_port_value          = "1234"
-	sql_db_user_value          = "my-db-user"
-	sql_db_password_value      = "my-db-password"
-	sql_db_ssl_mode_value      = "disable"
-	wait_group_timeout         = 400
-	default_wait_group_timeout = 90
+	invalidValue            = "XYZ"
+	appNameValue            = "TEST APP NAME"
+	newRelicLicenseValue    = "123456-abcdef-7890-ghi"
+	cloudHostValue          = "http://my-cloud-host-fake.com"
+	cloudRegionValue        = "test-region"
+	cloudSecretValue        = "test-secret"
+	cloudTokenValue         = "test-token"
+	portValue               = "8081"
+	cacheUriValue           = "my-cache-fake:6379"
+	cachePasswordValue      = "my-cache-password"
+	sqlDbNameValue          = "my-db-name"
+	sqlDbHostValue          = "my-db-host"
+	sqlDbPortValue          = "1234"
+	sqlDbUserValue          = "my-db-user"
+	sqlDbPasswordValue      = "my-db-password"
+	sqlDbSslModeValue       = "disable"
+	waitGroupTimeout        = 400
+	defaultWaitGroupTimeout = 90
 )
 
 func TestEnvironmentProfiles(t *testing.T) {
-	t.Run("Should return error when enviroment is not configured", func(t *testing.T) {
+	t.Run("Should return error when environment is not configured", func(t *testing.T) {
 		assert.EqualError(t, Load(), errorEnvironmentNotConfiguredMsg)
 	})
 
-	t.Run("Should return error when enviroment contains a invalid value", func(t *testing.T) {
-		assert.NoError(t, os.Setenv(ENV_ENVIRONMENT, invalid_value))
+	t.Run("Should return error when environment contains a invalid value", func(t *testing.T) {
+		assert.NoError(t, os.Setenv(ENV_ENVIRONMENT, invalidValue))
 
 		err := Load()
-		assert.Equal(t, invalid_value, ENVIRONMENT)
+		assert.Equal(t, invalidValue, ENVIRONMENT)
 		assert.EqualError(t, err, errorEnvironmentNotConfiguredMsg)
 	})
 
@@ -84,7 +81,7 @@ func TestEnvironmentProfiles(t *testing.T) {
 		assert.True(t, IsLocalEnvironment())
 	})
 
-	t.Run("Should configure with develpoment environment", func(t *testing.T) {
+	t.Run("Should configure with development environment", func(t *testing.T) {
 		assert.NoError(t, os.Setenv(ENV_ENVIRONMENT, ENVIRONMENT_DEVELOPMENT))
 
 		Load()
@@ -110,32 +107,32 @@ func TestAppName(t *testing.T) {
 	})
 
 	t.Run("Should return app name", func(t *testing.T) {
-		assert.NoError(t, os.Setenv(ENV_APP_NAME, app_name_value))
+		assert.NoError(t, os.Setenv(ENV_APP_NAME, appNameValue))
 
 		Load()
 		assert.Equal(t, ENVIRONMENT_PRODUCTION, ENVIRONMENT)
-		assert.Equal(t, APP_NAME, app_name_value)
+		assert.Equal(t, APP_NAME, appNameValue)
 	})
 }
 
 func TestAppType(t *testing.T) {
 	assert.NoError(t, os.Setenv(ENV_ENVIRONMENT, ENVIRONMENT_PRODUCTION))
-	assert.NoError(t, os.Setenv(ENV_APP_NAME, app_name_value))
+	assert.NoError(t, os.Setenv(ENV_APP_NAME, appNameValue))
 
 	t.Run("Should return error when enviroment is not configured", func(t *testing.T) {
 		err := Load()
 		assert.Equal(t, ENVIRONMENT_PRODUCTION, ENVIRONMENT)
-		assert.Equal(t, app_name_value, APP_NAME)
+		assert.Equal(t, appNameValue, APP_NAME)
 		assert.EqualError(t, err, errorAppTypeNotConfiguredMsg)
 	})
 
 	t.Run("Should return error when app_type contains a invalid value", func(t *testing.T) {
-		assert.NoError(t, os.Setenv(ENV_APP_TYPE, invalid_value))
+		assert.NoError(t, os.Setenv(ENV_APP_TYPE, invalidValue))
 
 		err := Load()
 		assert.Equal(t, ENVIRONMENT_PRODUCTION, ENVIRONMENT)
-		assert.Equal(t, app_name_value, APP_NAME)
-		assert.Equal(t, invalid_value, APP_TYPE)
+		assert.Equal(t, appNameValue, APP_NAME)
+		assert.Equal(t, invalidValue, APP_TYPE)
 		assert.EqualError(t, err, errorAppTypeNotConfiguredMsg)
 	})
 
@@ -144,7 +141,7 @@ func TestAppType(t *testing.T) {
 
 		Load()
 		assert.Equal(t, ENVIRONMENT_PRODUCTION, ENVIRONMENT)
-		assert.Equal(t, app_name_value, APP_NAME)
+		assert.Equal(t, appNameValue, APP_NAME)
 		assert.Equal(t, APP_TYPE_SERVICE, APP_TYPE)
 	})
 
@@ -153,14 +150,14 @@ func TestAppType(t *testing.T) {
 
 		Load()
 		assert.Equal(t, ENVIRONMENT_PRODUCTION, ENVIRONMENT)
-		assert.Equal(t, app_name_value, APP_NAME)
+		assert.Equal(t, appNameValue, APP_NAME)
 		assert.Equal(t, APP_TYPE_SERVERLESS, APP_TYPE)
 	})
 }
 
 func TestCloud(t *testing.T) {
 	assert.NoError(t, os.Setenv(ENV_ENVIRONMENT, ENVIRONMENT_PRODUCTION))
-	assert.NoError(t, os.Setenv(ENV_APP_NAME, app_name_value))
+	assert.NoError(t, os.Setenv(ENV_APP_NAME, appNameValue))
 	assert.NoError(t, os.Setenv(ENV_APP_TYPE, APP_TYPE_SERVERLESS))
 
 	t.Run("Should return error when cloud is not configured", func(t *testing.T) {
@@ -168,10 +165,10 @@ func TestCloud(t *testing.T) {
 	})
 
 	t.Run("Should return error when enviroment contains a invalid value", func(t *testing.T) {
-		assert.NoError(t, os.Setenv(ENV_CLOUD, invalid_value))
+		assert.NoError(t, os.Setenv(ENV_CLOUD, invalidValue))
 
 		err := Load()
-		assert.Equal(t, invalid_value, CLOUD)
+		assert.Equal(t, invalidValue, CLOUD)
 		assert.EqualError(t, err, errorCloudNotConfiguredMsg)
 	})
 
@@ -200,29 +197,29 @@ func TestCloud(t *testing.T) {
 func TestWaitGroupTimeout(t *testing.T) {
 	loadTestEnvs(t)
 	t.Run("Should return default value when enviroment is not configured", func(t *testing.T) {
-		assert.Equal(t, default_wait_group_timeout, WAIT_GROUP_TIMEOUT_SECONDS)
+		assert.Equal(t, defaultWaitGroupTimeout, WAIT_GROUP_TIMEOUT_SECONDS)
 	})
 
 	t.Run("Should return wait group timeout value", func(t *testing.T) {
-		assert.NoError(t, os.Setenv("WAIT_GROUP_TIMEOUT_SECONDS", fmt.Sprintf("%v", wait_group_timeout)))
+		assert.NoError(t, os.Setenv("WAIT_GROUP_TIMEOUT_SECONDS", fmt.Sprintf("%v", waitGroupTimeout)))
 
 		Load()
-		assert.Equal(t, wait_group_timeout, WAIT_GROUP_TIMEOUT_SECONDS)
+		assert.Equal(t, waitGroupTimeout, WAIT_GROUP_TIMEOUT_SECONDS)
 	})
 
 }
 
 func TestNewRelicKey(t *testing.T) {
 	assert.NoError(t, os.Setenv(ENV_ENVIRONMENT, ENVIRONMENT_PRODUCTION))
-	assert.NoError(t, os.Setenv(ENV_APP_NAME, app_name_value))
+	assert.NoError(t, os.Setenv(ENV_APP_NAME, appNameValue))
 	assert.NoError(t, os.Setenv(ENV_APP_TYPE, APP_TYPE_SERVERLESS))
 	assert.NoError(t, os.Setenv(ENV_CLOUD, CLOUD_FIREBASE))
 
 	t.Run("Should return new relic key is configured in production environment", func(t *testing.T) {
-		assert.NoError(t, os.Setenv(ENV_NEW_RELIC_LICENSE, new_relic_license_value))
+		assert.NoError(t, os.Setenv(ENV_NEW_RELIC_LICENSE, newRelicLicenseValue))
 
 		_ = Load()
-		assert.Equal(t, new_relic_license_value, NEW_RELIC_LICENSE)
+		assert.Equal(t, newRelicLicenseValue, NEW_RELIC_LICENSE)
 	})
 }
 
@@ -235,12 +232,12 @@ func TestServerPort(t *testing.T) {
 	})
 
 	t.Run("Should return error when server port is wrong value", func(t *testing.T) {
-		assert.NoError(t, os.Setenv(ENV_PORT, invalid_value))
+		assert.NoError(t, os.Setenv(ENV_PORT, invalidValue))
 		assert.NotNil(t, Load())
 	})
 
 	t.Run("Should return server port when environment is not empty", func(t *testing.T) {
-		assert.NoError(t, os.Setenv(ENV_PORT, port_value))
+		assert.NoError(t, os.Setenv(ENV_PORT, portValue))
 
 		Load()
 		assert.Equal(t, 8081, PORT)
@@ -256,7 +253,7 @@ func TestSqlDBMaxOpenConns(t *testing.T) {
 	})
 
 	t.Run("Should return error when sqldb max open conns is wrong value", func(t *testing.T) {
-		assert.NoError(t, os.Setenv(ENV_SQL_DB_MAX_OPEN_CONNS, invalid_value))
+		assert.NoError(t, os.Setenv(ENV_SQL_DB_MAX_OPEN_CONNS, invalidValue))
 		assert.NotNil(t, Load())
 	})
 
@@ -277,7 +274,7 @@ func TestSqlDBMaxIdleConns(t *testing.T) {
 	})
 
 	t.Run("Should return error when sqldb max idle conns is wrong value", func(t *testing.T) {
-		assert.NoError(t, os.Setenv(ENV_SQL_DB_MAX_IDLE_CONNS, invalid_value))
+		assert.NoError(t, os.Setenv(ENV_SQL_DB_MAX_IDLE_CONNS, invalidValue))
 		assert.NotNil(t, Load())
 	})
 
@@ -298,7 +295,7 @@ func TestSqlDBMigration(t *testing.T) {
 	})
 
 	t.Run("Should return error when exec migration is wrong value", func(t *testing.T) {
-		assert.NoError(t, os.Setenv(ENV_SQL_DB_MIGRATION, invalid_value))
+		assert.NoError(t, os.Setenv(ENV_SQL_DB_MIGRATION, invalidValue))
 		assert.NotNil(t, Load())
 	})
 
@@ -319,7 +316,7 @@ func TestCloudDisableSsl(t *testing.T) {
 	})
 
 	t.Run("Should return error when debug is wrong value", func(t *testing.T) {
-		assert.NoError(t, os.Setenv(ENV_CLOUD_DISABLE_SSL, invalid_value))
+		assert.NoError(t, os.Setenv(ENV_CLOUD_DISABLE_SSL, invalidValue))
 		assert.NotNil(t, Load())
 	})
 
@@ -335,43 +332,43 @@ func TestGeneralEnvs(t *testing.T) {
 	loadTestEnvs(t)
 
 	t.Run("Should load configurations with success and return nil error", func(t *testing.T) {
-		assert.NoError(t, os.Setenv(ENV_CLOUD_HOST, cloud_host_value))
-		assert.NoError(t, os.Setenv(ENV_CLOUD_REGION, cloud_region_value))
-		assert.NoError(t, os.Setenv(ENV_CLOUD_SECRET, cloud_secret_value))
-		assert.NoError(t, os.Setenv(ENV_CLOUD_TOKEN, cloud_token_value))
-		assert.NoError(t, os.Setenv(ENV_CACHE_URI, cache_uri_value))
-		assert.NoError(t, os.Setenv(ENV_CACHE_PASSWORD, cache_password_value))
-		assert.NoError(t, os.Setenv(ENV_SQL_DB_NAME, sql_db_name_value))
-		assert.NoError(t, os.Setenv(ENV_SQL_DB_HOST, sql_db_host_value))
-		assert.NoError(t, os.Setenv(ENV_SQL_DB_PORT, sql_db_port_value))
-		assert.NoError(t, os.Setenv(ENV_SQL_DB_USER, sql_db_user_value))
-		assert.NoError(t, os.Setenv(ENV_SQL_DB_PASSWORD, sql_db_password_value))
-		assert.NoError(t, os.Setenv(ENV_SQL_DB_SSL_MODE, sql_db_ssl_mode_value))
+		assert.NoError(t, os.Setenv(ENV_CLOUD_HOST, cloudHostValue))
+		assert.NoError(t, os.Setenv(ENV_CLOUD_REGION, cloudRegionValue))
+		assert.NoError(t, os.Setenv(ENV_CLOUD_SECRET, cloudSecretValue))
+		assert.NoError(t, os.Setenv(ENV_CLOUD_TOKEN, cloudTokenValue))
+		assert.NoError(t, os.Setenv(ENV_CACHE_URI, cacheUriValue))
+		assert.NoError(t, os.Setenv(ENV_CACHE_PASSWORD, cachePasswordValue))
+		assert.NoError(t, os.Setenv(ENV_SQL_DB_NAME, sqlDbNameValue))
+		assert.NoError(t, os.Setenv(ENV_SQL_DB_HOST, sqlDbHostValue))
+		assert.NoError(t, os.Setenv(ENV_SQL_DB_PORT, sqlDbPortValue))
+		assert.NoError(t, os.Setenv(ENV_SQL_DB_USER, sqlDbUserValue))
+		assert.NoError(t, os.Setenv(ENV_SQL_DB_PASSWORD, sqlDbPasswordValue))
+		assert.NoError(t, os.Setenv(ENV_SQL_DB_SSL_MODE, sqlDbSslModeValue))
 
 		dbConnectionUri := fmt.Sprintf(SQL_DB_CONNECTION_URI_DEFAULT,
-			sql_db_host_value,
-			sql_db_port_value,
-			sql_db_user_value,
-			sql_db_password_value,
-			sql_db_name_value,
-			app_name_value,
-			sql_db_ssl_mode_value)
+			sqlDbHostValue,
+			sqlDbPortValue,
+			sqlDbUserValue,
+			sqlDbPasswordValue,
+			sqlDbNameValue,
+			appNameValue,
+			sqlDbSslModeValue)
 
 		assert.Nil(t, Load())
-		assert.Equal(t, cloud_host_value, CLOUD_HOST)
-		assert.Equal(t, cloud_region_value, CLOUD_REGION)
-		assert.Equal(t, cloud_secret_value, CLOUD_SECRET)
-		assert.Equal(t, cloud_token_value, CLOUD_TOKEN)
-		assert.Equal(t, cache_uri_value, CACHE_URI)
-		assert.Equal(t, cache_password_value, CACHE_PASSWORD)
-		assert.Equal(t, sql_db_name_value, SQL_DB_NAME)
+		assert.Equal(t, cloudHostValue, CLOUD_HOST)
+		assert.Equal(t, cloudRegionValue, CLOUD_REGION)
+		assert.Equal(t, cloudSecretValue, CLOUD_SECRET)
+		assert.Equal(t, cloudTokenValue, CLOUD_TOKEN)
+		assert.Equal(t, cacheUriValue, CACHE_URI)
+		assert.Equal(t, cachePasswordValue, CACHE_PASSWORD)
+		assert.Equal(t, sqlDbNameValue, SQL_DB_NAME)
 		assert.Equal(t, dbConnectionUri, SQL_DB_CONNECTION_URI)
 	})
 }
 
 func loadTestEnvs(t *testing.T) {
 	assert.NoError(t, os.Setenv(ENV_ENVIRONMENT, ENVIRONMENT_TEST))
-	assert.NoError(t, os.Setenv(ENV_APP_NAME, app_name_value))
+	assert.NoError(t, os.Setenv(ENV_APP_NAME, appNameValue))
 	assert.NoError(t, os.Setenv(ENV_APP_TYPE, APP_TYPE_SERVICE))
 	assert.NoError(t, os.Setenv(ENV_CLOUD, CLOUD_GCP))
 }
