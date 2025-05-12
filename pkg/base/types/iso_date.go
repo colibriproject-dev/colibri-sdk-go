@@ -11,7 +11,7 @@ type IsoDate time.Time
 
 // ParseIsoDate converts string to iso date.
 //
-// It takes a string value as input.
+// It takes a string value as an input.
 // Returns IsoDate and an error.
 func ParseIsoDate(value string) (IsoDate, error) {
 	parsedDate, err := time.Parse(time.DateOnly, value)
@@ -37,7 +37,7 @@ func (t IsoDate) String() string {
 	return time.Time(t).Format(time.DateOnly)
 }
 
-// GoString returns the iso date in Go source code format string.
+// GoString returns the iso date in the Go source code format string.
 //
 // No parameters.
 // Returns a string.
@@ -45,7 +45,7 @@ func (t IsoDate) GoString() string {
 	return time.Time(t).GoString()
 }
 
-// MarshalJSON converts iso date to json string format.
+// MarshalJSON converts iso date to JSON string format.
 //
 // No parameters.
 // Returns a byte slice and an error.
@@ -53,7 +53,7 @@ func (t IsoDate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Time(t).Format(time.DateOnly))
 }
 
-// UnmarshalJSON converts json string to iso date.
+// UnmarshalJSON converts JSON string to iso date.
 //
 // It takes a byte slice as the input data.
 // Returns an error.

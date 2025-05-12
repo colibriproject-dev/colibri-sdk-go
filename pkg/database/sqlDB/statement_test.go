@@ -18,7 +18,7 @@ func TestStatementWithoutInitialize(t *testing.T) {
 
 		err := NewStatement(ctx, "INSERT INTO users VALUES ($1, $2, $3, $4)", user.Id, user.Name, user.Birthday, user.Profile.Id).Execute()
 
-		assert.Error(t, err, db_not_initialized_error)
+		assert.Error(t, err, dbNotInitializedError)
 	})
 }
 
@@ -29,7 +29,7 @@ func TestStatement(t *testing.T) {
 	t.Run("Should return error when execute statement without query", func(t *testing.T) {
 		err := NewStatement(ctx, "").Execute()
 
-		assert.Error(t, err, query_is_empty_error)
+		assert.Error(t, err, queryIsEmptyError)
 	})
 
 	t.Run("Should execute statement", func(t *testing.T) {

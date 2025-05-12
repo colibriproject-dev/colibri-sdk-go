@@ -53,14 +53,13 @@ const (
 	SQL_DB_CONNECTION_URI_DEFAULT string = "host=%s port=%s user=%s password=%s dbname=%s application_name='%s' sslmode=%s"
 	VERSION                              = "v0.0.1"
 
-	// Errors
-	error_enviroment_not_configured                 string = "environment is not configured. Set production, sandbox, development or test"
-	error_app_name_not_configured                   string = "app name is not configured"
-	error_app_type_not_configured                   string = "app type is not configured. Set service or serverless"
-	error_cloud_not_configured                      string = "cloud is not configured. Set aws, azure, gcp or firebase"
-	error_production_required_params_not_configured string = "production required params not configured. Set NEW_RELIC_LICENSE"
-	error_integer_parse                             string = "could not parse %s, permitted int value, got %v: %w"
-	error_boolean_parse                             string = "could not parse %s, permitted 'true' or 'false', got %v: %w"
+	// Errors messages
+	errorEnvironmentNotConfiguredMsg string = "environment is not configured. Set production, sandbox, development or test"
+	errorAppNameNotConfiguredMsg     string = "app name is not configured"
+	errorAppTypeNotConfiguredMsg     string = "app type is not configured. Set service or serverless"
+	errorCloudNotConfiguredMsg       string = "cloud is not configured. Set aws, azure, gcp or firebase"
+	errorParsingIntegerMsg           string = "could not parse %s, permitted int value, got %v: %w"
+	errorParsingBooleanMsg           string = "could not parse %s, permitted 'true' or 'false', got %v: %w"
 )
 
 var (
@@ -99,22 +98,22 @@ func Load() error {
 
 	ENVIRONMENT = os.Getenv(ENV_ENVIRONMENT)
 	if !slices.Contains([]string{ENVIRONMENT_PRODUCTION, ENVIRONMENT_SANDBOX, ENVIRONMENT_DEVELOPMENT, ENVIRONMENT_TEST}, ENVIRONMENT) {
-		return errors.New(error_enviroment_not_configured)
+		return errors.New(errorEnvironmentNotConfiguredMsg)
 	}
 
 	APP_NAME = os.Getenv(ENV_APP_NAME)
 	if APP_NAME == "" {
-		return errors.New(error_app_name_not_configured)
+		return errors.New(errorAppNameNotConfiguredMsg)
 	}
 
 	APP_TYPE = os.Getenv(ENV_APP_TYPE)
 	if !slices.Contains([]string{APP_TYPE_SERVICE, APP_TYPE_SERVERLESS}, APP_TYPE) {
-		return errors.New(error_app_type_not_configured)
+		return errors.New(errorAppTypeNotConfiguredMsg)
 	}
 
 	CLOUD = os.Getenv(ENV_CLOUD)
 	if !slices.Contains([]string{CLOUD_AWS, CLOUD_GCP, CLOUD_FIREBASE}, CLOUD) {
-		return errors.New(error_cloud_not_configured)
+		return errors.New(errorCloudNotConfiguredMsg)
 	}
 
 	NEW_RELIC_LICENSE = os.Getenv(ENV_NEW_RELIC_LICENSE)
@@ -171,7 +170,7 @@ func convertBoolEnv(env *bool, envName string) error {
 	if envString := os.Getenv(envName); envString != "" {
 		var err error
 		if *env, err = strconv.ParseBool(envString); err != nil {
-			return fmt.Errorf(error_boolean_parse, envName, envString, err)
+			return fmt.Errorf(errorParsingBooleanMsg, envName, envString, err)
 		}
 	}
 	return nil
@@ -182,7 +181,7 @@ func convertIntEnv(env *int, envName string) error {
 	if envString := os.Getenv(envName); envString != "" {
 		var err error
 		if *env, err = strconv.Atoi(envString); err != nil {
-			return fmt.Errorf(error_integer_parse, envName, envString, err)
+			return fmt.Errorf(errorParsingIntegerMsg, envName, envString, err)
 		}
 	}
 	return nil
@@ -193,7 +192,7 @@ func convertIntEnvWithDefault(env *int, envName string, fallback int) error {
 	envString := getEnvWithDefault(envName, fallback)
 	var err error
 	if *env, err = strconv.Atoi(envString); err != nil {
-		return fmt.Errorf(error_integer_parse, envName, envString, err)
+		return fmt.Errorf(errorParsingIntegerMsg, envName, envString, err)
 	}
 	return nil
 }

@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	ErrorInvalidValue = errors.New("invalid []byte value")
+	ErrInvalidValue = errors.New("invalid []byte value")
 )
 
 type JsonB map[string]any
@@ -15,7 +15,7 @@ type JsonB map[string]any
 func (t *JsonB) Scan(value any) error {
 	result, valid := value.([]byte)
 	if !valid {
-		return ErrorInvalidValue
+		return ErrInvalidValue
 	}
 
 	return json.Unmarshal(result, &t)

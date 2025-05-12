@@ -34,7 +34,7 @@ const (
 
 func TestEnvironmentProfiles(t *testing.T) {
 	t.Run("Should return error when enviroment is not configured", func(t *testing.T) {
-		assert.EqualError(t, Load(), error_enviroment_not_configured)
+		assert.EqualError(t, Load(), errorEnvironmentNotConfiguredMsg)
 	})
 
 	t.Run("Should return error when enviroment contains a invalid value", func(t *testing.T) {
@@ -42,7 +42,7 @@ func TestEnvironmentProfiles(t *testing.T) {
 
 		err := Load()
 		assert.Equal(t, invalid_value, ENVIRONMENT)
-		assert.EqualError(t, err, error_enviroment_not_configured)
+		assert.EqualError(t, err, errorEnvironmentNotConfiguredMsg)
 	})
 
 	t.Run("Should configure with production environment", func(t *testing.T) {
@@ -106,7 +106,7 @@ func TestAppName(t *testing.T) {
 
 		err := Load()
 		assert.Equal(t, ENVIRONMENT_PRODUCTION, ENVIRONMENT)
-		assert.EqualError(t, err, error_app_name_not_configured)
+		assert.EqualError(t, err, errorAppNameNotConfiguredMsg)
 	})
 
 	t.Run("Should return app name", func(t *testing.T) {
@@ -126,7 +126,7 @@ func TestAppType(t *testing.T) {
 		err := Load()
 		assert.Equal(t, ENVIRONMENT_PRODUCTION, ENVIRONMENT)
 		assert.Equal(t, app_name_value, APP_NAME)
-		assert.EqualError(t, err, error_app_type_not_configured)
+		assert.EqualError(t, err, errorAppTypeNotConfiguredMsg)
 	})
 
 	t.Run("Should return error when app_type contains a invalid value", func(t *testing.T) {
@@ -136,7 +136,7 @@ func TestAppType(t *testing.T) {
 		assert.Equal(t, ENVIRONMENT_PRODUCTION, ENVIRONMENT)
 		assert.Equal(t, app_name_value, APP_NAME)
 		assert.Equal(t, invalid_value, APP_TYPE)
-		assert.EqualError(t, err, error_app_type_not_configured)
+		assert.EqualError(t, err, errorAppTypeNotConfiguredMsg)
 	})
 
 	t.Run("Should return service app type", func(t *testing.T) {
@@ -164,7 +164,7 @@ func TestCloud(t *testing.T) {
 	assert.NoError(t, os.Setenv(ENV_APP_TYPE, APP_TYPE_SERVERLESS))
 
 	t.Run("Should return error when cloud is not configured", func(t *testing.T) {
-		assert.EqualError(t, Load(), error_cloud_not_configured)
+		assert.EqualError(t, Load(), errorCloudNotConfiguredMsg)
 	})
 
 	t.Run("Should return error when enviroment contains a invalid value", func(t *testing.T) {
@@ -172,7 +172,7 @@ func TestCloud(t *testing.T) {
 
 		err := Load()
 		assert.Equal(t, invalid_value, CLOUD)
-		assert.EqualError(t, err, error_cloud_not_configured)
+		assert.EqualError(t, err, errorCloudNotConfiguredMsg)
 	})
 
 	t.Run("Should configure with aws environment", func(t *testing.T) {

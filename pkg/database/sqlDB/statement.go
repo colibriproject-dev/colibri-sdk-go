@@ -59,11 +59,11 @@ func (s *Statement) ExecuteInInstance(instance *sql.DB) error {
 // Returns an error.
 func (s *Statement) validate(instance *sql.DB) error {
 	if instance == nil {
-		return errors.New(db_not_initialized_error)
+		return errors.New(dbNotInitializedError)
 	}
 
 	if s.query == "" {
-		return errors.New(query_is_empty_error)
+		return errors.New(queryIsEmptyError)
 	}
 
 	return nil

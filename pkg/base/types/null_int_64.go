@@ -7,7 +7,7 @@ import (
 	"reflect"
 )
 
-// NullInt64 for empty int64 field
+// NullInt64 for an empty int64 field
 type NullInt64 sql.NullInt64
 
 func (t *NullInt64) Scan(value any) error {

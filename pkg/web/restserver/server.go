@@ -28,7 +28,7 @@ type Server interface {
 	listenAndServe() error
 }
 
-// AddRoutes add list of routes in the webrest server
+// AddRoutes add a list of routes in the webrest server
 func AddRoutes(routes []Route) {
 	srvRoutes = append(srvRoutes, routes...)
 }

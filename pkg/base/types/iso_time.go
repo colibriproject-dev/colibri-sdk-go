@@ -11,7 +11,7 @@ type IsoTime time.Time
 
 // ParseIsoTime converts string to iso time.
 //
-// It takes a string value as input.
+// It takes a string value as an input.
 // Returns IsoTime and an error.
 func ParseIsoTime(value string) (IsoTime, error) {
 	parsedTime, err := time.Parse(time.TimeOnly, value)
@@ -22,7 +22,7 @@ func ParseIsoTime(value string) (IsoTime, error) {
 	return IsoTime(parsedTime), nil
 }
 
-// Value converts iso time to sql driver value.
+// Value converts iso time to SQL driver value.
 //
 // Returns driver.Value and an error.
 func (t IsoTime) Value() (driver.Value, error) {
@@ -45,7 +45,7 @@ func (t IsoTime) GoString() string {
 	return time.Time(t).GoString()
 }
 
-// MarshalJSON converts iso time to json string format.
+// MarshalJSON converts iso time to JSON string format.
 //
 // No parameters.
 // Returns a byte slice and an error.
@@ -53,7 +53,7 @@ func (t IsoTime) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Time(t).Format(time.TimeOnly))
 }
 
-// UnmarshalJSON converts json string to iso time
+// UnmarshalJSON converts JSON string to iso time
 //
 // It takes a byte slice as the input data.
 // Returns an error.

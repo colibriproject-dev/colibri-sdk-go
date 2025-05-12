@@ -11,7 +11,7 @@ type Page[T any] struct {
 	TotalElements uint64 `json:"totalElements"`
 }
 
-// PageRequest is the contract of request page
+// PageRequest is the contract of the request page
 type PageRequest struct {
 	Page  uint16
 	Size  uint16
@@ -23,7 +23,7 @@ func NewPageRequest(page uint16, size uint16, order []Sort) *PageRequest {
 	return &PageRequest{page, size, order}
 }
 
-// GetOrder returns string contains concated order list
+// GetOrder returns string contains a concatenated order list
 func (p *PageRequest) GetOrder() string {
 	orders := make([]string, 0, len(p.Order))
 

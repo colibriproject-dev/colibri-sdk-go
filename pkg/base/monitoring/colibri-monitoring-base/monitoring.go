@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-// Monitoring is a contract to implements all necessary functions
+// Monitoring is a contract to implement all necessary functions
 type Monitoring interface {
 	StartTransaction(ctx context.Context, name string) (any, context.Context)
 	EndTransaction(transaction any)

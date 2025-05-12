@@ -7,7 +7,7 @@ import (
 	"reflect"
 )
 
-// NullString for empty string field
+// NullString for an empty string field
 type NullString sql.NullString
 
 func (t *NullString) Scan(value any) error {

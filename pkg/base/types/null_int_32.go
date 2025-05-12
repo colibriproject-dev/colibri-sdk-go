@@ -7,7 +7,7 @@ import (
 	"reflect"
 )
 
-// NullInt32 for empty int32 field
+// NullInt32 for an empty int32 field
 type NullInt32 sql.NullInt32
 
 func (t *NullInt32) Scan(value any) error {

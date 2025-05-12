@@ -18,28 +18,28 @@ func TestQueryWithoutInitialize(t *testing.T) {
 	t.Run("Should return error when execute query one without params with db not initialized error", func(t *testing.T) {
 		result, err := NewQuery[User](ctx, query_base+" LIMIT 1").One()
 
-		assert.Error(t, err, db_not_initialized_error)
+		assert.Error(t, err, dbNotInitializedError)
 		assert.Nil(t, result)
 	})
 
 	t.Run("Should return error when execute query one with params with db not initialized error", func(t *testing.T) {
 		result, err := NewQuery[User](ctx, query_base+" WHERE u.id = $1", 1).One()
 
-		assert.Error(t, err, db_not_initialized_error)
+		assert.Error(t, err, dbNotInitializedError)
 		assert.Nil(t, result)
 	})
 
 	t.Run("Should return error when execute query many without params with db not initialized error", func(t *testing.T) {
 		result, err := NewQuery[User](ctx, query_base).Many()
 
-		assert.Error(t, err, db_not_initialized_error)
+		assert.Error(t, err, dbNotInitializedError)
 		assert.Nil(t, result)
 	})
 
 	t.Run("Should return error when execute query many with params with db not initialized error", func(t *testing.T) {
 		result, err := NewQuery[User](ctx, query_base+" WHERE u.name = $1", "ADMIN USER").Many()
 
-		assert.Error(t, err, db_not_initialized_error)
+		assert.Error(t, err, dbNotInitializedError)
 		assert.Nil(t, result)
 	})
 }
@@ -51,7 +51,7 @@ func TestQuery(t *testing.T) {
 	t.Run("Should return error when execute one without query", func(t *testing.T) {
 		result, err := NewQuery[User](ctx, "").One()
 
-		assert.Error(t, err, query_is_empty_error)
+		assert.Error(t, err, queryIsEmptyError)
 		assert.Nil(t, result)
 	})
 
@@ -75,7 +75,7 @@ func TestQuery(t *testing.T) {
 	t.Run("Should return error when execute many without query", func(t *testing.T) {
 		result, err := NewQuery[User](ctx, "").Many()
 
-		assert.Error(t, err, query_is_empty_error)
+		assert.Error(t, err, queryIsEmptyError)
 		assert.Nil(t, result)
 	})
 
@@ -163,7 +163,7 @@ func TestCachedQuery(t *testing.T) {
 		result, err := NewCachedQuery(ctx, cache, "").One()
 
 		assert.NoError(t, cacheInitialErr)
-		assert.Error(t, err, query_is_empty_error)
+		assert.Error(t, err, queryIsEmptyError)
 		assert.Nil(t, cacheInitialData)
 		assert.Nil(t, result)
 	})
@@ -208,7 +208,7 @@ func TestCachedQuery(t *testing.T) {
 
 		assert.NoError(t, cacheInitialErr)
 		assert.Nil(t, cacheInitialData)
-		assert.Error(t, err, query_is_empty_error)
+		assert.Error(t, err, queryIsEmptyError)
 		assert.Nil(t, result)
 	})
 

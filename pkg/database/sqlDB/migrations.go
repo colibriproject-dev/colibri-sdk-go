@@ -30,7 +30,7 @@ const (
 // executeDatabaseMigration performs database migrations based on the provided source URL.
 //
 // It checks if the SQL_DB_MIGRATION environment variable is set to true before proceeding.
-// It uses the MIGRATION_SOURCE_URL environment variable for migration source. If not set, it defaults to "./migrations".
+// It uses the MIGRATION_SOURCE_URL environment variable for a migration source. If not set, it defaults to "./migrations".
 // Returns an error if there is a failure during migration execution.
 func executeDatabaseMigration(instance *sql.DB) error {
 	if !config.SQL_DB_MIGRATION {

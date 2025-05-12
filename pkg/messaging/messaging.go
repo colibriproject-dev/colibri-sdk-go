@@ -11,7 +11,6 @@ import (
 const (
 	messagingProducerTransaction string = "producer"
 	messagingConsumerTransaction string = "consumer-%s"
-	messagingDlqTransaction      string = "send-dlq"
 	messagingNotInitialized      string = "messaging has not been initialized. add in main.go `messaging.Initialize()`"
 	messagingAlreadyConnected    string = "message broker already connected"
 	messagingConnected           string = "message broker connected"

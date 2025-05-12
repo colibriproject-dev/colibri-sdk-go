@@ -33,7 +33,7 @@ func NewPageQuery[T any](ctx context.Context, page *types.PageRequest, query str
 	return &PageQuery[T]{ctx, page, query, params}
 }
 
-// Execute returns a pointer of page type with slice of T data.
+// Execute returns a pointer of a page type with slice of T data.
 //
 // No parameters.
 // Returns a pointer to PageQuery struct and an error.
@@ -98,15 +98,15 @@ func (q *PageQuery[T]) pageData(instance *sql.DB) ([]T, error) {
 // Returns an error.
 func (q *PageQuery[T]) validate(instance *sql.DB) error {
 	if instance == nil {
-		return errors.New(db_not_initialized_error)
+		return errors.New(dbNotInitializedError)
 	}
 
 	if q.page == nil {
-		return errors.New(page_is_empty_error)
+		return errors.New(pageIsEmptyError)
 	}
 
 	if q.query == "" {
-		return errors.New(query_is_empty_error)
+		return errors.New(queryIsEmptyError)
 	}
 
 	return nil

@@ -7,7 +7,7 @@ import (
 	"reflect"
 )
 
-// NullInt16 for empty int16 field
+// NullInt16 for an empty int16 field
 type NullInt16 sql.NullInt16
 
 func (t *NullInt16) Scan(value any) error {

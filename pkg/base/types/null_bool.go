@@ -7,7 +7,7 @@ import (
 	"reflect"
 )
 
-// NullBoll for empty boolean field
+// NullBool NullBoll for empty boolean field
 type NullBool sql.NullBool
 
 func (t *NullBool) Scan(value any) error {

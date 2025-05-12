@@ -118,11 +118,11 @@ func (c *Cache[T]) Del(ctx context.Context) error {
 // Returns an error.
 func (c *Cache[T]) validate() error {
 	if instance == nil {
-		return errors.New("Cache not initialized")
+		return errors.New("cache not initialized")
 	}
 
 	if c.name == "" {
-		return errors.New("Cache without name")
+		return errors.New("cache without name")
 	}
 
 	return nil
@@ -145,11 +145,11 @@ func (c *Cache[T]) isErrRedisMoved(err error) bool {
 	return strings.Contains(err.Error(), errRedisMoved)
 }
 
-// reconectInstanceAfterError updates the address of the instance based on the last element of the error message.
+// reconnectInstanceAfterError updates the address of the instance based on the last element of the error message.
 //
 // Parameter:
 // - err: The error that triggered the reconnection.
-func (c *Cache[T]) reconectInstanceAfterError(err error) {
+func (c *Cache[T]) reconnectInstanceAfterError(err error) {
 	movedSetInfo := strings.Split(err.Error(), " ")
 	instance.Options().Addr = movedSetInfo[len(movedSetInfo)-1]
 }
@@ -165,7 +165,7 @@ func (c *Cache[T]) get(ctx context.Context) ([]byte, error) {
 			if err.Error() == errRedisNil {
 				return nil, nil
 			} else if c.isErrRedisMoved(err) {
-				c.reconectInstanceAfterError(err)
+				c.reconnectInstanceAfterError(err)
 				continue
 			} else {
 				return nil, err
@@ -185,7 +185,7 @@ func (c *Cache[T]) set(ctx context.Context, data []byte) error {
 		err := instance.Set(ctx, c.getNamePrefixed(), data, c.ttl).Err()
 		if err != nil {
 			if c.isErrRedisMoved(err) {
-				c.reconectInstanceAfterError(err)
+				c.reconnectInstanceAfterError(err)
 				continue
 			} else {
 				return err
@@ -204,7 +204,7 @@ func (c *Cache[T]) del(ctx context.Context) error {
 		err := instance.Del(ctx, c.getNamePrefixed()).Err()
 		if err != nil {
 			if c.isErrRedisMoved(err) {
-				c.reconectInstanceAfterError(err)
+				c.reconnectInstanceAfterError(err)
 				continue
 			} else {
 				return err

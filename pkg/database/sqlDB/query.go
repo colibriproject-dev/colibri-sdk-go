@@ -8,7 +8,7 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/database/cacheDB"
 )
 
-// Query is a struct for sql query
+// Query is a struct for an SQL query
 type Query[T any] struct {
 	ctx   context.Context
 	cache *cacheDB.Cache[T]
@@ -47,7 +47,7 @@ func (q *Query[T]) Many() ([]T, error) {
 // ManyInInstance retrieves multiple items of type T for the given SQL instance.
 //
 // instance: The *sql.DB instance to execute the query.
-// Returns a slice of retrieved items of type T and an error.
+// Returns a slice of retrieved items type T and an error.
 func (q *Query[T]) ManyInInstance(instance *sql.DB) ([]T, error) {
 	if err := q.validate(instance); err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (q *Query[T]) ManyInInstance(instance *sql.DB) ([]T, error) {
 // fetchMany retrieves multiple items of type T for the given SQL instance.
 //
 // instance: The *sql.DB instance to execute the query.
-// Returns a slice of retrieved items of type T and an error.
+// Returns a slice of retrieved items type T and an error.
 func (q *Query[T]) fetchMany(instance *sql.DB) ([]T, error) {
 	rows, err := q.queryContext(instance)
 	if err != nil {
@@ -140,11 +140,11 @@ func (q *Query[T]) fetchOne(instance *sql.DB) (*T, error) {
 // Returns an error.
 func (q *Query[T]) validate(instance *sql.DB) error {
 	if instance == nil {
-		return errors.New(db_not_initialized_error)
+		return errors.New(dbNotInitializedError)
 	}
 
 	if q.query == "" {
-		return errors.New(query_is_empty_error)
+		return errors.New(queryIsEmptyError)
 	}
 
 	return nil

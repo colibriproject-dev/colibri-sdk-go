@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	storageTransaction      string = "Storage"
-	storageAlreadyConnected string = "storage provider already connected"
-	storageConnected        string = "storage provider connected"
-	connectionError         string = "an error occurred when trying to connect to the storage provider"
+	storageTransactionMsg      string = "Storage"
+	storageAlreadyConnectedMsg string = "storage provider already connected"
+	storageConnectedMsg        string = "storage provider connected"
+	connectionErrorMsg         string = "an error occurred when trying to connect to the storage provider"
 )
 
 type storage interface {
@@ -31,7 +31,7 @@ var instance storage
 // No return values.
 func Initialize() {
 	if instance != nil {
-		logging.Info(context.Background()).Msg(storageAlreadyConnected)
+		logging.Info(context.Background()).Msg(storageAlreadyConnectedMsg)
 		return
 	}
 
@@ -42,7 +42,7 @@ func Initialize() {
 		instance = newGcpStorage()
 	}
 
-	logging.Info(context.Background()).Msg(storageConnected)
+	logging.Info(context.Background()).Msg(storageConnectedMsg)
 }
 
 // DownloadFile downloads a file from the storage provider.
@@ -54,7 +54,7 @@ func Initialize() {
 func DownloadFile(ctx context.Context, bucket, key string) (*os.File, error) {
 	txn := monitoring.GetTransactionInContext(ctx)
 	if txn != nil {
-		segment := monitoring.StartTransactionSegment(ctx, storageTransaction, map[string]string{
+		segment := monitoring.StartTransactionSegment(ctx, storageTransactionMsg, map[string]string{
 			"method": "Download",
 			"bucket": bucket,
 			"key":    key,
@@ -75,7 +75,7 @@ func DownloadFile(ctx context.Context, bucket, key string) (*os.File, error) {
 func UploadFile(ctx context.Context, bucket, key string, file *multipart.File) (string, error) {
 	txn := monitoring.GetTransactionInContext(ctx)
 	if txn != nil {
-		segment := monitoring.StartTransactionSegment(ctx, storageTransaction, map[string]string{
+		segment := monitoring.StartTransactionSegment(ctx, storageTransactionMsg, map[string]string{
 			"method": "Upload",
 			"bucket": bucket,
 			"key":    key,
@@ -95,7 +95,7 @@ func UploadFile(ctx context.Context, bucket, key string, file *multipart.File) (
 func DeleteFile(ctx context.Context, bucket, key string) error {
 	txn := monitoring.GetTransactionInContext(ctx)
 	if txn != nil {
-		segment := monitoring.StartTransactionSegment(ctx, storageTransaction, map[string]string{
+		segment := monitoring.StartTransactionSegment(ctx, storageTransactionMsg, map[string]string{
 			"method": "Delete",
 			"bucket": bucket,
 			"key":    key,

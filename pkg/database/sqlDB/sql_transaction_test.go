@@ -15,7 +15,7 @@ func TestSqlTransactionWithoutInitialize(t *testing.T) {
 	t.Run("Should return error when instance is nil", func(t *testing.T) {
 		err := NewStatement(ctx, "", "Contact Name 1", "em@il.com").Execute()
 
-		assert.Error(t, err, db_not_initialized_error)
+		assert.Error(t, err, dbNotInitializedError)
 	})
 }
 
@@ -31,7 +31,7 @@ func TestSqlTransaction(t *testing.T) {
 	t.Run("Should return error when query is nil", func(t *testing.T) {
 		err := NewStatement(ctx, "", "Contact Name 1", "em@il.com").Execute()
 
-		assert.Error(t, err, query_is_empty_error)
+		assert.Error(t, err, queryIsEmptyError)
 	})
 
 	t.Run("Should execute transaction and commit", func(t *testing.T) {

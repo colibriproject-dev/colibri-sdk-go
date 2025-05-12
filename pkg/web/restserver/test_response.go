@@ -45,7 +45,7 @@ func (r *TestResponse) Headers() http.Header {
 	return r.resp.Header
 }
 
-// Header get header by key
+// Header gets header by key
 func (r *TestResponse) Header(key string) string {
 	return r.resp.Header.Get(key)
 }

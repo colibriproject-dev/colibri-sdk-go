@@ -21,7 +21,7 @@ func (sd SortDirection) IsValid() bool {
 	return sortDirections[sd]
 }
 
-// Sort is the contract to sort an field
+// Sort is the contract to sort a field
 type Sort struct {
 	Direction SortDirection
 	Field     string

@@ -7,7 +7,7 @@ import (
 	"reflect"
 )
 
-// NullFloat64 for empty float field
+// NullFloat64 for an empty float field
 type NullFloat64 sql.NullFloat64
 
 func (t *NullFloat64) Scan(value any) error {

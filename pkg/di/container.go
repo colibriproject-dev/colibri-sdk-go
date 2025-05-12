@@ -28,15 +28,15 @@ func (c *Container) AddGlobalDependencies(deps []any) {
 	c.dependencies = ReflectTypeArray
 }
 
-func (f *Container) StartApp(startFunc any) {
+func (c *Container) StartApp(startFunc any) {
 
 	fmt.Println("Starting framework.....")
-	quantDep := len(f.dependencies)
+	quantDep := len(c.dependencies)
 	fmt.Println(quantDep, " registered dependencies")
 
 	dep := generateDependencyBean(startFunc, false)
 
-	args := f.getDependencyConstructorArgs(dep)
+	args := c.getDependencyConstructorArgs(dep)
 
 	fmt.Println("............Starting application................")
 	fmt.Println()
@@ -108,9 +108,9 @@ func (c *Container) searchInjectableDependencies(paramType reflect.Type, returnT
 	return depsFound
 }
 
-func (f *Container) searchTypes(paramType reflect.Type) []DependencyBean {
+func (c *Container) searchTypes(paramType reflect.Type) []DependencyBean {
 	dependenciesFound := []DependencyBean{}
-	for fnName, dependency := range f.dependencies {
+	for fnName, dependency := range c.dependencies {
 		for i := 0; i < dependency.constructorType.NumOut(); i++ {
 			returnType := dependency.constructorType.Out(i)
 			if returnType == paramType {
@@ -122,9 +122,9 @@ func (f *Container) searchTypes(paramType reflect.Type) []DependencyBean {
 	return dependenciesFound
 }
 
-func (f *Container) searchImplementations(paramType reflect.Type) []DependencyBean {
+func (c *Container) searchImplementations(paramType reflect.Type) []DependencyBean {
 	dependenciesFound := []DependencyBean{}
-	for fnName, dependency := range f.dependencies {
+	for fnName, dependency := range c.dependencies {
 		for i := 0; i < dependency.constructorType.NumOut(); i++ {
 			returnType := dependency.constructorType.Out(i)
 			implements := implementsInterface(returnType, paramType)

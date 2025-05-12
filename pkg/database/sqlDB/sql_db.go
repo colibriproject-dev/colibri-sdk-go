@@ -13,18 +13,18 @@ import (
 )
 
 const (
-	db_default_name          string = "SQL"
-	db_connection_success    string = "%s database connected"
-	db_already_connected     string = "SQL database already connected"
-	db_connection_error      string = "an error occurred while trying to connect to the %s database"
-	db_migration_error       string = "an error occurred when validate database migrations"
-	db_waiting_safe_close    string = "waiting to safely close the %s database connection"
-	db_waiting_force_close   string = "waiting timed out, forcing to close the %s database connection"
-	db_close_error           string = "error on closing the %s database connection"
-	db_close_success         string = "%s database closed"
-	db_not_initialized_error string = "database not initialized"
-	query_is_empty_error     string = "query is empty"
-	page_is_empty_error      string = "page is empty"
+	dbDefaultName         string = "SQL"
+	dbConnectionSuccess   string = "%s database connected"
+	dbAlreadyConnected    string = "SQL database already connected"
+	dbConnectionError     string = "an error occurred while trying to connect to the %s database"
+	dbMigrationError      string = "an error occurred when validate database migrations"
+	dbWaitingSafeClose    string = "waiting to safely close the %s database connection"
+	dbWaitingForceClose   string = "waiting timed out, forcing to close the %s database connection"
+	dbCloseError          string = "error on closing the %s database connection"
+	dbCloseSuccess        string = "%s database closed"
+	dbNotInitializedError string = "database not initialized"
+	queryIsEmptyError     string = "query is empty"
+	pageIsEmptyError      string = "page is empty"
 )
 
 // sqlDBInstance is a pointer to sql.DB
@@ -36,16 +36,16 @@ var sqlDBInstance *sql.DB
 // No return values.
 func Initialize() {
 	if sqlDBInstance != nil {
-		logging.Info(context.Background()).Msg(db_already_connected)
+		logging.Info(context.Background()).Msg(dbAlreadyConnected)
 		return
 	}
 
-	sqlDB := NewSQLDatabaseInstance(db_default_name, config.SQL_DB_CONNECTION_URI)
+	sqlDB := NewSQLDatabaseInstance(dbDefaultName, config.SQL_DB_CONNECTION_URI)
 	sqlDB.SetMaxOpenConns(config.SQL_DB_MAX_OPEN_CONNS)
 	sqlDB.SetMaxIdleConns(config.SQL_DB_MAX_IDLE_CONNS)
 
 	if err := executeDatabaseMigration(sqlDB); err != nil {
-		logging.Fatal(context.Background()).Err(err).Msg(db_migration_error)
+		logging.Fatal(context.Background()).Err(err).Msg(dbMigrationError)
 	}
 
 	sqlDBInstance = sqlDB
@@ -60,15 +60,15 @@ func Initialize() {
 func NewSQLDatabaseInstance(name, databaseURL string) *sql.DB {
 	sqlDB, err := sql.Open(monitoring.GetSQLDBDriverName(), databaseURL)
 	if err != nil {
-		logging.Fatal(context.Background()).Err(err).Msgf(db_connection_error, name)
+		logging.Fatal(context.Background()).Err(err).Msgf(dbConnectionError, name)
 	}
 
 	if err = sqlDB.Ping(); err != nil {
-		logging.Fatal(context.Background()).Err(err).Msgf(db_connection_error, name)
+		logging.Fatal(context.Background()).Err(err).Msgf(dbConnectionError, name)
 	}
 
 	observer.Attach(sqlDBObserver{name, sqlDB})
-	logging.Info(context.Background()).Msgf(db_connection_success, name)
+	logging.Info(context.Background()).Msgf(dbConnectionSuccess, name)
 
 	return sqlDB
 }

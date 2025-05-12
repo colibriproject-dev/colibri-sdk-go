@@ -11,7 +11,7 @@ import (
 
 // getDataList retrieves a list of items from the given sql.Rows object.
 //
-// It takes a sql.Rows object as input and returns a list of items of type T and an error.
+// It takes a sql.Rows object as input and returns a list of items type T and an error.
 func getDataList[T any](rows *sql.Rows) ([]T, error) {
 	list := make([]T, 0)
 	for rows.Next() {
@@ -62,7 +62,7 @@ func reflectCols(model any) (cols []any) {
 // reflectValueValidations validates the type of the provided value.
 //
 // value: the value to validate
-// (isStruct, isTime, isNull, isSlice) : returns booleans indicating if the value is a struct, time type, null type, or a slice.
+// (isStruct, isTime, isNull, isSlice): returns booleans indicating if the value is a struct, time type, null type, or a slice.
 func reflectValueValidations(value reflect.Value) (isStruct, isTime, isNull, isSlice bool) {
 	isStruct = value.Kind() == reflect.Struct
 	isTime = slices.Contains([]string{"time.Time", "types.IsoDate", "types.IsoTime"}, value.Type().String())

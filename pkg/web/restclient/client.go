@@ -12,7 +12,6 @@ import (
 
 const (
 	timeoutDefault           uint   = 1
-	restClientTransaction    string = "REST-CLIENT"
 	circuitBreakerMsg        string = "[%s] state changed: old [%s] -> new [%s]"
 	errServiceNotAvailable   string = "service not available"
 	errResponseWithEmptyBody string = "response returned with empty body and %d status code"

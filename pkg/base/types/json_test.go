@@ -12,7 +12,7 @@ func TestJsonB(t *testing.T) {
 		err := result.Scan(nil)
 
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, ErrorInvalidValue)
+		assert.ErrorIs(t, err, ErrInvalidValue)
 		assert.Nil(t, result)
 	})
 

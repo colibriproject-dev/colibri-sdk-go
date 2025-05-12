@@ -31,7 +31,7 @@ func NewProviderMessage(ctx context.Context, action string, message any) *Provid
 	}
 }
 
-// String convert struct into json string
+// String convert struct into JSON string
 func (msg *ProviderMessage) String() string {
 	message, _ := json.Marshal(msg)
 
@@ -62,7 +62,7 @@ func (msg *ProviderMessage) DecodeMessage(model any) error {
 	return nil
 }
 
-// addOriginBrokerNotification add reference of origin broker message to send dlq if an error occurs
+// addOriginBrokerNotification add reference of an origin broker message to send dlq if an error occurs
 func (msg *ProviderMessage) addOriginBrokerNotification(n any) {
 	msg.n = n
 }

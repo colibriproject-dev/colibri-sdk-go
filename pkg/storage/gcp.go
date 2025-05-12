@@ -24,7 +24,7 @@ func newGcpStorage() *gcpStorage {
 
 	client, err := gcp_storage.NewClient(ctx)
 	if err != nil {
-		logging.Fatal(ctx).Err(err).Msg(connectionError)
+		logging.Fatal(ctx).Err(err).Msg(connectionErrorMsg)
 	}
 
 	return &gcpStorage{client}

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// NullDateTime for empty date/time field
+// NullDateTime for an empty date / time field
 type NullDateTime sql.NullTime
 
 func (t *NullDateTime) Scan(value any) error {
