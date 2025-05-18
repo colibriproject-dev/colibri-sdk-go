@@ -47,17 +47,19 @@ const (
 	ENVIRONMENT_TEST              string = "test"
 	APP_TYPE_SERVICE              string = "service"
 	APP_TYPE_SERVERLESS           string = "serverless"
+	APP_TYPE_CLI                  string = "cli"
 	CLOUD_AWS                     string = "aws"
 	CLOUD_GCP                     string = "gcp"
 	CLOUD_FIREBASE                string = "firebase"
+	CLOUD_NONE                    string = "none"
 	SQL_DB_CONNECTION_URI_DEFAULT string = "host=%s port=%s user=%s password=%s dbname=%s application_name='%s' sslmode=%s"
-	VERSION                              = "v0.0.1"
+	VERSION                              = "v0.4.0"
 
 	// Errors messages
 	errorEnvironmentNotConfiguredMsg string = "environment is not configured. Set production, sandbox, development or test"
 	errorAppNameNotConfiguredMsg     string = "app name is not configured"
-	errorAppTypeNotConfiguredMsg     string = "app type is not configured. Set service or serverless"
-	errorCloudNotConfiguredMsg       string = "cloud is not configured. Set aws, azure, gcp or firebase"
+	errorAppTypeNotConfiguredMsg     string = "app type is not configured. Set service, serverless or cli"
+	errorCloudNotConfiguredMsg       string = "cloud is not configured. Set aws, azure, gcp, firebase or none"
 	errorParsingIntegerMsg           string = "could not parse %s, permitted int value, got %v: %w"
 	errorParsingBooleanMsg           string = "could not parse %s, permitted 'true' or 'false', got %v: %w"
 )
@@ -94,7 +96,7 @@ var (
 
 // Load loads and validates all environment variables. It's used in app initialization.
 func Load() error {
-	godotenv.Load()
+	_ = godotenv.Load()
 
 	ENVIRONMENT = os.Getenv(ENV_ENVIRONMENT)
 	if !slices.Contains([]string{ENVIRONMENT_PRODUCTION, ENVIRONMENT_SANDBOX, ENVIRONMENT_DEVELOPMENT, ENVIRONMENT_TEST}, ENVIRONMENT) {
@@ -107,12 +109,12 @@ func Load() error {
 	}
 
 	APP_TYPE = os.Getenv(ENV_APP_TYPE)
-	if !slices.Contains([]string{APP_TYPE_SERVICE, APP_TYPE_SERVERLESS}, APP_TYPE) {
+	if !slices.Contains([]string{APP_TYPE_SERVICE, APP_TYPE_SERVERLESS, APP_TYPE_CLI}, APP_TYPE) {
 		return errors.New(errorAppTypeNotConfiguredMsg)
 	}
 
 	CLOUD = os.Getenv(ENV_CLOUD)
-	if !slices.Contains([]string{CLOUD_AWS, CLOUD_GCP, CLOUD_FIREBASE}, CLOUD) {
+	if !slices.Contains([]string{CLOUD_AWS, CLOUD_GCP, CLOUD_FIREBASE, CLOUD_NONE}, CLOUD) {
 		return errors.New(errorCloudNotConfiguredMsg)
 	}
 

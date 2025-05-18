@@ -19,7 +19,7 @@ const banner = `
  '-..-| /   / __ / _ \| | | '_ \| '__| |
     /\/\   | (__| (_) | | | |_) | |  | |
     '--'    \___ \___/|_|_|_.__/|_|  |_|
-            project
+            project (%s)
 `
 
 func InitializeApp() {
@@ -38,7 +38,7 @@ func InitializeApp() {
 
 func printBanner() {
 	if config.IsDevelopmentEnvironment() {
-		fmt.Print(banner)
+		fmt.Printf(banner, config.VERSION)
 	}
 }
 
