@@ -49,7 +49,7 @@ func Initialize() {
 // If the application is running in a development environment,
 // it returns a text-based log handler. Otherwise, it returns a JSON handler.
 func createLogHandler() slog.Handler {
-	logLevel = os.Getenv("LOG_LEVEL")
+	logLevel = os.Getenv(config.ENV_LOG_LEVEL)
 	if !slices.Contains([]string{"debug", "info", "warn", "warning", "error"}, logLevel) {
 		logLevel = "info"
 	}
