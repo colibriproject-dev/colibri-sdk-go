@@ -3,6 +3,7 @@ package restclient
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
@@ -46,7 +47,21 @@ func NewRestClient(config *RestClientConfig) *RestClient {
 		config.Timeout = timeoutDefault
 	}
 
-	client := &http.Client{Timeout: time.Duration(config.Timeout) * time.Second}
+	transport := &http.Transport{
+		MaxIdleConns: 0,
+	}
+
+	if config.ProxyURL != "" {
+		proxyURL, err := url.Parse(config.ProxyURL)
+		if err == nil {
+			transport.Proxy = http.ProxyURL(proxyURL)
+		}
+	}
+
+	client := &http.Client{
+		Timeout:   time.Duration(config.Timeout) * time.Second,
+		Transport: transport,
+	}
 	client.Transport = newrelic.NewRoundTripper(client.Transport)
 	return &RestClient{
 		name:    config.Name,

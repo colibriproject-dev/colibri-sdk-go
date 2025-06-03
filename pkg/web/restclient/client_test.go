@@ -493,6 +493,23 @@ func TestPostWithRetry(t *testing.T) {
 	})
 }
 
+func TestClientWithProxy(t *testing.T) {
+	t.Run("Should create a client with proxy configuration", func(t *testing.T) {
+		proxyClient := NewRestClient(&RestClientConfig{
+			Name:     "test-proxy-client",
+			BaseURL:  "http://example.com",
+			Timeout:  1,
+			ProxyURL: "http://proxy.example.com:8080",
+		})
+
+		assert.NotNil(t, proxyClient)
+		assert.Equal(t, "test-proxy-client", proxyClient.name)
+		assert.Equal(t, "http://example.com", proxyClient.baseURL)
+		assert.NotNil(t, proxyClient.client)
+		assert.NotNil(t, proxyClient.client.Transport)
+	})
+}
+
 func TestPostWithCache(t *testing.T) {
 	cacheDB.Initialize()
 	retryClient := NewRestClient(&RestClientConfig{
