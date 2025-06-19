@@ -6,7 +6,6 @@ import (
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	colibri_monitoring_base "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
-	colibri_nr "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-nr"
 	colibri_otel "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-otel"
 )
 
@@ -14,9 +13,7 @@ var instance colibri_monitoring_base.Monitoring
 
 // Initialize loads the Monitoring settings according to the configured environment.
 func Initialize() {
-	if useNRMonitoring() {
-		instance = colibri_nr.StartNewRelicMonitoring()
-	} else if useOTELMonitoring() {
+	if useOTELMonitoring() {
 		instance = colibri_otel.StartOpenTelemetryMonitoring()
 	} else {
 		instance = colibri_monitoring_base.NewOthers()
@@ -25,10 +22,6 @@ func Initialize() {
 
 func useOTELMonitoring() bool {
 	return config.OTEL_EXPORTER_OTLP_ENDPOINT != ""
-}
-
-func useNRMonitoring() bool {
-	return config.NEW_RELIC_LICENSE != ""
 }
 
 // StartTransaction start a transaction in context with name

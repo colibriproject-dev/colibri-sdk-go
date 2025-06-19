@@ -10,18 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestProductionMonitoring_NR(t *testing.T) {
-	config.NEW_RELIC_LICENSE = "abcdefghijklmopqrstuvwxyz1234567890aNRAL"
-	config.APP_NAME = "test"
-	config.ENVIRONMENT = config.ENVIRONMENT_PRODUCTION
-	assert.True(t, config.IsProductionEnvironment())
-
-	Initialize()
-	assert.NotNil(t, instance)
-
-	monitoringTest(t)
-}
-
 func TestProductionMonitoring_OT(t *testing.T) {
 	config.OTEL_EXPORTER_OTLP_ENDPOINT = "http://localhost:4318/v1/traces"
 	config.APP_NAME = "test"
