@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
+	"os"
 	"testing"
 	"time"
 
@@ -56,6 +57,18 @@ func TestMessaging(t *testing.T) {
 			logging.Info(context.Background()).Msg("Cleaning up AWS localstack")
 		})
 	})
+
+	t.Run("TestRabbitMQ_Container", func(t *testing.T) {
+		test.InitializeRabbitmq()
+		Initialize()
+		executeMessagingTest(t)
+		t.Cleanup(func() {
+			instance = nil
+			_ = os.Unsetenv("RABBITMQ_URL")
+			_ = os.Unsetenv("USE_RABBITMQ")
+			logging.Info(context.Background()).Msg("Cleaning up RabbitMQ container")
+		})
+	})
 }
 
 func executeMessagingTest(t *testing.T) {
@@ -72,7 +85,7 @@ func executeMessagingTest(t *testing.T) {
 		}
 
 		producer := NewProducer(testTopicName)
-		NewConsumer(&qc)
+		NewConsumerWithTopic(&qc, testTopicName)
 
 		model := userMessageTest{"User Name", "user@email.com"}
 		if err := producer.Publish(context.Background(), "create", model); err != nil {
@@ -103,7 +116,7 @@ func executeMessagingTest(t *testing.T) {
 		}
 
 		producer := NewProducer(testFailTopicName)
-		NewConsumer(&qc)
+		NewConsumerWithTopic(&qc, testFailTopicName)
 
 		model := userMessageTest{"User Name", "user@email.com"}
 		if err := producer.Publish(context.Background(), "create", model); err != nil {

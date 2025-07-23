@@ -20,6 +20,7 @@ type key string
 const (
 	localstackID  key = "localstack-id"
 	gcpEmulatorID key = "gcpEmulator-id"
+	rabbitmqID    key = "rabbitmq-id"
 
 	DEVELOPMENT_ENVIRONMENT_PATH  string = "../../../development-environment"
 	DATABASE_ENVIRONMENT_PATH     string = DEVELOPMENT_ENVIRONMENT_PATH + "/database/"
@@ -77,6 +78,18 @@ func getGcpEmulatorBasePath(path ...string) string {
 		return MountAbsolutPath(GCP_EMULATOR_ENVIRONMENT_PATH)
 	}
 	return path[0]
+}
+
+func InitializeRabbitmq() {
+	m.Lock()
+	ctx := context.WithValue(context.Background(), rabbitmqID, uuid.New().String())
+	_ = UseRabbitmqContainer(ctx)
+	loadConfig()
+
+	_ = os.Setenv("USE_RABBITMQ", "true")
+	_ = os.Setenv(config.ENV_CLOUD, config.CLOUD_NONE)
+	cloud.Initialize()
+	m.Unlock()
 }
 
 func loadConfig() {

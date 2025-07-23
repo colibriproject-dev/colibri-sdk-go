@@ -3,9 +3,7 @@ package messaging
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
@@ -19,9 +17,8 @@ const (
 )
 
 type rabbitMQMessaging struct {
-	conn         *amqp.Connection
-	channelMutex sync.Mutex
-	channels     map[string]*amqp.Channel
+	conn *amqp.Connection
+	ch   *amqp.Channel
 }
 
 func newRabbitMQMessaging() *rabbitMQMessaging {
@@ -35,38 +32,20 @@ func newRabbitMQMessaging() *rabbitMQMessaging {
 		logging.Fatal(context.Background()).Err(err).Msg(connectionError)
 	}
 
+	ch, err := conn.Channel()
+	if err != nil {
+		logging.Fatal(context.Background()).Err(err).Msg(connectionError)
+	}
+
 	return &rabbitMQMessaging{
-		conn:     conn,
-		channels: make(map[string]*amqp.Channel),
+		conn: conn,
+		ch:   ch,
 	}
 }
 
-func (m *rabbitMQMessaging) getChannel(name string) (*amqp.Channel, error) {
-	m.channelMutex.Lock()
-	defer m.channelMutex.Unlock()
-
-	if ch, exists := m.channels[name]; exists {
-		return ch, nil
-	}
-
-	ch, err := m.conn.Channel()
-	if err != nil {
-		return nil, err
-	}
-
-	m.channels[name] = ch
-	return ch, nil
-}
-
-func (m *rabbitMQMessaging) producer(ctx context.Context, p *Producer, msg *ProviderMessage) error {
-	ch, err := m.getChannel(fmt.Sprintf("producer-%s", p.topic))
-	if err != nil {
-		return err
-	}
-
-	// Declare the exchange
-	err = ch.ExchangeDeclare(
-		p.topic,      // name
+func (m *rabbitMQMessaging) createExchange(topicName string) error {
+	return m.ch.ExchangeDeclare(
+		topicName,    // name
 		exchangeType, // type
 		true,         // durable
 		false,        // auto-deleted
@@ -74,18 +53,21 @@ func (m *rabbitMQMessaging) producer(ctx context.Context, p *Producer, msg *Prov
 		false,        // no-wait
 		nil,          // arguments
 	)
-	if err != nil {
+}
+
+func (m *rabbitMQMessaging) producer(ctx context.Context, p *Producer, msg *ProviderMessage) error {
+	if err := m.createExchange(p.topic); err != nil {
 		return err
 	}
 
-	// Convert message to JSON
+	// Convert a message to JSON
 	body := []byte(msg.String())
 
 	// Publish the message
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	err = ch.PublishWithContext(
+	err := m.ch.PublishWithContext(
 		ctx,
 		p.topic,    // exchange
 		msg.Action, // routing key
@@ -103,64 +85,58 @@ func (m *rabbitMQMessaging) producer(ctx context.Context, p *Producer, msg *Prov
 }
 
 func (m *rabbitMQMessaging) consumer(ctx context.Context, c *consumer) (chan *ProviderMessage, error) {
-	ch, err := m.getChannel(fmt.Sprintf("consumer-%s", c.queue))
-	if err != nil {
+	if err := m.createExchange(c.topicName); err != nil {
 		return nil, err
 	}
 
-	// Declare the queue
-	q, err := ch.QueueDeclare(
-		c.queue, // name
-		true,    // durable
-		false,   // delete when unused
-		false,   // exclusive
-		false,   // no-wait
-		nil,     // arguments
+	q, err := m.ch.QueueDeclare(
+		c.queue,
+		true,
+		false,
+		false,
+		false,
+		nil,
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	// Bind the queue to the exchange with a routing key
-	// Note: In RabbitMQ, we need to know which exchange to bind to.
-	// Since we don't have that information directly, we'll use the queue name as the exchange name
-	// This assumes that producers are publishing to an exchange with the same name as the queue
-	err = ch.QueueBind(
-		q.Name,  // queue name
-		"#",     // routing key (# is a wildcard that matches everything)
-		c.queue, // exchange
-		false,   // no-wait
-		nil,     // arguments
+	if c.topicName == "" {
+		logging.Fatal(ctx).Msgf("Topic name is not set for queue %s", c.queue)
+	}
+
+	if err = m.ch.QueueBind(
+		q.Name,
+		"#",
+		c.topicName,
+		false,
+		nil,
+	); err != nil {
+		return nil, err
+	}
+
+	if err = m.ch.Qos(
+		1,
+		0,
+		false,
+	); err != nil {
+		return nil, err
+	}
+
+	msgs, err := m.ch.Consume(
+		q.Name,
+		"",
+		false,
+		false,
+		false,
+		false,
+		nil,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	// Set QoS
-	err = ch.Qos(
-		1,     // prefetch count
-		0,     // prefetch size
-		false, // global
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Consume messages
-	msgs, err := ch.Consume(
-		q.Name, // queue
-		"",     // consumer
-		false,  // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // args
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create a channel for provider messages
 	providerMsgs := make(chan *ProviderMessage, 1)
 
 	// Start a goroutine to process messages
@@ -180,13 +156,18 @@ func (m *rabbitMQMessaging) consumer(ctx context.Context, c *consumer) (chan *Pr
 				var pm ProviderMessage
 				if err := json.Unmarshal(d.Body, &pm); err != nil {
 					logging.Error(ctx).Err(err).Msgf(couldNotReadMsgBody, d.MessageId, c.queue)
-					d.Ack(false)
+					if err := d.Ack(false); err != nil {
+						logging.Error(ctx).Err(err).Msgf("could not ack message %s", d.MessageId)
+					}
+					// TODO sendo do DLQ
 					continue
 				}
 
 				pm.addOriginBrokerNotification(d)
 				providerMsgs <- &pm
-				d.Ack(false)
+				if err := d.Ack(false); err != nil {
+					logging.Error(ctx).Err(err).Msgf("could not ack message %s", d.MessageId)
+				}
 			}
 		}
 	}()
