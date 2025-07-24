@@ -27,6 +27,8 @@ const (
 	couldNotSetupDLQ  = "could not setup DLQ for queue %s"
 	couldNotSendToDLQ = "could not send message %s to DLQ"
 	messageSentToDLQ  = "message %s sent to DLQ %s due to: %s"
+
+	maxRetries = 3
 )
 
 type rabbitMQMessaging struct {
@@ -261,8 +263,6 @@ func (m *rabbitMQMessaging) consumer(ctx context.Context, c *consumer) (chan *Pr
 						}
 					}
 				}
-
-				maxRetries := 3 // Defina o número máximo de retries
 
 				requeue := retryCount < maxRetries
 				if dlqErr := m.sendToDLQ(ctx, d, c.queue, err.Error()); dlqErr != nil {

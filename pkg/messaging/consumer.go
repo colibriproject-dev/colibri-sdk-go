@@ -57,6 +57,7 @@ func startListener(c *consumer) {
 			msg.AuthContext.SetInContext(ctx)
 
 			if err := c.fn(ctx, msg); err != nil {
+				// TODO add dlq process
 				logging.Error(ctx).Err(err).Msgf(couldNotProcessMsg, msg.ID)
 			}
 		}
