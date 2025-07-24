@@ -58,7 +58,7 @@ func TestMessaging(t *testing.T) {
 		})
 	})
 
-	t.Run("TestRabbitMQ_Container", func(t *testing.T) {
+	t.Run("TestMessaging_RabbitMQ", func(t *testing.T) {
 		test.InitializeRabbitmq()
 		Initialize()
 		executeMessagingTest(t)
@@ -78,7 +78,9 @@ func executeMessagingTest(t *testing.T) {
 
 		qc := queueConsumerTest{
 			fn: func(ctx context.Context, message *ProviderMessage) error {
-				chSuccess <- fmt.Sprintf("processing message: %v", message)
+				successfulProcessMessage := fmt.Sprintf("processing message: %v", message)
+				logging.Info(ctx).Msgf("Received message: %v", message)
+				chSuccess <- successfulProcessMessage
 				return nil
 			},
 			qName: testQueueName,
