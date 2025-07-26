@@ -17,13 +17,11 @@ const (
 	dlqExchange        = "dlq.exchange"
 	dlqSuffix          = ".dlq"
 
-	// DLQ error headers
 	dlqErrorReasonHeader   = "x-error-reason"
 	dlqOriginalQueueHeader = "x-original-queue"
 	dlqFailedAtHeader      = "x-failed-at"
 	dlqMessageIdHeader     = "x-message-id"
 
-	// DLQ error messages
 	couldNotSetupDLQ  = "could not setup DLQ for queue %s"
 	couldNotSendToDLQ = "could not send message %s to DLQ"
 	messageSentToDLQ  = "message %s sent to DLQ %s due to: %s"
@@ -185,14 +183,52 @@ func (m *rabbitMQMessaging) producer(ctx context.Context, p *Producer, msg *Prov
 }
 
 func (m *rabbitMQMessaging) consumer(ctx context.Context, c *consumer) (chan *ProviderMessage, error) {
-	if err := m.createExchange(c.topicName); err != nil {
+	// Setup exchange and queue
+	if err := m.setupConsumerInfrastructure(ctx, c); err != nil {
 		return nil, err
+	}
+
+	// Declare and bind queue
+	q, err := m.declareAndBindQueue(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set QoS and start consuming
+	msgs, err := m.startConsuming(q.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create channel for provider messages
+	providerMsgs := make(chan *ProviderMessage, 1)
+
+	// Start message processing goroutine
+	go m.processMessages(ctx, c, msgs, providerMsgs)
+
+	return providerMsgs, nil
+}
+
+// setupConsumerInfrastructure creates the exchange and sets up the DLQ
+func (m *rabbitMQMessaging) setupConsumerInfrastructure(ctx context.Context, c *consumer) error {
+	if err := m.createExchange(c.topicName); err != nil {
+		return err
 	}
 
 	if err := m.setupDLQ(c.queue); err != nil {
 		logging.Error(ctx).Err(err).Msgf(couldNotSetupDLQ, c.queue)
+		// Continue despite DLQ setup error
 	}
 
+	if c.topicName == "" {
+		logging.Fatal(ctx).Msgf("Topic name is not set for queue %s", c.queue)
+	}
+
+	return nil
+}
+
+// declareAndBindQueue declares the queue and binds it to the exchange
+func (m *rabbitMQMessaging) declareAndBindQueue(ctx context.Context, c *consumer) (amqp.Queue, error) {
 	q, err := m.ch.QueueDeclare(
 		c.queue,
 		true,
@@ -202,24 +238,26 @@ func (m *rabbitMQMessaging) consumer(ctx context.Context, c *consumer) (chan *Pr
 		nil,
 	)
 	if err != nil {
-		return nil, err
+		return amqp.Queue{}, err
 	}
 
-	if c.topicName == "" {
-		logging.Fatal(ctx).Msgf("Topic name is not set for queue %s", c.queue)
-	}
-
-	if err = m.ch.QueueBind(
+	err = m.ch.QueueBind(
 		q.Name,
 		"#",
 		c.topicName,
 		false,
 		nil,
-	); err != nil {
-		return nil, err
+	)
+	if err != nil {
+		return amqp.Queue{}, err
 	}
 
-	if err = m.ch.Qos(
+	return q, nil
+}
+
+// startConsuming sets QoS and starts consuming from the queue
+func (m *rabbitMQMessaging) startConsuming(queueName string) (<-chan amqp.Delivery, error) {
+	if err := m.ch.Qos(
 		1,
 		0,
 		false,
@@ -227,8 +265,8 @@ func (m *rabbitMQMessaging) consumer(ctx context.Context, c *consumer) (chan *Pr
 		return nil, err
 	}
 
-	msgs, err := m.ch.Consume(
-		q.Name,
+	return m.ch.Consume(
+		queueName,
 		"",
 		false,
 		false,
@@ -236,41 +274,49 @@ func (m *rabbitMQMessaging) consumer(ctx context.Context, c *consumer) (chan *Pr
 		false,
 		nil,
 	)
-	if err != nil {
-		return nil, err
+}
+
+// processMessages handles incoming messages from RabbitMQ
+func (m *rabbitMQMessaging) processMessages(ctx context.Context, c *consumer, msgs <-chan amqp.Delivery, providerMsgs chan<- *ProviderMessage) {
+	defer c.Done()
+
+	for d := range msgs {
+		m.handleMessage(ctx, c, d, providerMsgs)
+	}
+}
+
+// handleMessage processes a single message
+func (m *rabbitMQMessaging) handleMessage(ctx context.Context, c *consumer, d amqp.Delivery, providerMsgs chan<- *ProviderMessage) {
+	var pm ProviderMessage
+
+	if err := json.Unmarshal(d.Body, &pm); err != nil {
+		m.handleUnmarshalError(ctx, c, d, err)
+		return
 	}
 
-	providerMsgs := make(chan *ProviderMessage, 1)
+	// Successfully unmarshalled message
+	pm.addOriginBrokerNotification(rabbitMQOriginalMessage{m: m, d: d, q: c.queue})
+	providerMsgs <- &pm
+}
 
-	go func() {
-		defer c.Done()
+// handleUnmarshalError handles errors when unmarshalling a message
+func (m *rabbitMQMessaging) handleUnmarshalError(ctx context.Context, c *consumer, d amqp.Delivery, err error) {
+	logging.Error(ctx).Err(err).Msgf(couldNotReadMsgBody, d.MessageId, c.queue)
 
-		for d := range msgs {
-			var pm ProviderMessage
+	// Try to send to DLQ
+	if dlqErr := m.sendToDLQ(ctx, d, c.queue, err.Error()); dlqErr != nil {
+		logging.Error(ctx).Err(dlqErr).Msgf(couldNotSendToDLQ, d.MessageId)
 
-			if err := json.Unmarshal(d.Body, &pm); err != nil {
-				logging.Error(ctx).Err(err).Msgf(couldNotReadMsgBody, d.MessageId, c.queue)
-
-				if dlqErr := m.sendToDLQ(ctx, d, c.queue, err.Error()); dlqErr != nil {
-					logging.Error(ctx).Err(dlqErr).Msgf(couldNotSendToDLQ, d.MessageId)
-
-					if nackErr := d.Reject(false); nackErr != nil {
-						logging.Error(ctx).Err(nackErr).Msgf("Failed to nack message %s", d.MessageId)
-					}
-					continue
-				}
-
-				logging.Info(ctx).Msgf(messageSentToDLQ, d.MessageId, c.queue+dlqSuffix, err.Error())
-				if ackErr := d.Ack(false); ackErr != nil {
-					logging.Error(ctx).Err(ackErr).Msgf("Could not ack message %s after DLQ", d.MessageId)
-				}
-				continue
-			}
-
-			pm.addOriginBrokerNotification(rabbitMQOriginalMessage{m: m, d: d, q: c.queue})
-			providerMsgs <- &pm
+		// Failed to send to DLQ, reject the message
+		if nackErr := d.Reject(false); nackErr != nil {
+			logging.Error(ctx).Err(nackErr).Msgf("Failed to nack message %s", d.MessageId)
 		}
-	}()
+		return
+	}
 
-	return providerMsgs, nil
+	// Successfully sent to DLQ
+	logging.Info(ctx).Msgf(messageSentToDLQ, d.MessageId, c.queue+dlqSuffix, err.Error())
+	if ackErr := d.Ack(false); ackErr != nil {
+		logging.Error(ctx).Err(ackErr).Msgf("Could not ack message %s after DLQ", d.MessageId)
+	}
 }
