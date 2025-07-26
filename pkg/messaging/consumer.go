@@ -27,12 +27,16 @@ func (o consumerObserver) Close() {
 }
 
 func NewConsumer(qc QueueConsumer) {
-	NewConsumerWithTopic(qc, "")
-}
-
-func NewConsumerWithTopic(qc QueueConsumer, topicName string) {
 	if instance == nil {
 		logging.Fatal(context.Background()).Msg(messagingNotInitialized)
+	}
+
+	topicName := ""
+	if qConfig, ok := qc.(QueueConsumerConfig); ok {
+		config := qConfig.Config()
+		if config != nil {
+			topicName = config.topicName
+		}
 	}
 
 	c := &consumer{

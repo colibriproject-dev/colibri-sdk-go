@@ -26,8 +26,9 @@ const (
 )
 
 type queueConsumerTest struct {
-	fn    func(ctx context.Context, n *ProviderMessage) error
-	qName string
+	fn     func(ctx context.Context, n *ProviderMessage) error
+	qName  string
+	config *QueueConfiguration
 }
 
 func (q *queueConsumerTest) Consume(ctx context.Context, pm *ProviderMessage) error {
@@ -36,6 +37,10 @@ func (q *queueConsumerTest) Consume(ctx context.Context, pm *ProviderMessage) er
 
 func (q *queueConsumerTest) QueueName() string {
 	return q.qName
+}
+
+func (q *queueConsumerTest) Config() *QueueConfiguration {
+	return q.config
 }
 
 func TestMessaging(t *testing.T) {
@@ -85,16 +90,13 @@ func executeMessagingTest(t *testing.T) {
 				chSuccess <- successfulProcessMessage
 				return nil
 			},
-			qName: testQueueName,
+			qName:  testQueueName,
+			config: &QueueConfiguration{topicName: testTopicName},
 		}
 
 		producer := NewProducer(testTopicName)
 
-		if os.Getenv("USE_RABBITMQ") == "true" {
-			NewConsumerWithTopic(&qc, testTopicName)
-		} else {
-			NewConsumer(&qc)
-		}
+		NewConsumer(&qc)
 
 		model := userMessageTest{"User Name", "user@email.com"}
 		if err := producer.Publish(context.Background(), "create", model); err != nil {
@@ -121,16 +123,13 @@ func executeMessagingTest(t *testing.T) {
 				chFail <- err.Error()
 				return err
 			},
-			qName: testFailQueueName,
+			qName:  testFailQueueName,
+			config: &QueueConfiguration{topicName: testFailTopicName},
 		}
 
 		producer := NewProducer(testFailTopicName)
 
-		if os.Getenv("USE_RABBITMQ") == "true" {
-			NewConsumerWithTopic(&qc, testFailTopicName)
-		} else {
-			NewConsumer(&qc)
-		}
+		NewConsumer(&qc)
 
 		model := userMessageTest{"User Name", "user@email.com"}
 		if err := producer.Publish(context.Background(), "create", model); err != nil {
