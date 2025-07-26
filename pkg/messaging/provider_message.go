@@ -66,3 +66,21 @@ func (msg *ProviderMessage) DecodeMessage(model any) error {
 func (msg *ProviderMessage) addOriginBrokerNotification(n any) {
 	msg.n = n
 }
+
+// Ack acknowledges the message.
+func (msg *ProviderMessage) Ack() error {
+	if originalMessage, ok := msg.n.(OriginalMessage); ok {
+		return originalMessage.Ack()
+	}
+	return nil
+}
+
+// Nack rejects the message.
+// If requeue is true, the message will be put back in the original queue.
+// If requeue is false, the message will be discarded or sent to a DLQ.
+func (msg *ProviderMessage) Nack(requeue bool, err error) error {
+	if originalMessage, ok := msg.n.(OriginalMessage); ok {
+		return originalMessage.Nack(requeue, err)
+	}
+	return nil
+}

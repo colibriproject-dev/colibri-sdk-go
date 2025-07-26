@@ -3,7 +3,9 @@ package messaging
 import (
 	"context"
 	"fmt"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
+	"os"
 	"testing"
 	"time"
 
@@ -24,8 +26,9 @@ const (
 )
 
 type queueConsumerTest struct {
-	fn    func(ctx context.Context, n *ProviderMessage) error
-	qName string
+	fn     func(ctx context.Context, n *ProviderMessage) error
+	qName  string
+	config *QueueConfiguration
 }
 
 func (q *queueConsumerTest) Consume(ctx context.Context, pm *ProviderMessage) error {
@@ -34,6 +37,10 @@ func (q *queueConsumerTest) Consume(ctx context.Context, pm *ProviderMessage) er
 
 func (q *queueConsumerTest) QueueName() string {
 	return q.qName
+}
+
+func (q *queueConsumerTest) Config() *QueueConfiguration {
+	return q.config
 }
 
 func TestMessaging(t *testing.T) {
@@ -56,6 +63,19 @@ func TestMessaging(t *testing.T) {
 			logging.Info(context.Background()).Msg("Cleaning up AWS localstack")
 		})
 	})
+
+	t.Run("TestMessaging_RabbitMQ", func(t *testing.T) {
+		test.InitializeRabbitmq()
+		Initialize()
+		executeMessagingTest(t)
+		t.Cleanup(func() {
+			instance = nil
+			_ = os.Unsetenv("RABBITMQ_URL")
+			_ = os.Unsetenv("USE_RABBITMQ")
+			config.USE_RABBITMQ = false
+			logging.Info(context.Background()).Msg("Cleaning up RabbitMQ container")
+		})
+	})
 }
 
 func executeMessagingTest(t *testing.T) {
@@ -65,13 +85,17 @@ func executeMessagingTest(t *testing.T) {
 
 		qc := queueConsumerTest{
 			fn: func(ctx context.Context, message *ProviderMessage) error {
-				chSuccess <- fmt.Sprintf("processing message: %v", message)
+				successfulProcessMessage := fmt.Sprintf("processing message: %v", message)
+				logging.Info(ctx).Msgf("Received message: %v", message)
+				chSuccess <- successfulProcessMessage
 				return nil
 			},
-			qName: testQueueName,
+			qName:  testQueueName,
+			config: &QueueConfiguration{topicName: testTopicName},
 		}
 
 		producer := NewProducer(testTopicName)
+
 		NewConsumer(&qc)
 
 		model := userMessageTest{"User Name", "user@email.com"}
@@ -99,10 +123,12 @@ func executeMessagingTest(t *testing.T) {
 				chFail <- err.Error()
 				return err
 			},
-			qName: testFailQueueName,
+			qName:  testFailQueueName,
+			config: &QueueConfiguration{topicName: testFailTopicName},
 		}
 
 		producer := NewProducer(testFailTopicName)
+
 		NewConsumer(&qc)
 
 		model := userMessageTest{"User Name", "user@email.com"}

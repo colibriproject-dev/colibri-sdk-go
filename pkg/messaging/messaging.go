@@ -56,11 +56,15 @@ func Initialize() {
 		return
 	}
 
-	switch config.CLOUD {
-	case config.CLOUD_AWS:
-		instance = newAwsMessaging()
-	case config.CLOUD_GCP, config.CLOUD_FIREBASE:
-		instance = newGcpMessaging()
+	if config.USE_RABBITMQ {
+		instance = newRabbitMQMessaging()
+	} else {
+		switch config.CLOUD {
+		case config.CLOUD_AWS:
+			instance = newAwsMessaging()
+		case config.CLOUD_GCP, config.CLOUD_FIREBASE:
+			instance = newGcpMessaging()
+		}
 	}
 
 	observer.Attach(&messagingObserver{})

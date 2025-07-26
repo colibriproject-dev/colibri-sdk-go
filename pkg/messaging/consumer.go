@@ -3,18 +3,19 @@ package messaging
 import (
 	"context"
 	"fmt"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
 	"sync"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
-	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
 )
 
 type consumer struct {
 	sync.WaitGroup
-	queue string
-	fn    func(ctx context.Context, message *ProviderMessage) error
-	done  chan any
+	queue     string
+	fn        func(ctx context.Context, message *ProviderMessage) error
+	done      chan any
+	topicName string
 }
 
 type consumerObserver struct {
@@ -30,11 +31,20 @@ func NewConsumer(qc QueueConsumer) {
 		logging.Fatal(context.Background()).Msg(messagingNotInitialized)
 	}
 
+	topicName := ""
+	if qConfig, ok := qc.(QueueConsumerConfig); ok {
+		config := qConfig.Config()
+		if config != nil {
+			topicName = config.topicName
+		}
+	}
+
 	c := &consumer{
 		WaitGroup: sync.WaitGroup{},
 		queue:     qc.QueueName(),
 		fn:        qc.Consume,
 		done:      make(chan any),
+		topicName: topicName,
 	}
 
 	observer.Attach(consumerObserver{c: c})
@@ -52,6 +62,14 @@ func startListener(c *consumer) {
 
 			if err := c.fn(ctx, msg); err != nil {
 				logging.Error(ctx).Err(err).Msgf(couldNotProcessMsg, msg.ID)
+				if err := msg.Nack(false, err); err != nil {
+					logging.Error(ctx).Err(err).Msgf("error sending nack for message %s", msg.ID)
+				}
+				continue
+			}
+
+			if err := msg.Ack(); err != nil {
+				logging.Error(ctx).Err(err).Msgf("error sending ack for message %s", msg.ID)
 			}
 		}
 	}()

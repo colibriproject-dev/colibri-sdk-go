@@ -29,6 +29,16 @@ type awsMessaging struct {
 	sqsService *sqs.SQS
 }
 
+type awsOriginalMessage struct{}
+
+func (a awsOriginalMessage) Ack() error {
+	return nil
+}
+
+func (a awsOriginalMessage) Nack(_ bool, _ error) error {
+	return nil
+}
+
 func newAwsMessaging() *awsMessaging {
 	var m awsMessaging
 	m.snsService = sns.New(cloud.GetAwsSession())
@@ -80,7 +90,7 @@ func (m *awsMessaging) consumer(ctx context.Context, c *consumer) (chan *Provide
 					return
 				}
 
-				pm.addOriginBrokerNotification(&n)
+				pm.addOriginBrokerNotification(awsOriginalMessage{})
 				ch <- &pm
 				m.removeMessageFromQueue(ctx, queueUrl, msg)
 			}
