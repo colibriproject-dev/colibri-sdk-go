@@ -13,6 +13,16 @@ type gcpMessaging struct {
 	client *pubsub.Client
 }
 
+type gcpOriginalMessage struct{}
+
+func (g gcpOriginalMessage) Ack() error {
+	return nil
+}
+
+func (g gcpOriginalMessage) Nack(_ bool, _ error) error {
+	return nil
+}
+
 func newGcpMessaging() *gcpMessaging {
 	client, err := pubsub.NewClient(context.Background(), os.Getenv("PUBSUB_PROJECT_ID"))
 	if err != nil {
@@ -46,6 +56,7 @@ func (m *gcpMessaging) consumer(ctx context.Context, c *consumer) (chan *Provide
 				return
 			}
 
+			pm.addOriginBrokerNotification(gcpOriginalMessage{})
 			ch <- &pm
 			msg.Ack()
 		}); err != nil {

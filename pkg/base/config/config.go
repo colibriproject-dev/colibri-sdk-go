@@ -39,6 +39,7 @@ const (
 	ENV_SQL_DB_MAX_OPEN_CONNS string = "SQL_DB_MAX_OPEN_CONNS"
 	ENV_SQL_DB_MAX_IDLE_CONNS string = "SQL_DB_MAX_IDLE_CONNS"
 	ENV_LOG_LEVEL             string = "LOG_LEVEL"
+	ENV_USE_RABBITMQ          string = "USE_RABBITMQ"
 
 	// Environment values
 	ENVIRONMENT_PRODUCTION        string = "production"
@@ -89,6 +90,8 @@ var (
 	SQL_DB_MIGRATION      = false
 	SQL_DB_MAX_OPEN_CONNS = 10
 	SQL_DB_MAX_IDLE_CONNS = 3
+
+	USE_RABBITMQ = false
 
 	CACHE_URI      = ""
 	CACHE_PASSWORD = ""
@@ -143,6 +146,10 @@ func Load() error {
 	}
 
 	if err := convertBoolEnv(&CLOUD_DISABLE_SSL, ENV_CLOUD_DISABLE_SSL); err != nil {
+		return err
+	}
+
+	if err := convertBoolEnv(&USE_RABBITMQ, ENV_USE_RABBITMQ); err != nil {
 		return err
 	}
 

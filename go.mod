@@ -23,6 +23,7 @@ require (
 	github.com/newrelic/go-agent/v3/integrations/nrpq v1.1.1
 	github.com/newrelic/go-agent/v3/integrations/nrredis-v8 v1.0.1
 	github.com/prometheus/client_golang v1.16.0
+	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.22.0
 	github.com/valyala/fasthttp v1.51.0
@@ -105,7 +106,6 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.10.1 // indirect
-	github.com/rabbitmq/amqp091-go v1.10.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/swaggo/files/v2 v2.0.0 // indirect

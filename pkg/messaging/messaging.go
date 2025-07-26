@@ -2,7 +2,6 @@ package messaging
 
 import (
 	"context"
-	"os"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
@@ -27,9 +26,6 @@ const (
 	couldNotSendMsg              string = "could not send message with id %s to topic %s"
 	safelyCloseMsg               string = "waiting to safely close messaging module"
 	timeoutCloseMsg              string = "waiting timed out, forcing close the messaging module"
-
-	// Environment variable to enable RabbitMQ
-	envUseRabbitMQ string = "USE_RABBITMQ"
 )
 
 type messaging interface {
@@ -60,11 +56,9 @@ func Initialize() {
 		return
 	}
 
-	// Check if RabbitMQ should be used
-	if os.Getenv(envUseRabbitMQ) == "true" {
+	if config.USE_RABBITMQ {
 		instance = newRabbitMQMessaging()
 	} else {
-		// Use cloud-specific messaging
 		switch config.CLOUD {
 		case config.CLOUD_AWS:
 			instance = newAwsMessaging()

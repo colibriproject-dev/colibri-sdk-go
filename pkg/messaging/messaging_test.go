@@ -3,6 +3,7 @@ package messaging
 import (
 	"context"
 	"fmt"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"os"
 	"testing"
@@ -66,6 +67,7 @@ func TestMessaging(t *testing.T) {
 			instance = nil
 			_ = os.Unsetenv("RABBITMQ_URL")
 			_ = os.Unsetenv("USE_RABBITMQ")
+			config.USE_RABBITMQ = false
 			logging.Info(context.Background()).Msg("Cleaning up RabbitMQ container")
 		})
 	})
@@ -87,7 +89,12 @@ func executeMessagingTest(t *testing.T) {
 		}
 
 		producer := NewProducer(testTopicName)
-		NewConsumerWithTopic(&qc, testTopicName)
+
+		if os.Getenv("USE_RABBITMQ") == "true" {
+			NewConsumerWithTopic(&qc, testTopicName)
+		} else {
+			NewConsumer(&qc)
+		}
 
 		model := userMessageTest{"User Name", "user@email.com"}
 		if err := producer.Publish(context.Background(), "create", model); err != nil {
@@ -118,7 +125,12 @@ func executeMessagingTest(t *testing.T) {
 		}
 
 		producer := NewProducer(testFailTopicName)
-		NewConsumerWithTopic(&qc, testFailTopicName)
+
+		if os.Getenv("USE_RABBITMQ") == "true" {
+			NewConsumerWithTopic(&qc, testFailTopicName)
+		} else {
+			NewConsumer(&qc)
+		}
 
 		model := userMessageTest{"User Name", "user@email.com"}
 		if err := producer.Publish(context.Background(), "create", model); err != nil {
