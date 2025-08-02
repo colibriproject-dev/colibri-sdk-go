@@ -3,7 +3,7 @@ package messaging
 import "context"
 
 type QueueConfiguration struct {
-	topicName string
+	TopicName string
 }
 
 // QueueConsumer defines an interface for consuming messages from a queue and managing the queue's name.

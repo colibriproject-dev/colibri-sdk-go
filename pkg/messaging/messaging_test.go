@@ -91,7 +91,7 @@ func executeMessagingTest(t *testing.T) {
 				return nil
 			},
 			qName:  testQueueName,
-			config: &QueueConfiguration{topicName: testTopicName},
+			config: &QueueConfiguration{TopicName: testTopicName},
 		}
 
 		producer := NewProducer(testTopicName)
@@ -124,7 +124,7 @@ func executeMessagingTest(t *testing.T) {
 				return err
 			},
 			qName:  testFailQueueName,
-			config: &QueueConfiguration{topicName: testFailTopicName},
+			config: &QueueConfiguration{TopicName: testFailTopicName},
 		}
 
 		producer := NewProducer(testFailTopicName)

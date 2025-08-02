@@ -35,7 +35,7 @@ func NewConsumer(qc QueueConsumer) {
 	if qConfig, ok := qc.(QueueConsumerConfig); ok {
 		config := qConfig.Config()
 		if config != nil {
-			topicName = config.topicName
+			topicName = config.TopicName
 		}
 	}
 
