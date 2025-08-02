@@ -54,7 +54,7 @@ const (
 	CLOUD_FIREBASE                string = "firebase"
 	CLOUD_NONE                    string = "none"
 	SQL_DB_CONNECTION_URI_DEFAULT string = "host=%s port=%s user=%s password=%s dbname=%s application_name='%s' sslmode=%s"
-	VERSION                              = "v0.1.3"
+	VERSION                              = "v0.1.4"
 
 	// Errors messages
 	errorEnvironmentNotConfiguredMsg string = "environment is not configured. Set production, sandbox, development or test"
