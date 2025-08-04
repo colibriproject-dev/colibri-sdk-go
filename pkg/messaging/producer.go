@@ -15,16 +15,15 @@ type Producer struct {
 }
 
 func NewProducer(topicName string) *Producer {
-	if instance == nil {
-		logging.Fatal(context.Background()).Msg(messagingNotInitialized)
-	}
-
 	return &Producer{topicName}
 }
 
 func (p *Producer) Publish(ctx context.Context, action string, message any) error {
-	txn := monitoring.GetTransactionInContext(ctx)
+	if instance == nil {
+		logging.Fatal(context.Background()).Msg(messagingNotInitialized)
+	}
 
+	txn := monitoring.GetTransactionInContext(ctx)
 	if txn != nil {
 		segment := monitoring.StartTransactionSegment(ctx, messagingProducerTransaction, map[string]string{
 			"topic": p.topic,

@@ -53,12 +53,12 @@ func (q *PageQuery[T]) ExecuteInInstance(instance *sql.DB) (*types.Page[T], erro
 
 	var result types.Page[T]
 	var err error
-	result.TotalElements, err = q.pageTotal(instance)
+	result.TotalItems, err = q.pageTotal(instance)
 	if err != nil {
 		return nil, err
 	}
 
-	result.Content, err = q.pageData(instance)
+	result.Items, err = q.pageData(instance)
 	return &result, err
 }
 

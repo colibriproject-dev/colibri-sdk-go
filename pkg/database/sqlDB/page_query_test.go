@@ -51,7 +51,7 @@ func TestPageQuery(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, "OTHER USER", result.Content[0].Name)
-		assert.Equal(t, uint64(2), result.TotalElements)
+		assert.Equal(t, "OTHER USER", result.Items[0].Name)
+		assert.Equal(t, uint64(2), result.TotalItems)
 	})
 }

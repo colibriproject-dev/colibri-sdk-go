@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
 	"github.com/gofiber/fiber/v2"
@@ -102,4 +103,23 @@ func accessControlFiberMiddleware() fiber.Handler {
 		AllowMethods: "OPTIONS, GET, POST, PUT, PATCH, DELETE",
 		AllowHeaders: fmt.Sprintf("Origin, Content-Type, %s, %s, %s", authorizationHeader, userIDHeader, tenantIDHeader),
 	})
+}
+
+func panicRecoverMiddleware() fiber.Handler {
+	return func(c *fiber.Ctx) (err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				logging.Error(c.UserContext()).
+					Err(fmt.Errorf("%v", r)).
+					AddParam("path", c.Path()).
+					AddParam("method", c.Method()).
+					Msg("panic recovered")
+
+				c.Status(fiber.StatusInternalServerError)
+				err = c.JSON(Error{Error: "internal server error occurred"})
+			}
+		}()
+
+		return c.Next()
+	}
 }

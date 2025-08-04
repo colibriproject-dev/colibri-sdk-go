@@ -1,10 +1,8 @@
 package validator
 
 import (
-	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/types"
 	"github.com/go-playground/form/v4"
 	playValidator "github.com/go-playground/validator/v10"
-	"github.com/google/uuid"
 )
 
 type Validator struct {
@@ -24,10 +22,7 @@ func Initialize() {
 		formDecoder: form.NewDecoder(),
 	}
 
-	registerUUIDCustomType()
-	registerIsoDateCustomType()
-	registerIsoTimeCustomType()
-
+	registerCustomTypes()
 	registerCustomValidations()
 }
 
@@ -39,33 +34,6 @@ func Initialize() {
 // No return values.
 func RegisterCustomValidation(tag string, fn playValidator.Func) {
 	instance.validator.RegisterValidation(tag, fn)
-}
-
-// registerUUIDCustomType registers a custom type function for UUID parsing.
-//
-// It takes an array of strings as input parameters and returns an any type and an error.
-func registerUUIDCustomType() {
-	instance.formDecoder.RegisterCustomTypeFunc(func(vals []string) (any, error) {
-		return uuid.Parse(vals[0])
-	}, uuid.UUID{})
-}
-
-// registerIsoDateCustomType registers a custom type function for ISO date parsing.
-//
-// It takes an array of strings as input parameters and returns an any and an error.
-func registerIsoDateCustomType() {
-	instance.formDecoder.RegisterCustomTypeFunc(func(vals []string) (any, error) {
-		return types.ParseIsoDate(vals[0])
-	}, types.IsoDate{})
-}
-
-// registerIsoTimeCustomType registers a custom type function for ISO time parsing.
-//
-// It takes an array of strings as input parameters and returns an any and an error.
-func registerIsoTimeCustomType() {
-	instance.formDecoder.RegisterCustomTypeFunc(func(vals []string) (any, error) {
-		return types.ParseIsoTime(vals[0])
-	}, types.IsoTime{})
 }
 
 // Struct performs validation on the provided object using the validator instance.
@@ -85,13 +53,4 @@ func Struct(object any) error {
 // Return type: error
 func FormDecode(object any, values map[string][]string) error {
 	return instance.formDecoder.Decode(object, values)
-}
-
-// registerCustomValidations registers all custom validations
-func registerCustomValidations() {
-	RegisterCustomValidation("br-states", brStatesValidation)
-	RegisterCustomValidation("cnpj", brCNPJValidation)
-	RegisterCustomValidation("cpf", brCPFValidation)
-	RegisterCustomValidation("br-postal-code", brPostalCodeValidation)
-	RegisterCustomValidation("sort-direction", sortDirectionValidation)
 }

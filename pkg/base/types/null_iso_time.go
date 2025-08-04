@@ -11,6 +11,17 @@ import (
 // NullIsoTime for empty time field
 type NullIsoTime sql.NullTime
 
+// ParseNullIsoTime converts string to NullIsoTime
+func ParseNullIsoTime(value string) (NullIsoTime, error) {
+	parsedTime, err := time.Parse(time.TimeOnly, value)
+	if err != nil {
+		return NullIsoTime{}, err
+	}
+
+	return NullIsoTime{Time: parsedTime, Valid: true}, nil
+}
+
+// Scan converts sql driver value to null iso time
 func (t *NullIsoTime) Scan(value any) error {
 	var i sql.NullTime
 	if err := i.Scan(value); err != nil {
@@ -26,6 +37,7 @@ func (t *NullIsoTime) Scan(value any) error {
 	return nil
 }
 
+// Value converts null iso time to sql driver value
 func (t NullIsoTime) Value() (driver.Value, error) {
 	if !t.Valid {
 		return nil, nil
@@ -34,6 +46,7 @@ func (t NullIsoTime) Value() (driver.Value, error) {
 	return t.Time, nil
 }
 
+// MarshalJSON converts null iso time to json iso time format
 func (t NullIsoTime) MarshalJSON() ([]byte, error) {
 	if !t.Valid {
 		return json.Marshal(nil)
@@ -42,6 +55,7 @@ func (t NullIsoTime) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.Time.Format(time.TimeOnly))
 }
 
+// UnmarshalJSON converts json iso time to null iso time
 func (t *NullIsoTime) UnmarshalJSON(data []byte) error {
 	var ptr *string
 	if err := json.Unmarshal(data, &ptr); err != nil {

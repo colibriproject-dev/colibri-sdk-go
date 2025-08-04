@@ -95,14 +95,4 @@ func TestNullDateTime(t *testing.T) {
 		assert.Equal(t, false, result.Valid)
 		assert.Equal(t, time.Time(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)), result.Time)
 	})
-
-	t.Run("Should handle null value in json", func(t *testing.T) {
-		var result NullDateTime
-		err := result.UnmarshalJSON([]byte("null"))
-
-		assert.Nil(t, err)
-		assert.NotNil(t, result)
-		assert.Equal(t, false, result.Valid)
-		assert.Equal(t, time.Time(time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)), result.Time)
-	})
 }

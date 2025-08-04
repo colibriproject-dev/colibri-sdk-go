@@ -37,6 +37,7 @@ func (f *fiberWebServer) shutdown() error {
 func (f *fiberWebServer) injectMiddlewares() {
 	f.srv.Use(newRelicFiberMiddleware())
 	f.srv.Use(accessControlFiberMiddleware())
+	f.srv.Use(panicRecoverMiddleware())
 	if customAuth != nil {
 		f.srv.Use(customAuthenticationContextFiberMiddleware())
 	} else {
@@ -100,14 +101,7 @@ func (f *fiberWebServer) injectRoutes() {
 }
 
 func (f *fiberWebServer) listenAndServe() error {
-	defer func() {
-		if p := recover(); p != nil {
-			logging.Error(context.Background()).Msgf("panic recovering: %v", p)
-		}
-	}()
-
-	addr := fmt.Sprintf(":%d", config.PORT)
-	return f.srv.Listen(addr)
+	return f.srv.Listen(fmt.Sprintf(":%d", config.PORT))
 }
 
 func (f *fiberWebServer) addMetricsRoute() {
