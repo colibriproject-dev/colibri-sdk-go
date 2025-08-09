@@ -71,8 +71,8 @@ func TestMessaging(t *testing.T) {
 		t.Cleanup(func() {
 			instance = nil
 			_ = os.Unsetenv("RABBITMQ_URL")
-			_ = os.Unsetenv("USE_RABBITMQ")
-			config.USE_RABBITMQ = false
+			_ = os.Unsetenv("COLIBRI_MESSAGING")
+			config.COLIBRI_MESSAGING = config.MESSAGING_CLOUD_DEFAULT
 			logging.Info(context.Background()).Msg("Cleaning up RabbitMQ container")
 		})
 	})

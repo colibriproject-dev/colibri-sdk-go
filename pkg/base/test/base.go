@@ -86,8 +86,8 @@ func InitializeRabbitmq() {
 	_ = UseRabbitmqContainer(ctx)
 	loadConfig()
 
-	_ = os.Setenv(config.ENV_USE_RABBITMQ, "true")
-	config.USE_RABBITMQ = true
+	_ = os.Setenv(config.ENV_COLIBRI_MESSAGING, config.MESSAGING_RABBITMQ)
+	config.COLIBRI_MESSAGING = config.MESSAGING_RABBITMQ
 	_ = os.Setenv(config.ENV_CLOUD, config.CLOUD_NONE)
 	cloud.Initialize()
 	m.Unlock()

@@ -39,7 +39,7 @@ const (
 	ENV_SQL_DB_MAX_OPEN_CONNS string = "SQL_DB_MAX_OPEN_CONNS"
 	ENV_SQL_DB_MAX_IDLE_CONNS string = "SQL_DB_MAX_IDLE_CONNS"
 	ENV_LOG_LEVEL             string = "LOG_LEVEL"
-	ENV_USE_RABBITMQ          string = "USE_RABBITMQ"
+	ENV_COLIBRI_MESSAGING     string = "COLIBRI_MESSAGING"
 
 	// Environment values
 	ENVIRONMENT_PRODUCTION        string = "production"
@@ -53,6 +53,8 @@ const (
 	CLOUD_GCP                     string = "gcp"
 	CLOUD_FIREBASE                string = "firebase"
 	CLOUD_NONE                    string = "none"
+	MESSAGING_CLOUD_DEFAULT       string = "CLOUD_DEFAULT"
+	MESSAGING_RABBITMQ            string = "RABBITMQ"
 	SQL_DB_CONNECTION_URI_DEFAULT string = "host=%s port=%s user=%s password=%s dbname=%s application_name='%s' sslmode=%s"
 	VERSION                              = "v0.1.5"
 
@@ -91,7 +93,7 @@ var (
 	SQL_DB_MAX_OPEN_CONNS = 10
 	SQL_DB_MAX_IDLE_CONNS = 3
 
-	USE_RABBITMQ = false
+	COLIBRI_MESSAGING = MESSAGING_CLOUD_DEFAULT
 
 	CACHE_URI      = ""
 	CACHE_PASSWORD = ""
@@ -149,8 +151,11 @@ func Load() error {
 		return err
 	}
 
-	if err := convertBoolEnv(&USE_RABBITMQ, ENV_USE_RABBITMQ); err != nil {
-		return err
+	if messagingEnv := os.Getenv(ENV_COLIBRI_MESSAGING); messagingEnv != "" {
+		if messagingEnv != MESSAGING_CLOUD_DEFAULT && messagingEnv != MESSAGING_RABBITMQ {
+			return fmt.Errorf("invalid COLIBRI_MESSAGING value: %s. Allowed values: %s, %s", messagingEnv, MESSAGING_CLOUD_DEFAULT, MESSAGING_RABBITMQ)
+		}
+		COLIBRI_MESSAGING = messagingEnv
 	}
 
 	CLOUD_HOST = os.Getenv(ENV_CLOUD_HOST)

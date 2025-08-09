@@ -56,7 +56,7 @@ func Initialize() {
 		return
 	}
 
-	if config.USE_RABBITMQ {
+	if config.COLIBRI_MESSAGING == config.MESSAGING_RABBITMQ {
 		instance = newRabbitMQMessaging()
 	} else {
 		switch config.CLOUD {
