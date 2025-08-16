@@ -33,12 +33,16 @@ type WebContext interface {
 	DecodeQueryParams(object any) error
 	// DecodeBody converts http request body into a structured object
 	DecodeBody(object any) error
+	// DecodeFormData converts http request form data into a structured object
+	DecodeFormData(object any) error
 	// StringBody return request raw body
 	StringBody() (string, error)
 	// Path return request path
 	Path() string
 	// FormFile returns the first file for the provided form key.
 	FormFile(key string) (multipart.File, *multipart.FileHeader, error)
+	// FormValue returns the first value for the provided form key.
+	FormValue(key string) string
 
 	// AddHeader add header into http response
 	AddHeader(key string, value string)

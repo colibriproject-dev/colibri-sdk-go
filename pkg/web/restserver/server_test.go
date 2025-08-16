@@ -69,6 +69,12 @@ func TestStartRestServer(t *testing.T) {
 		Size uint8  `form:"size"`
 	}
 
+	type FormData struct {
+		Name  string `form:"name" validate:"required"`
+		Email string `form:"email" validate:"required,email"`
+		Age   int    `form:"age" validate:"min=0,max=120"`
+	}
+
 	listener := func() (l net.Listener) {
 		l, err := net.Listen("tcp", ":0")
 		if err != nil {
@@ -260,6 +266,28 @@ func TestStartRestServer(t *testing.T) {
 			},
 			Prefix:      PublicApi,
 			BeforeEnter: beforeEnterApply,
+		},
+		{
+			URI:    "test-form-value",
+			Method: http.MethodPost,
+			Function: func(ctx WebContext) {
+				name := ctx.FormValue("name")
+				ctx.JsonResponse(http.StatusOK, &Resp{Msg: name})
+			},
+			Prefix: NoPrefix,
+		},
+		{
+			URI:    "test-decode-form-data",
+			Method: http.MethodPost,
+			Function: func(ctx WebContext) {
+				var result FormData
+				if err := ctx.DecodeFormData(&result); err != nil {
+					ctx.ErrorResponse(http.StatusBadRequest, err)
+					return
+				}
+				ctx.JsonResponse(http.StatusOK, result)
+			},
+			Prefix: NoPrefix,
 		},
 	})
 
@@ -680,6 +708,100 @@ func TestStartRestServer(t *testing.T) {
 		assert.EqualValues(t, expected, response.SuccessBody())
 		assert.Nil(t, response.ErrorBody())
 		assert.NoError(t, response.Error())
+	})
+
+	t.Run("Should return form value", func(t *testing.T) {
+		expected := &Resp{Msg: "John Doe"}
+
+		response := restclient.Request[Resp, any]{
+			Ctx:        ctx,
+			Client:     client,
+			HttpMethod: http.MethodPost,
+			Path:       "/test-form-value",
+			Headers:    map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			Body:       "name=John%20Doe&email=john@example.com",
+		}.Call()
+
+		assert.NotNil(t, response)
+		assert.EqualValues(t, http.StatusOK, response.StatusCode())
+		assert.NotNil(t, response.SuccessBody())
+		assert.EqualValues(t, expected, response.SuccessBody())
+		assert.Nil(t, response.ErrorBody())
+		assert.NoError(t, response.Error())
+	})
+
+	t.Run("Should return empty string for non-existent form value", func(t *testing.T) {
+		expected := &Resp{Msg: ""}
+
+		response := restclient.Request[Resp, any]{
+			Ctx:        ctx,
+			Client:     client,
+			HttpMethod: http.MethodPost,
+			Path:       "/test-form-value",
+			Headers:    map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			Body:       "email=john@example.com",
+		}.Call()
+
+		assert.NotNil(t, response)
+		assert.EqualValues(t, http.StatusOK, response.StatusCode())
+		assert.NotNil(t, response.SuccessBody())
+		assert.EqualValues(t, expected, response.SuccessBody())
+		assert.Nil(t, response.ErrorBody())
+		assert.NoError(t, response.Error())
+	})
+
+	t.Run("Should decode form data successfully", func(t *testing.T) {
+		expected := &FormData{Name: "John Doe", Email: "john@example.com", Age: 30}
+
+		response := restclient.Request[FormData, any]{
+			Ctx:        ctx,
+			Client:     client,
+			HttpMethod: http.MethodPost,
+			Path:       "/test-decode-form-data",
+			Headers:    map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			Body:       "name=John%20Doe&email=john@example.com&age=30",
+		}.Call()
+
+		assert.NotNil(t, response)
+		assert.EqualValues(t, http.StatusOK, response.StatusCode())
+		assert.NotNil(t, response.SuccessBody())
+		assert.EqualValues(t, expected, response.SuccessBody())
+		assert.Nil(t, response.ErrorBody())
+		assert.NoError(t, response.Error())
+	})
+
+	t.Run("Should return validation error when form data is invalid", func(t *testing.T) {
+		response := restclient.Request[FormData, Error]{
+			Ctx:        ctx,
+			Client:     client,
+			HttpMethod: http.MethodPost,
+			Path:       "/test-decode-form-data",
+			Headers:    map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			Body:       "name=&email=invalid-email&age=150",
+		}.Call()
+
+		assert.NotNil(t, response)
+		assert.EqualValues(t, http.StatusBadRequest, response.StatusCode())
+		assert.Nil(t, response.SuccessBody())
+		assert.NotNil(t, response.ErrorBody())
+		assert.ErrorContains(t, response.Error(), "400 status code")
+	})
+
+	t.Run("Should return validation error when required fields are missing", func(t *testing.T) {
+		response := restclient.Request[FormData, Error]{
+			Ctx:        ctx,
+			Client:     client,
+			HttpMethod: http.MethodPost,
+			Path:       "/test-decode-form-data",
+			Headers:    map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			Body:       "age=25",
+		}.Call()
+
+		assert.NotNil(t, response)
+		assert.EqualValues(t, http.StatusBadRequest, response.StatusCode())
+		assert.Nil(t, response.SuccessBody())
+		assert.NotNil(t, response.ErrorBody())
+		assert.ErrorContains(t, response.Error(), "400 status code")
 	})
 }
 

@@ -77,6 +77,26 @@ func (f *fiberWebContext) DecodeBody(value any) error {
 	return validator.Struct(value)
 }
 
+func (f *fiberWebContext) DecodeFormData(value any) error {
+	formData := make(map[string][]string)
+
+	f.ctx.Request().PostArgs().VisitAll(func(key, val []byte) {
+		keyStr := string(key)
+		valStr := string(val)
+		if existing, ok := formData[keyStr]; ok {
+			formData[keyStr] = append(existing, valStr)
+		} else {
+			formData[keyStr] = []string{valStr}
+		}
+	})
+
+	if err := validator.FormDecode(value, formData); err != nil {
+		return err
+	}
+
+	return validator.Struct(value)
+}
+
 func (f *fiberWebContext) AddHeader(key string, value string) {
 	f.ctx.Response().Header.Add(key, value)
 }
@@ -137,4 +157,8 @@ func (f *fiberWebContext) FormFile(key string) (multipart.File, *multipart.FileH
 	} else {
 		return file, fileHeader, nil
 	}
+}
+
+func (f *fiberWebContext) FormValue(key string) string {
+	return f.ctx.FormValue(key)
 }
