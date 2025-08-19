@@ -8,7 +8,7 @@ import (
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/mercari/go-circuitbreaker"
-	"github.com/newrelic/go-agent/v3/newrelic"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 const (
@@ -62,7 +62,7 @@ func NewRestClient(config *RestClientConfig) *RestClient {
 		Timeout:   time.Duration(config.Timeout) * time.Second,
 		Transport: transport,
 	}
-	client.Transport = newrelic.NewRoundTripper(client.Transport)
+	client.Transport = otelhttp.NewTransport(client.Transport)
 	return &RestClient{
 		name:    config.Name,
 		baseURL: config.BaseURL,

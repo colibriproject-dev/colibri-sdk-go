@@ -18,7 +18,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -67,14 +67,14 @@ func (m *MonitoringOpenTelemetry) EndTransaction(span any) {
 
 func (m *MonitoringOpenTelemetry) StartWebRequest(ctx context.Context, header http.Header, path string, method string) (any, context.Context) {
 	attrs := []attribute.KeyValue{
-		semconv.HTTPMethodKey.String(method),
-		semconv.HTTPRequestContentLengthKey.String(header.Get("Content-Length")),
-		semconv.HTTPSchemeKey.String(header.Get("X-Protocol")),
-		semconv.HTTPTargetKey.String(header.Get("X-Request-URI")),
-		semconv.HTTPURLKey.String(path),
+		semconv.HTTPRequestMethodKey.String(method),
+		//semconv.HTTPRequestContentLengthKey.String(header.Get("Content-Length")),
+		semconv.URLSchemeKey.String(header.Get("X-Protocol")),
+		//semconv.HTTPTargetKey.String(header.Get("X-Request-URI")),
+		semconv.URLPathKey.String(path),
 		semconv.UserAgentOriginal(header.Get("User-Agent")),
-		semconv.NetHostNameKey.String(header.Get("Host")),
-		semconv.NetTransportTCP,
+		semconv.HostNameKey.String(header.Get("Host")),
+		semconv.NetworkTransportTCP,
 	}
 
 	opts := []trace.SpanStartOption{
@@ -118,7 +118,7 @@ func (m *MonitoringOpenTelemetry) GetSQLDBDriverName() string {
 		otelsql.TraceRowsClose(),
 		otelsql.TraceRowsAffected(),
 		otelsql.WithDatabaseName(os.Getenv(config.SQL_DB_NAME)),
-		otelsql.WithSystem(semconv.DBSystemPostgreSQL),
+		otelsql.WithSystem(semconv.DBSystemNamePostgreSQL),
 	)
 	if err != nil {
 		logging.Fatal(context.Background()).Msgf("could not get sql db driver name: %v", err)
