@@ -6,8 +6,8 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
-	"github.com/go-redis/redis/v8"
-	"github.com/newrelic/go-agent/v3/integrations/nrredis-v8"
+	"github.com/redis/go-redis/extra/redisotel/v9"
+	"github.com/redis/go-redis/v9"
 )
 
 type cacheDBObserver struct{}
@@ -27,7 +27,13 @@ func Initialize() {
 	opts := &redis.Options{Addr: config.CACHE_URI, Password: config.CACHE_PASSWORD}
 
 	redisClient := redis.NewClient(opts)
-	redisClient.AddHook(nrredis.NewHook(opts))
+
+	//redisClient.AddHook(nrredis.NewHook(opts))
+
+	if err := redisotel.InstrumentTracing(redisClient); err != nil {
+		panic(err)
+	}
+
 	if _, err := redisClient.Ping(context.Background()).Result(); err != nil {
 		logging.
 			Fatal(context.Background()).

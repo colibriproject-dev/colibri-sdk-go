@@ -14,12 +14,13 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 	"go.opentelemetry.io/otel/trace"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type MonitoringOpenTelemetry struct {
@@ -27,30 +28,41 @@ type MonitoringOpenTelemetry struct {
 	tracer         trace.Tracer
 }
 
-func newResource() *resource.Resource {
-	return resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceName(config.APP_NAME),
-		semconv.ServiceVersion(config.APP_VERSION),
-	)
-}
-
 func StartOpenTelemetryMonitoring() colibri_monitoring_base.Monitoring {
-	client := otlptracehttp.NewClient()
-	exporter, err := otlptrace.New(context.Background(), client)
+	ctx := context.Background()
+	conn, err := grpc.NewClient(
+		config.OTEL_EXPORTER_OTLP_ENDPOINT,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
-		logging.Fatal(context.Background()).Msgf("Creating OTLP trace exporter: %v", err)
+		logging.Fatal(ctx).Msgf("Creating grpc client: %v", err)
 	}
 
+	exporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn))
+	if err != nil {
+		logging.Fatal(ctx).Msgf("Creating OTLP client exporter: %v", err)
+	}
+
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			semconv.ServiceNameKey.String(config.APP_NAME),
+		),
+	)
+	if err != nil {
+		logging.Fatal(ctx).Msgf("Creating resource: %v", err)
+	}
+
+	bsp := sdktrace.NewBatchSpanProcessor(exporter)
 	tracerProvider := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(newResource()),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithResource(res),
+		sdktrace.WithSpanProcessor(bsp),
 	)
 	otel.SetTracerProvider(tracerProvider)
 
 	tracer := tracerProvider.Tracer(
 		"github.com/colibriproject-dev/colibri-sdk-go",
-		trace.WithInstrumentationVersion(contrib.SemVersion()),
+		trace.WithInstrumentationVersion(contrib.Version()),
 	)
 
 	return &MonitoringOpenTelemetry{tracer: tracer}
