@@ -74,10 +74,12 @@ func (m *MonitoringOpenTelemetry) EndTransaction(span any) {
 func (m *MonitoringOpenTelemetry) StartWebRequest(ctx context.Context, header http.Header, path string, method string) (any, context.Context) {
 	attrs := []attribute.KeyValue{
 		semconv.HTTPRequestMethodKey.String(method),
-		//semconv.HTTPRequestContentLengthKey.String(header.Get("Content-Length")),
+		semconv.HTTPRequestSizeKey.String(header.Get("Content-Length")),
 		semconv.URLSchemeKey.String(header.Get("X-Protocol")),
+		semconv.HTTPResponseStatusCodeKey.String(header.Get("X-Response-Code")),
 		//semconv.HTTPTargetKey.String(header.Get("X-Request-URI")),
 		semconv.URLPathKey.String(path),
+		//semconv.HTTPRouteKey.String(path),
 		semconv.UserAgentOriginal(header.Get("User-Agent")),
 		semconv.HostNameKey.String(header.Get("Host")),
 		semconv.NetworkTransportTCP,
@@ -130,4 +132,10 @@ func (m *MonitoringOpenTelemetry) GetSQLDBDriverName() string {
 		logging.Fatal(context.Background()).Msgf("could not get sql db driver name: %v", err)
 	}
 	return driverName
+}
+
+func (m *MonitoringOpenTelemetry) UpdateWebRequest(transaction any, method string, path string) {
+	name := fmt.Sprintf("%s %s", method, path)
+	transaction.(trace.Span).SetName(name)
+	transaction.(trace.Span).SetAttributes(semconv.HTTPRouteKey.String(path))
 }

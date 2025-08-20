@@ -49,3 +49,7 @@ func (m *others) NoticeError(_ any, err error) {
 func (m *others) GetSQLDBDriverName() string {
 	return "postgres"
 }
+
+func (m *others) UpdateWebRequest(_ any, method string, path string) {
+	logging.Debug(context.Background()).Msgf("UpdateWebRequest: %s %s", method, path)
+}

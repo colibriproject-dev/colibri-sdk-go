@@ -87,14 +87,16 @@ func newRelicFiberMiddleware() fiber.Handler {
 		defer monitoring.EndTransaction(txn)
 
 		c.SetUserContext(ctx)
-		err := c.Next()
-
-		if err != nil {
+		if err := c.Next(); err != nil {
 			monitoring.NoticeError(txn, err)
 			return err
 		}
+
+		monitoring.UpdateRequestSpan(txn, c.Method(), c.Route().Path)
+
 		return nil
 	}
+	//return otelfiber.Middleware()
 }
 
 func accessControlFiberMiddleware() fiber.Handler {

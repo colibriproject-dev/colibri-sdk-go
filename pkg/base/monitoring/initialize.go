@@ -63,3 +63,7 @@ func NoticeError(transaction any, err error) {
 func GetSQLDBDriverName() string {
 	return instance.GetSQLDBDriverName()
 }
+
+func UpdateRequestSpan(transaction any, method string, path string) {
+	instance.UpdateWebRequest(transaction, method, path)
+}

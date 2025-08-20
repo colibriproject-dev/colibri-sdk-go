@@ -7,6 +7,8 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
 )
 
+const parameterizedURLHeaderKey = "X-Parameterized-URL"
+
 // Error is the structure from the default error response
 type Error struct {
 	Error string `json:"error"`

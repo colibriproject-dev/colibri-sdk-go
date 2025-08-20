@@ -82,6 +82,7 @@ func (f *fiberWebServer) injectRoutes() {
 		beforeEnter := route.BeforeEnter
 
 		f.srv.Add(route.Method, routeUri, func(fctx *fiber.Ctx) error {
+			fctx.Set(parameterizedURLHeaderKey, routeUri)
 			webContext := newFiberWebContext(fctx)
 			if beforeEnter != nil {
 				if err := beforeEnter(webContext); err != nil {
@@ -92,7 +93,7 @@ func (f *fiberWebServer) injectRoutes() {
 
 			fn(webContext)
 			return nil
-		})
+		}).Name(routeUri)
 
 		logging.
 			Info(context.Background()).

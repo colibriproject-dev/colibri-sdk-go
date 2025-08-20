@@ -15,4 +15,5 @@ type Monitoring interface {
 	GetTransactionInContext(ctx context.Context) any
 	NoticeError(transaction any, err error)
 	GetSQLDBDriverName() string
+	UpdateWebRequest(transaction any, method string, path string)
 }
