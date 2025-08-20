@@ -14,13 +14,11 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 	"go.opentelemetry.io/otel/trace"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type MonitoringOpenTelemetry struct {
@@ -30,17 +28,13 @@ type MonitoringOpenTelemetry struct {
 
 func StartOpenTelemetryMonitoring() colibri_monitoring_base.Monitoring {
 	ctx := context.Background()
-	conn, err := grpc.NewClient(
-		config.OTEL_EXPORTER_OTLP_ENDPOINT,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+
+	exporter, err := otlptracehttp.New(ctx,
+		otlptracehttp.WithEndpoint(config.OTEL_EXPORTER_OTLP_ENDPOINT),
+		otlptracehttp.WithInsecure(),
 	)
 	if err != nil {
-		logging.Fatal(ctx).Msgf("Creating grpc client: %v", err)
-	}
-
-	exporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn))
-	if err != nil {
-		logging.Fatal(ctx).Msgf("Creating OTLP client exporter: %v", err)
+		logging.Fatal(ctx).Msgf("Creating OTLP HTTP exporter: %v", err)
 	}
 
 	res, err := resource.New(ctx,
