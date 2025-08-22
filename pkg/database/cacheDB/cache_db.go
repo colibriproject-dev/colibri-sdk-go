@@ -28,8 +28,6 @@ func Initialize() {
 
 	redisClient := redis.NewClient(opts)
 
-	//redisClient.AddHook(nrredis.NewHook(opts))
-
 	if err := redisotel.InstrumentTracing(redisClient); err != nil {
 		panic(err)
 	}
