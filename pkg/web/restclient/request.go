@@ -16,6 +16,8 @@ import (
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/database/cacheDB"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -44,6 +46,11 @@ type Request[T ResponseSuccessData, E ResponseErrorData] struct {
 // It validates the request, checks cache, executes the request with retries, handles success, and logs errors.
 // Returns the response data.
 func (req Request[T, E]) Call() (response ResponseData[T, E]) {
+	tracer := otel.Tracer(req.Client.name)
+	var span trace.Span
+	req.Ctx, span = tracer.Start(req.Ctx, "Request.Call")
+	defer span.End()
+
 	if err := req.validate(); err != nil {
 		return newResponseData[T, E](http.StatusInternalServerError, nil, nil, nil, err)
 	}

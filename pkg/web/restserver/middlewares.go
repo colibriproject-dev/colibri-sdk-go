@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
-	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
+	"github.com/gofiber/contrib/otelfiber/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 )
@@ -76,27 +76,7 @@ func customAuthenticationContextFiberMiddleware() fiber.Handler {
 }
 
 func newRelicFiberMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		headers := make(http.Header)
-		c.Context().Request.Header.VisitAll(func(key, value []byte) {
-			headers.Set(string(key), string(value))
-		})
-		headers.Set("X-Request-URI", string(c.Request().RequestURI()))
-		headers.Set("X-Protocol", c.Protocol())
-		txn, ctx := monitoring.StartWebRequest(c.UserContext(), headers, c.Path(), c.Method())
-		defer monitoring.EndTransaction(txn)
-
-		c.SetUserContext(ctx)
-		if err := c.Next(); err != nil {
-			monitoring.NoticeError(txn, err)
-			return err
-		}
-
-		monitoring.UpdateRequestSpan(txn, c.Method(), c.Route().Path)
-
-		return nil
-	}
-	//return otelfiber.Middleware()
+	return otelfiber.Middleware()
 }
 
 func accessControlFiberMiddleware() fiber.Handler {

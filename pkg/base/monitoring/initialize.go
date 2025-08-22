@@ -2,25 +2,25 @@ package monitoring
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
-	colibri_monitoring_base "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
-	colibri_otel "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-otel"
+	colibrimonitoringbase "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
+	colibriotel "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-otel"
 )
 
-var instance colibri_monitoring_base.Monitoring
+var instance colibrimonitoringbase.Monitoring
 
 // Initialize loads the Monitoring settings according to the configured environment.
 func Initialize() {
-	if useOTELMonitoring() {
-		instance = colibri_otel.StartOpenTelemetryMonitoring()
+	if UseOTELMonitoring() {
+		instance = colibriotel.StartOpenTelemetryMonitoring()
 	} else {
-		instance = colibri_monitoring_base.NewOthers()
+		instance = colibrimonitoringbase.NewOthers()
 	}
 }
 
-func useOTELMonitoring() bool {
+// UseOTELMonitoring returns true if OTEL monitoring is enabled
+func UseOTELMonitoring() bool {
 	return config.OTEL_EXPORTER_OTLP_ENDPOINT != ""
 }
 
@@ -32,11 +32,6 @@ func StartTransaction(ctx context.Context, name string) (any, context.Context) {
 // EndTransaction ends the transaction
 func EndTransaction(transaction any) {
 	instance.EndTransaction(transaction)
-}
-
-// StartWebRequest sets a web request config inside transaction
-func StartWebRequest(ctx context.Context, header http.Header, path string, method string) (any, context.Context) {
-	return instance.StartWebRequest(ctx, header, path, method)
 }
 
 // StartTransactionSegment start a transaction segment inside opened transaction with name and atributes
@@ -62,8 +57,4 @@ func NoticeError(transaction any, err error) {
 // GetSQLDBDriverName return driver name for monitoring provider
 func GetSQLDBDriverName() string {
 	return instance.GetSQLDBDriverName()
-}
-
-func UpdateRequestSpan(transaction any, method string, path string) {
-	instance.UpdateWebRequest(transaction, method, path)
 }

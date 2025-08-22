@@ -2,7 +2,6 @@ package colibri_monitoring_base
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 )
@@ -21,11 +20,6 @@ func (m *others) StartTransaction(ctx context.Context, name string) (any, contex
 
 func (m *others) EndTransaction(_ any) {
 	logging.Debug(context.Background()).Msg("Ending transaction Monitoring")
-}
-
-func (m *others) StartWebRequest(ctx context.Context, _ http.Header, path string, _ string) (any, context.Context) {
-	logging.Debug(ctx).Msgf("Start web request in transaction with path %s", path)
-	return nil, ctx
 }
 
 func (m *others) StartTransactionSegment(ctx context.Context, name string, _ map[string]string) any {
@@ -48,8 +42,4 @@ func (m *others) NoticeError(_ any, err error) {
 
 func (m *others) GetSQLDBDriverName() string {
 	return "postgres"
-}
-
-func (m *others) UpdateWebRequest(_ any, method string, path string) {
-	logging.Debug(context.Background()).Msgf("UpdateWebRequest: %s %s", method, path)
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/swagger"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -35,7 +36,9 @@ func (f *fiberWebServer) shutdown() error {
 }
 
 func (f *fiberWebServer) injectMiddlewares() {
-	f.srv.Use(newRelicFiberMiddleware())
+	if monitoring.UseOTELMonitoring() {
+		f.srv.Use(newRelicFiberMiddleware())
+	}
 	f.srv.Use(accessControlFiberMiddleware())
 	f.srv.Use(panicRecoverMiddleware())
 	if customAuth != nil {

@@ -2,19 +2,18 @@ package colibri_otel
 
 import (
 	"context"
-	"fmt"
-	"net/http"
 	"os"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
-	colibri_monitoring_base "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
+	colibrimonitoringbase "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
 	"go.nhat.io/otelsql"
 	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
@@ -26,7 +25,7 @@ type MonitoringOpenTelemetry struct {
 	tracer         trace.Tracer
 }
 
-func StartOpenTelemetryMonitoring() colibri_monitoring_base.Monitoring {
+func StartOpenTelemetryMonitoring() colibrimonitoringbase.Monitoring {
 	ctx := context.Background()
 
 	exporter, err := otlptracehttp.New(ctx,
@@ -59,6 +58,8 @@ func StartOpenTelemetryMonitoring() colibri_monitoring_base.Monitoring {
 		trace.WithInstrumentationVersion(contrib.Version()),
 	)
 
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+
 	return &MonitoringOpenTelemetry{tracer: tracer}
 }
 
@@ -69,29 +70,6 @@ func (m *MonitoringOpenTelemetry) StartTransaction(ctx context.Context, name str
 
 func (m *MonitoringOpenTelemetry) EndTransaction(span any) {
 	span.(trace.Span).End()
-}
-
-func (m *MonitoringOpenTelemetry) StartWebRequest(ctx context.Context, header http.Header, path string, method string) (any, context.Context) {
-	attrs := []attribute.KeyValue{
-		semconv.HTTPRequestMethodKey.String(method),
-		semconv.HTTPRequestSizeKey.String(header.Get("Content-Length")),
-		semconv.URLSchemeKey.String(header.Get("X-Protocol")),
-		semconv.HTTPResponseStatusCodeKey.String(header.Get("X-Response-Code")),
-		//semconv.HTTPTargetKey.String(header.Get("X-Request-URI")),
-		semconv.URLPathKey.String(path),
-		//semconv.HTTPRouteKey.String(path),
-		semconv.UserAgentOriginal(header.Get("User-Agent")),
-		semconv.HostNameKey.String(header.Get("Host")),
-		semconv.NetworkTransportTCP,
-	}
-
-	opts := []trace.SpanStartOption{
-		trace.WithAttributes(attrs...),
-		trace.WithSpanKind(trace.SpanKindServer),
-	}
-	ctx, span := m.tracer.Start(ctx, fmt.Sprintf("%s %s", method, path), opts...)
-
-	return span, ctx
 }
 
 func (m *MonitoringOpenTelemetry) StartTransactionSegment(ctx context.Context, name string, attributes map[string]string) any {
@@ -132,10 +110,4 @@ func (m *MonitoringOpenTelemetry) GetSQLDBDriverName() string {
 		logging.Fatal(context.Background()).Msgf("could not get sql db driver name: %v", err)
 	}
 	return driverName
-}
-
-func (m *MonitoringOpenTelemetry) UpdateWebRequest(transaction any, method string, path string) {
-	name := fmt.Sprintf("%s %s", method, path)
-	transaction.(trace.Span).SetName(name)
-	transaction.(trace.Span).SetAttributes(semconv.HTTPRouteKey.String(path))
 }

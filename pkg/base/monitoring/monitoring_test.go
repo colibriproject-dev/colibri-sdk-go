@@ -2,8 +2,6 @@ package monitoring
 
 import (
 	"context"
-	"errors"
-	"net/http"
 	"testing"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
@@ -31,22 +29,5 @@ func monitoringTest(t *testing.T) {
 		EndTransaction(transaction)
 
 		assert.NotNil(t, transaction)
-	})
-
-	t.Run("Should start/end transaction, start/end segment and notice error", func(t *testing.T) {
-		segName := "txn-segment-test"
-
-		transaction, ctx := StartWebRequest(context.Background(), http.Header{}, "/", http.MethodGet)
-		segment := StartTransactionSegment(ctx, segName, map[string]string{
-			"TestKey": "TestValue",
-		})
-
-		EndTransactionSegment(segment)
-		NoticeError(transaction, errors.New("test notice error"))
-		EndTransaction(transaction)
-
-		assert.NotNil(t, transaction)
-		assert.NotNil(t, segment)
-		assert.NotEmpty(t, ctx)
 	})
 }
