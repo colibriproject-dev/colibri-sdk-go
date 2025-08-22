@@ -5,6 +5,7 @@ import (
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
 	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
@@ -28,8 +29,10 @@ func Initialize() {
 
 	redisClient := redis.NewClient(opts)
 
-	if err := redisotel.InstrumentTracing(redisClient); err != nil {
-		panic(err)
+	if monitoring.UseOTELMonitoring() {
+		if err := redisotel.InstrumentTracing(redisClient); err != nil {
+			logging.Fatal(context.Background()).Err(err).Msg("An error occurred while trying to instrument tracing")
+		}
 	}
 
 	if _, err := redisClient.Ping(context.Background()).Result(); err != nil {
