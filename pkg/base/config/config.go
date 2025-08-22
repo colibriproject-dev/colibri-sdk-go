@@ -28,6 +28,7 @@ const (
 	ENV_CLOUD_SECRET          string = "CLOUD_SECRET"
 	ENV_CLOUD_TOKEN           string = "CLOUD_TOKEN"
 	ENV_CLOUD_DISABLE_SSL     string = "CLOUD_DISABLE_SSL"
+	ENV_CLOUD_AWS_ROLE_ARN    string = "CLOUD_AWS_ROLE_ARN"
 	ENV_CACHE_URI             string = "CACHE_URI"
 	ENV_CACHE_PASSWORD        string = "CACHE_PASSWORD"
 	ENV_SQL_DB_NAME           string = "SQL_DB_NAME"
@@ -80,12 +81,13 @@ var (
 
 	PORT = 8080
 
-	CLOUD             = ""
-	CLOUD_HOST        = ""
-	CLOUD_REGION      = ""
-	CLOUD_SECRET      = ""
-	CLOUD_TOKEN       = ""
-	CLOUD_DISABLE_SSL = true
+	CLOUD              = ""
+	CLOUD_HOST         = ""
+	CLOUD_REGION       = ""
+	CLOUD_SECRET       = ""
+	CLOUD_TOKEN        = ""
+	CLOUD_DISABLE_SSL  = true
+	CLOUD_AWS_ROLE_ARN = ""
 
 	SQL_DB_NAME           = ""
 	SQL_DB_CONNECTION_URI = ""
@@ -162,6 +164,7 @@ func Load() error {
 	CLOUD_REGION = os.Getenv(ENV_CLOUD_REGION)
 	CLOUD_SECRET = os.Getenv(ENV_CLOUD_SECRET)
 	CLOUD_TOKEN = os.Getenv(ENV_CLOUD_TOKEN)
+	CLOUD_AWS_ROLE_ARN = os.Getenv(ENV_CLOUD_AWS_ROLE_ARN)
 
 	CACHE_URI = os.Getenv(ENV_CACHE_URI)
 	CACHE_PASSWORD = os.Getenv(ENV_CACHE_PASSWORD)

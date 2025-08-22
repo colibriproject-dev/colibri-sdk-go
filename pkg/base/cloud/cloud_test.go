@@ -19,7 +19,8 @@ func TestInitialize(t *testing.T) {
 		Initialize()
 
 		assert.NotNil(t, instance)
-		assert.NotNil(t, instance.aws)
+		assert.NotNil(t, instance.awsSession)
+		assert.NotNil(t, instance.awsARN)
 		assert.Nil(t, instance.firebase)
 		assert.NotNil(t, GetAwsSession())
 	})
@@ -31,7 +32,8 @@ func TestInitialize(t *testing.T) {
 		Initialize()
 
 		assert.NotNil(t, instance)
-		assert.NotNil(t, instance.aws)
+		assert.NotNil(t, instance.awsSession)
+		assert.NotNil(t, instance.awsARN)
 		assert.Nil(t, instance.firebase)
 		assert.NotNil(t, GetAwsSession())
 	})
@@ -43,7 +45,8 @@ func TestInitialize(t *testing.T) {
 		Initialize()
 
 		assert.NotNil(t, instance)
-		assert.Nil(t, instance.aws)
+		assert.Nil(t, instance.awsSession)
+		assert.Nil(t, instance.awsARN)
 		assert.NotNil(t, instance.firebase)
 		assert.NotNil(t, GetFirebaseSession())
 	})
@@ -55,7 +58,8 @@ func TestInitialize(t *testing.T) {
 		Initialize()
 
 		assert.NotNil(t, instance)
-		assert.Nil(t, instance.aws)
+		assert.Nil(t, instance.awsSession)
+		assert.Nil(t, instance.awsARN)
 		assert.NotNil(t, instance.firebase)
 		assert.NotNil(t, GetFirebaseSession())
 	})
@@ -67,7 +71,8 @@ func TestInitialize(t *testing.T) {
 		Initialize()
 
 		assert.NotNil(t, instance)
-		assert.Nil(t, instance.aws)
+		assert.Nil(t, instance.awsSession)
+		assert.Nil(t, instance.awsARN)
 		assert.Nil(t, instance.firebase)
 	})
 
@@ -78,7 +83,8 @@ func TestInitialize(t *testing.T) {
 		Initialize()
 
 		assert.NotNil(t, instance)
-		assert.Nil(t, instance.aws)
+		assert.Nil(t, instance.awsSession)
+		assert.Nil(t, instance.awsARN)
 		assert.Nil(t, instance.firebase)
 	})
 }

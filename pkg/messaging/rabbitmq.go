@@ -15,11 +15,6 @@ const (
 	rabbitMQURLEnvVar  = "RABBITMQ_URL"
 	dlqExchangeSuffix  = "dlx"
 
-	dlqErrorReasonHeader   = "x-error-reason"
-	dlqOriginalQueueHeader = "x-original-queue"
-	dlqFailedAtHeader      = "x-failed-at"
-	dlqMessageIdHeader     = "x-message-id"
-
 	couldNotSendToDLQ = "could not send message %s to DLQ"
 	messageSentToDLQ  = "message %s sent to DLQ %s due to: %s"
 )
