@@ -11,7 +11,6 @@ import (
 const (
 	invalidValue            = "XYZ"
 	appNameValue            = "TEST APP NAME"
-	newRelicLicenseValue    = "123456-abcdef-7890-ghi"
 	cloudHostValue          = "http://my-cloud-host-fake.com"
 	cloudRegionValue        = "test-region"
 	cloudSecretValue        = "test-secret"
@@ -207,20 +206,6 @@ func TestWaitGroupTimeout(t *testing.T) {
 		assert.Equal(t, waitGroupTimeout, WAIT_GROUP_TIMEOUT_SECONDS)
 	})
 
-}
-
-func TestNewRelicKey(t *testing.T) {
-	assert.NoError(t, os.Setenv(ENV_ENVIRONMENT, ENVIRONMENT_PRODUCTION))
-	assert.NoError(t, os.Setenv(ENV_APP_NAME, appNameValue))
-	assert.NoError(t, os.Setenv(ENV_APP_TYPE, APP_TYPE_SERVERLESS))
-	assert.NoError(t, os.Setenv(ENV_CLOUD, CLOUD_FIREBASE))
-
-	t.Run("Should return new relic key is configured in production environment", func(t *testing.T) {
-		assert.NoError(t, os.Setenv(ENV_NEW_RELIC_LICENSE, newRelicLicenseValue))
-
-		_ = Load()
-		assert.Equal(t, newRelicLicenseValue, NEW_RELIC_LICENSE)
-	})
 }
 
 func TestServerPort(t *testing.T) {

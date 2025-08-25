@@ -75,7 +75,7 @@ func customAuthenticationContextFiberMiddleware() fiber.Handler {
 	}
 }
 
-func newRelicFiberMiddleware() fiber.Handler {
+func newOpenTelemetryFiberMiddleware() fiber.Handler {
 	return otelfiber.Middleware()
 }
 

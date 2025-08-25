@@ -37,7 +37,7 @@ func (f *fiberWebServer) shutdown() error {
 
 func (f *fiberWebServer) injectMiddlewares() {
 	if monitoring.UseOTELMonitoring() {
-		f.srv.Use(newRelicFiberMiddleware())
+		f.srv.Use(newOpenTelemetryFiberMiddleware())
 	}
 	f.srv.Use(accessControlFiberMiddleware())
 	f.srv.Use(panicRecoverMiddleware())

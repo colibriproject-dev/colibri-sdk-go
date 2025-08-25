@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/docker/go-connections/nat"
-	_ "github.com/newrelic/go-agent/v3/integrations/nrpq"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )

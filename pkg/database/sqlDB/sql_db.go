@@ -9,7 +9,6 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
-	_ "github.com/newrelic/go-agent/v3/integrations/nrpq"
 )
 
 const (
