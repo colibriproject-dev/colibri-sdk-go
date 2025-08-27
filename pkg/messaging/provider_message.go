@@ -12,12 +12,13 @@ import (
 )
 
 type ProviderMessage struct {
-	ID          uuid.UUID                       `json:"id"`
-	Origin      string                          `json:"origin"`
-	Action      string                          `json:"action"`
-	Message     any                             `json:"message"`
-	AuthContext *security.AuthenticationContext `json:"authenticationContext"`
-	n           any
+	ID            uuid.UUID                       `json:"id"`
+	Origin        string                          `json:"origin"`
+	Action        string                          `json:"action"`
+	Message       any                             `json:"message"`
+	AuthContext   *security.AuthenticationContext `json:"authenticationContext"`
+	CorrelationID string                          `json:"correlationId,omitempty"`
+	n             any
 }
 
 // NewProviderMessage returns a new ProviderMessage

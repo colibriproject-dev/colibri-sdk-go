@@ -22,21 +22,28 @@ func (p *Producer) Publish(ctx context.Context, action string, message any) erro
 	if instance == nil {
 		logging.Fatal(context.Background()).Msg(messagingNotInitialized)
 	}
+	correlationID := ctx.Value("CorrelationID")
+	if correlationID == nil {
+		correlationID = uuid.New().String()
+	}
 
 	txn := monitoring.GetTransactionInContext(ctx)
 	if txn != nil {
 		segment := monitoring.StartTransactionSegment(ctx, messagingProducerTransaction, map[string]string{
-			"topic": p.topic,
+			"topic":         p.topic,
+			"correlationId": correlationID.(string),
+			"action":        action,
 		})
 		defer monitoring.EndTransactionSegment(segment)
 	}
 
 	msg := &ProviderMessage{
-		ID:          uuid.New(),
-		Origin:      config.APP_NAME,
-		Action:      action,
-		Message:     message,
-		AuthContext: security.GetAuthenticationContext(ctx),
+		ID:            uuid.New(),
+		Origin:        config.APP_NAME,
+		Action:        action,
+		Message:       message,
+		AuthContext:   security.GetAuthenticationContext(ctx),
+		CorrelationID: correlationID.(string),
 	}
 
 	if err := instance.producer(ctx, p, msg); err != nil {

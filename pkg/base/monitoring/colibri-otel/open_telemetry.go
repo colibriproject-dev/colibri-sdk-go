@@ -28,6 +28,13 @@ type MonitoringOpenTelemetry struct {
 func StartOpenTelemetryMonitoring() colibrimonitoringbase.Monitoring {
 	ctx := context.Background()
 
+	var appName string
+	if otelSrvName := os.Getenv("OTEL_SERVICE_NAME"); otelSrvName != "" {
+		appName = otelSrvName
+	} else {
+		appName = config.APP_NAME
+	}
+
 	exporter, err := otlptracehttp.New(ctx,
 		otlptracehttp.WithEndpoint(config.OTEL_EXPORTER_OTLP_ENDPOINT),
 		otlptracehttp.WithInsecure(),
@@ -36,14 +43,10 @@ func StartOpenTelemetryMonitoring() colibrimonitoringbase.Monitoring {
 		logging.Fatal(ctx).Msgf("Creating OTLP HTTP exporter: %v", err)
 	}
 
-	res, err := resource.New(ctx,
-		resource.WithAttributes(
-			semconv.ServiceNameKey.String(config.APP_NAME),
-		),
+	res := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceNameKey.String(appName),
 	)
-	if err != nil {
-		logging.Fatal(ctx).Msgf("Creating resource: %v", err)
-	}
 
 	bsp := sdktrace.NewBatchSpanProcessor(exporter)
 	tracerProvider := sdktrace.NewTracerProvider(
@@ -82,6 +85,10 @@ func (m *MonitoringOpenTelemetry) StartTransactionSegment(ctx context.Context, n
 	span.SetAttributes(kv...)
 
 	return span
+}
+
+func (m *MonitoringOpenTelemetry) AddTransactionAttribute(transaction any, key string, value string) {
+	transaction.(trace.Span).SetAttributes(attribute.String(key, value))
 }
 
 func (m *MonitoringOpenTelemetry) EndTransactionSegment(segment any) {

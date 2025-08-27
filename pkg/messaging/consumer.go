@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
-	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 )
 
 type consumer struct {
@@ -48,32 +48,43 @@ func startListener(c *consumer) {
 	go func() {
 		for {
 			msg := <-ch
-			ctx := context.Background()
-			msg.AuthContext.SetInContext(ctx)
-
-			if err := c.fn(ctx, msg); err != nil {
-				logging.Error(ctx).Err(err).Msgf(couldNotProcessMsg, msg.ID)
-				if err := msg.Nack(false, err); err != nil {
-					logging.Error(ctx).Err(err).Msgf("error sending nack for message %s", msg.ID)
-				}
-				continue
-			}
-
-			if err := msg.Ack(); err != nil {
-				logging.Error(ctx).Err(err).Msgf("error sending ack for message %s", msg.ID)
-			}
+			processMessage(c, msg)
 		}
 	}()
 }
 
-func createConsumer(c *consumer) chan *ProviderMessage {
-	txn, ctx := monitoring.StartTransaction(context.Background(), fmt.Sprintf(messagingConsumerTransaction, c.queue))
-	defer monitoring.EndTransaction(txn)
+func processMessage(c *consumer, msg *ProviderMessage) {
+	ctxRoot := context.WithValue(context.Background(), "correlationID", msg.CorrelationID)
 
+	txn, ctx := monitoring.StartTransaction(ctxRoot, fmt.Sprintf(messagingConsumerTransaction, c.queue))
+	monitoring.AddTransactionAttribute(txn, "correlationId", msg.CorrelationID)
+	monitoring.AddTransactionAttribute(txn, "action", msg.Action)
+	monitoring.AddTransactionAttribute(txn, "messageId", msg.ID.String())
+	defer monitoring.EndTransactionSegment(txn)
+
+	msg.AuthContext.SetInContext(ctx)
+
+	if err := c.fn(ctx, msg); err != nil {
+		logging.Error(ctx).Err(err).Msgf(couldNotProcessMsg, msg.ID)
+		if err := msg.Nack(false, err); err != nil {
+			logging.Error(ctx).Err(err).Msgf("error sending nack for message %s", msg.ID)
+		}
+		monitoring.NoticeError(txn, err)
+		return
+	}
+
+	if err := msg.Ack(); err != nil {
+		logging.Error(ctx).Err(err).Msgf("error sending ack for message %s", msg.ID)
+	}
+
+	logging.Debug(ctx).Msgf("message %s processed", msg.ID)
+}
+
+func createConsumer(c *consumer) chan *ProviderMessage {
+	ctx := context.Background()
 	ch, err := instance.consumer(ctx, c)
 	if err != nil {
-		logging.Error(ctx).Err(err).Msgf(createQueueError, c.queue)
-		monitoring.NoticeError(txn, err)
+		logging.Fatal(ctx).Err(err).Msgf(createQueueError, c.queue)
 		return nil
 	}
 

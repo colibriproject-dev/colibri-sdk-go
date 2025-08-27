@@ -27,6 +27,13 @@ func (m *others) StartTransactionSegment(ctx context.Context, name string, _ map
 	return nil
 }
 
+func (m *others) AddTransactionAttribute(_ any, key string, value string) {
+	logging.Debug(context.Background()).
+		AddParam("key", key).
+		AddParam("value", value).
+		Msg("Adding transaction attribute Monitoring")
+}
+
 func (m *others) EndTransactionSegment(_ any) {
 	logging.Debug(context.Background()).Msg("Ending transaction segment Monitoring")
 }

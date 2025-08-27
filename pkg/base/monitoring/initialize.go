@@ -29,6 +29,10 @@ func StartTransaction(ctx context.Context, name string) (any, context.Context) {
 	return instance.StartTransaction(ctx, name)
 }
 
+func AddTransactionAttribute(transaction any, key string, value string) {
+	instance.AddTransactionAttribute(transaction, key, value)
+}
+
 // EndTransaction ends the transaction
 func EndTransaction(transaction any) {
 	instance.EndTransaction(transaction)
