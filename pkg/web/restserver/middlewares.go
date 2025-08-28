@@ -1,12 +1,12 @@
 package restserver
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
 	"github.com/gofiber/contrib/otelfiber/v2"
 	"github.com/gofiber/fiber/v2"
@@ -114,7 +114,11 @@ func correlationIdMiddleware() fiber.Handler {
 		if correlationID == "" {
 			correlationID = uuid.New().String()
 		}
-		ctx.SetUserContext(context.WithValue(ctx.UserContext(), logging.CorrelationIDParam, correlationID))
+		ctx.SetUserContext(logging.InjectCorrelationIDInContext(ctx.UserContext(), correlationID))
+		if monitoring.UseOTELMonitoring() {
+			txn := monitoring.GetTransactionInContext(ctx.UserContext())
+			monitoring.AddTransactionAttribute(txn, logging.CorrelationIDParam, correlationID)
+		}
 		return ctx.Next()
 	}
 }

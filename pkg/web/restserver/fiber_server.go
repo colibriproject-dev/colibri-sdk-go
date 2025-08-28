@@ -36,10 +36,10 @@ func (f *fiberWebServer) shutdown() error {
 }
 
 func (f *fiberWebServer) injectMiddlewares() {
-	f.srv.Use(correlationIdMiddleware())
 	if monitoring.UseOTELMonitoring() {
 		f.srv.Use(newOpenTelemetryFiberMiddleware())
 	}
+	f.srv.Use(correlationIdMiddleware())
 	f.srv.Use(accessControlFiberMiddleware())
 	f.srv.Use(panicRecoverMiddleware())
 	if customAuth != nil {
