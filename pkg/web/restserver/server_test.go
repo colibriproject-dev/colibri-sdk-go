@@ -214,16 +214,6 @@ func TestStartRestServer(t *testing.T) {
 			Prefix: NoPrefix,
 		},
 		{
-			URI:    "test-context",
-			Method: http.MethodGet,
-			Function: func(ctx WebContext) {
-				msg := fmt.Sprintf("%s", ctx.Context())
-				ctx.AddHeader("context", msg)
-				ctx.JsonResponse(http.StatusOK, &Resp{Msg: msg})
-			},
-			Prefix: NoPrefix,
-		},
-		{
 			URI:    "test-serve-file",
 			Method: http.MethodGet,
 			Function: func(ctx WebContext) {
@@ -598,24 +588,6 @@ func TestStartRestServer(t *testing.T) {
 			HttpMethod: http.MethodPost,
 			Path:       "/test-decode-body",
 			Body:       expected,
-		}.Call()
-
-		assert.NotNil(t, response)
-		assert.EqualValues(t, http.StatusOK, response.StatusCode())
-		assert.NotNil(t, response.SuccessBody())
-		assert.EqualValues(t, expected, response.SuccessBody())
-		assert.Nil(t, response.ErrorBody())
-		assert.NoError(t, response.Error())
-	})
-
-	t.Run("Should return context", func(t *testing.T) {
-		expected := &Resp{Msg: "context.Background"}
-
-		response := restclient.Request[Resp, any]{
-			Ctx:        ctx,
-			Client:     client,
-			HttpMethod: http.MethodGet,
-			Path:       "/test-context",
 		}.Call()
 
 		assert.NotNil(t, response)

@@ -257,7 +257,9 @@ func (req *Request[T, E]) execute() (response ResponseData[T, E]) {
 	if len(req.MultipartFields) > 0 {
 		request.Header.Add("Content-Type", req.writer.FormDataContentType())
 	}
-	request.Header.Add("X-Correlation-ID", req.Ctx.Value(logging.CorrelationIDParam).(string))
+	if correlationIDParam := req.Ctx.Value(logging.CorrelationIDParam); correlationIDParam != nil {
+		request.Header.Add("X-Correlation-ID", correlationIDParam.(string))
+	}
 
 	resp, err := req.Client.client.Do(request)
 	if err != nil {

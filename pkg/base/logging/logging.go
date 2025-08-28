@@ -176,7 +176,7 @@ func buildParams(l *Logging) []any {
 func startLogging(ctx context.Context, level string) *Logging {
 	l := createLogging()
 	l.level = level
-	l.params[CorrelationIDParam] = getCorrelationIDFromContext(ctx)
+	l.correlationID = getCorrelationIDFromContext(ctx)
 
 	return l
 }
