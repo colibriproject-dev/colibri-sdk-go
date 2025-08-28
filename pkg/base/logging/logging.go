@@ -13,13 +13,10 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 )
 
-type correlationID string
-
 const (
-	correlationIDParam correlationID = "correlationID"
-	callerParam        string        = "caller"
-	errorParam         string        = "error"
-	cIDParam           string        = "correlationId"
+	CorrelationIDParam string = "correlationId"
+	callerParam        string = "caller"
+	errorParam         string = "error"
 )
 
 var (
@@ -163,7 +160,7 @@ func buildParams(l *Logging) []any {
 	}
 
 	if l.correlationID != "" {
-		l.params[cIDParam] = l.correlationID
+		l.params[CorrelationIDParam] = l.correlationID
 	}
 
 	vals := make([]any, 0, len(l.params)*2)
@@ -179,7 +176,7 @@ func buildParams(l *Logging) []any {
 func startLogging(ctx context.Context, level string) *Logging {
 	l := createLogging()
 	l.level = level
-	l.correlationID = getCorrelationIDFromContext(ctx)
+	l.params[CorrelationIDParam] = getCorrelationIDFromContext(ctx)
 
 	return l
 }
@@ -187,12 +184,12 @@ func startLogging(ctx context.Context, level string) *Logging {
 // InjectCorrelationIDInContext injects the correlation ID into the provided context, that allow to log with this ID
 // making easy to identify all logs related to the same execution.
 func InjectCorrelationIDInContext(ctx context.Context, id string) context.Context {
-	return context.WithValue(ctx, correlationIDParam, id)
+	return context.WithValue(ctx, CorrelationIDParam, id)
 }
 
 // getCorrelationIDFromContext retrieves the correlation ID from the context.
 func getCorrelationIDFromContext(ctx context.Context) string {
-	val := ctx.Value(correlationIDParam)
+	val := ctx.Value(CorrelationIDParam)
 	if val == nil {
 		return ""
 	}

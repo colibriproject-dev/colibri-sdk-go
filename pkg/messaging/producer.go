@@ -22,7 +22,7 @@ func (p *Producer) Publish(ctx context.Context, action string, message any) erro
 	if instance == nil {
 		logging.Fatal(context.Background()).Msg(messagingNotInitialized)
 	}
-	correlationID := ctx.Value("CorrelationID")
+	correlationID := ctx.Value(logging.CorrelationIDParam)
 	if correlationID == nil {
 		correlationID = uuid.New().String()
 	}

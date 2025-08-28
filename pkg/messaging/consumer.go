@@ -54,10 +54,10 @@ func startListener(c *consumer) {
 }
 
 func processMessage(c *consumer, msg *ProviderMessage) {
-	ctxRoot := context.WithValue(context.Background(), "correlationID", msg.CorrelationID)
+	ctxRoot := context.WithValue(context.Background(), logging.CorrelationIDParam, msg.CorrelationID)
 
 	txn, ctx := monitoring.StartTransaction(ctxRoot, fmt.Sprintf(messagingConsumerTransaction, c.queue))
-	monitoring.AddTransactionAttribute(txn, "correlationId", msg.CorrelationID)
+	monitoring.AddTransactionAttribute(txn, logging.CorrelationIDParam, msg.CorrelationID)
 	monitoring.AddTransactionAttribute(txn, "action", msg.Action)
 	monitoring.AddTransactionAttribute(txn, "messageId", msg.ID.String())
 	defer monitoring.EndTransactionSegment(txn)

@@ -1,6 +1,7 @@
 package restserver
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/gofiber/contrib/otelfiber/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/google/uuid"
 )
 
 const (
@@ -103,5 +105,16 @@ func panicRecoverMiddleware() fiber.Handler {
 		}()
 
 		return c.Next()
+	}
+}
+
+func correlationIdMiddleware() fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		correlationID := ctx.Get("X-Correlation-ID")
+		if correlationID == "" {
+			correlationID = uuid.New().String()
+		}
+		ctx.SetUserContext(context.WithValue(ctx.UserContext(), logging.CorrelationIDParam, correlationID))
+		return ctx.Next()
 	}
 }
