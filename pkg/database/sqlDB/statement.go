@@ -46,7 +46,7 @@ func (s *Statement) ExecuteInInstance(instance *sql.DB) error {
 	}
 	defer closer(stmt)
 
-	if _, err = stmt.Exec(s.args...); err != nil {
+	if _, err = stmt.ExecContext(s.ctx, s.args...); err != nil {
 		return err
 	}
 
