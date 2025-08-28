@@ -39,7 +39,7 @@ func TestLogging(t *testing.T) {
 	t.Run("Should create logging instance with correlation ID when context has correlation ID", func(t *testing.T) {
 		log := Info(ctx)
 
-		assert.Equal(t, "test-correlation-id", log.correlationID)
+		assert.Equal(t, "test-correlation-id", log.params[CorrelationIDParam])
 	})
 
 	t.Run("Should add parameters to logging instance when AddParam is called", func(t *testing.T) {
