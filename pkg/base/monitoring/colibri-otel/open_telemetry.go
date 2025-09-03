@@ -3,6 +3,7 @@ package colibri_otel
 import (
 	"context"
 	"os"
+	"strings"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
@@ -20,6 +21,19 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// splitAndTrim splits s by sep and trims spaces on each part, ignoring empty parts.
+func splitAndTrim(s string, sep string) []string {
+	parts := strings.Split(s, sep)
+	res := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			res = append(res, p)
+		}
+	}
+	return res
+}
+
 type MonitoringOpenTelemetry struct {
 	tracerProvider trace.TracerProvider
 	tracer         trace.Tracer
@@ -35,10 +49,31 @@ func StartOpenTelemetryMonitoring() colibrimonitoringbase.Monitoring {
 		appName = config.APP_NAME
 	}
 
-	exporter, err := otlptracehttp.New(ctx,
+	options := []otlptracehttp.Option{
 		otlptracehttp.WithEndpoint(config.OTEL_EXPORTER_OTLP_ENDPOINT),
 		otlptracehttp.WithInsecure(),
-	)
+	}
+	if config.OTEL_EXPORTER_OTLP_HEADERS != "" {
+		// The OTEL spec uses OTEL_EXPORTER_OTLP_HEADERS as a comma-separated list of key=value pairs
+		// otlptracehttp supports passing headers via WithHeaders(map[string]string)
+		headers := map[string]string{}
+		pairs := os.Getenv(config.ENV_OTEL_EXPORTER_OTLP_HEADERS)
+		// Fallback to config value if needed
+		if pairs == "" {
+			pairs = config.OTEL_EXPORTER_OTLP_HEADERS
+		}
+		for _, part := range splitAndTrim(pairs, ",") {
+			kv := splitAndTrim(part, "=")
+			if len(kv) == 2 {
+				headers[kv[0]] = kv[1]
+			}
+		}
+		if len(headers) > 0 {
+			options = append(options, otlptracehttp.WithHeaders(headers))
+		}
+	}
+
+	exporter, err := otlptracehttp.New(ctx, options...)
 	if err != nil {
 		logging.Fatal(ctx).Msgf("Creating OTLP HTTP exporter: %v", err)
 	}
