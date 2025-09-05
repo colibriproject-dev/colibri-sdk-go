@@ -53,21 +53,18 @@ func StartOpenTelemetryMonitoring() colibrimonitoringbase.Monitoring {
 		otlptracehttp.WithEndpoint(config.OTEL_EXPORTER_OTLP_ENDPOINT),
 		otlptracehttp.WithInsecure(),
 	}
+
 	if config.OTEL_EXPORTER_OTLP_HEADERS != "" {
-		// The OTEL spec uses OTEL_EXPORTER_OTLP_HEADERS as a comma-separated list of key=value pairs
-		// otlptracehttp supports passing headers via WithHeaders(map[string]string)
 		headers := map[string]string{}
-		pairs := os.Getenv(config.ENV_OTEL_EXPORTER_OTLP_HEADERS)
-		// Fallback to config value if needed
-		if pairs == "" {
-			pairs = config.OTEL_EXPORTER_OTLP_HEADERS
-		}
+		pairs := config.OTEL_EXPORTER_OTLP_HEADERS
+
 		for _, part := range splitAndTrim(pairs, ",") {
 			kv := splitAndTrim(part, "=")
 			if len(kv) == 2 {
 				headers[kv[0]] = kv[1]
 			}
 		}
+
 		if len(headers) > 0 {
 			options = append(options, otlptracehttp.WithHeaders(headers))
 		}
