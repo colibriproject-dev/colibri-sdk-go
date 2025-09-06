@@ -6,6 +6,7 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
+	colibrimonitoringbase "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
 	"github.com/google/uuid"
 )
@@ -27,15 +28,11 @@ func (p *Producer) Publish(ctx context.Context, action string, message any) erro
 		correlationID = uuid.New().String()
 	}
 
-	txn := monitoring.GetTransactionInContext(ctx)
-	if txn != nil {
-		segment := monitoring.StartTransactionSegment(ctx, messagingProducerTransaction, map[string]string{
-			"topic":         p.topic,
-			"correlationId": correlationID.(string),
-			"action":        action,
-		})
-		defer monitoring.EndTransactionSegment(segment)
-	}
+	txn, _ := monitoring.StartTransaction(ctx, messagingProducerTransaction, colibrimonitoringbase.SpanKindProducer)
+	monitoring.AddTransactionAttribute(txn, "topic", p.topic)
+	monitoring.AddTransactionAttribute(txn, "correlationId", correlationID.(string))
+	monitoring.AddTransactionAttribute(txn, "action", action)
+	defer monitoring.EndTransaction(txn)
 
 	msg := &ProviderMessage{
 		ID:            uuid.New(),

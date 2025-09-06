@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
+	colibrimonitoringbase "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
@@ -56,10 +57,11 @@ func startListener(c *consumer) {
 func processMessage(c *consumer, msg *ProviderMessage) {
 	ctxRoot := context.WithValue(context.Background(), logging.CorrelationIDParam, msg.CorrelationID)
 
-	txn, ctx := monitoring.StartTransaction(ctxRoot, fmt.Sprintf(messagingConsumerTransaction, c.queue))
+	txn, ctx := monitoring.StartTransaction(ctxRoot, fmt.Sprintf(messagingConsumerTransaction, c.queue), colibrimonitoringbase.SpanKindConsumer)
 	monitoring.AddTransactionAttribute(txn, logging.CorrelationIDParam, msg.CorrelationID)
 	monitoring.AddTransactionAttribute(txn, "action", msg.Action)
 	monitoring.AddTransactionAttribute(txn, "messageId", msg.ID.String())
+	monitoring.AddTransactionAttribute(txn, "span.kind", "CONSUMER")
 	defer monitoring.EndTransactionSegment(txn)
 
 	msg.AuthContext.SetInContext(ctx)

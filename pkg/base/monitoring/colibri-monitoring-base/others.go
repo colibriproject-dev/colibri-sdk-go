@@ -13,8 +13,8 @@ func NewOthers() Monitoring {
 	return &others{}
 }
 
-func (m *others) StartTransaction(ctx context.Context, name string) (any, context.Context) {
-	logging.Debug(ctx).Msgf("Starting transaction Monitoring with name %s", name)
+func (m *others) StartTransaction(ctx context.Context, name string, kind SpanKind) (any, context.Context) {
+	logging.Debug(ctx).Msgf("Starting transaction %s Monitoring with name %s", kind, name)
 	return nil, ctx
 }
 

@@ -25,8 +25,8 @@ func UseOTELMonitoring() bool {
 }
 
 // StartTransaction start a transaction in context with name
-func StartTransaction(ctx context.Context, name string) (any, context.Context) {
-	return instance.StartTransaction(ctx, name)
+func StartTransaction(ctx context.Context, name string, kind colibrimonitoringbase.SpanKind) (any, context.Context) {
+	return instance.StartTransaction(ctx, name, kind)
 }
 
 func AddTransactionAttribute(transaction any, key string, value string) {

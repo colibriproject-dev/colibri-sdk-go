@@ -78,7 +78,9 @@ func customAuthenticationContextFiberMiddleware() fiber.Handler {
 }
 
 func newOpenTelemetryFiberMiddleware() fiber.Handler {
-	return otelfiber.Middleware()
+	return otelfiber.Middleware(otelfiber.WithSpanNameFormatter(func(ctx *fiber.Ctx) string {
+		return fmt.Sprintf("%s - %s", ctx.Method(), ctx.Route().Path)
+	}))
 }
 
 func accessControlFiberMiddleware() fiber.Handler {

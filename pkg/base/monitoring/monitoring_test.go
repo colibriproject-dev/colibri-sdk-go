@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
+	colibri_monitoring_base "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,7 +25,7 @@ func monitoringTest(t *testing.T) {
 	t.Run("Should get transaction in context", func(t *testing.T) {
 		txnName := "txn-test"
 
-		_, ctx := StartTransaction(context.Background(), txnName)
+		_, ctx := StartTransaction(context.Background(), txnName, colibri_monitoring_base.SpanKindInternal)
 		transaction := GetTransactionInContext(ctx)
 		EndTransaction(transaction)
 
