@@ -99,7 +99,7 @@ func StartOpenTelemetryMonitoring() colibrimonitoringbase.Monitoring {
 }
 
 func (m *MonitoringOpenTelemetry) StartTransaction(ctx context.Context, name string, kind colibrimonitoringbase.SpanKind) (any, context.Context) {
-	ctx, span := m.tracer.Start(ctx, name, trace.WithSpanKind(m.kindToOpenTelemetry(kind)))
+	ctx, span := m.tracer.Start(ctx, name, trace.WithSpanKind(kindToOpenTelemetry(kind)))
 	return span, ctx
 }
 
@@ -151,7 +151,7 @@ func (m *MonitoringOpenTelemetry) GetSQLDBDriverName() string {
 	return driverName
 }
 
-func (m *MonitoringOpenTelemetry) kindToOpenTelemetry(kind colibrimonitoringbase.SpanKind) trace.SpanKind {
+func kindToOpenTelemetry(kind colibrimonitoringbase.SpanKind) trace.SpanKind {
 	switch kind {
 	case colibrimonitoringbase.SpanKindClient:
 		return trace.SpanKindClient
