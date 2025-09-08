@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
+	colibrimonitoringbase "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/database/cacheDB"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -45,37 +45,36 @@ type Request[T ResponseSuccessData, E ResponseErrorData] struct {
 //
 // It validates the request, checks cache, executes the request with retries, handles success, and logs errors.
 // Returns the response data.
-func (req Request[T, E]) Call() (response ResponseData[T, E]) {
-	tracer := otel.Tracer(req.Client.name)
-	var span trace.Span
-	req.Ctx, span = tracer.Start(req.Ctx, "Request.Call")
-	defer span.End()
+func (rc Request[T, E]) Call() (response ResponseData[T, E]) {
+	var tx any
+	tx, rc.Ctx = monitoring.StartTransaction(rc.Ctx, "HTTP Client", colibrimonitoringbase.SpanKindClient)
+	defer monitoring.EndTransaction(tx)
 
-	if err := req.validate(); err != nil {
+	if err := rc.validate(); err != nil {
 		return newResponseData[T, E](http.StatusInternalServerError, nil, nil, nil, err)
 	}
 
-	if req.hasCache() {
-		data, _ := req.Cache.One(req.Ctx)
+	if rc.hasCache() {
+		data, _ := rc.Cache.One(rc.Ctx)
 		if data != nil {
 			return newResponseData[T, E](http.StatusNotModified, nil, data, nil, nil)
 		}
 	}
 
-	for execution := uint8(0); execution <= req.Client.retries; execution++ {
-		response = req.execute()
+	for execution := uint8(0); execution <= rc.Client.retries; execution++ {
+		response = rc.execute()
 		if response.HasSuccess() {
-			if req.hasCache() {
-				req.Cache.Set(req.Ctx, response.SuccessBody())
+			if rc.hasCache() {
+				rc.Cache.Set(rc.Ctx, response.SuccessBody())
 			}
 			break
 		}
 
-		time.Sleep(req.getSleepDuration())
-		if req.Client.retries != 0 {
+		time.Sleep(rc.getSleepDuration())
+		if rc.Client.retries != 0 {
 			logging.
-				Warn(req.Ctx).
-				Msgf(retriesWarnMsg, execution+1, req.getUrl(), response.StatusCode(), response.Error(), response.ErrorBody())
+				Warn(rc.Ctx).
+				Msgf(retriesWarnMsg, execution+1, rc.getUrl(), response.StatusCode(), response.Error(), response.ErrorBody())
 		}
 	}
 
@@ -237,31 +236,31 @@ func (rc *Request[T, E]) addHeadersInRequest(req *http.Request) {
 //
 // No parameters.
 // Returns a ResponseData containing the response data and any errors.
-func (req *Request[T, E]) execute() (response ResponseData[T, E]) {
-	if !req.Client.cb.Ready() {
+func (rc *Request[T, E]) execute() (response ResponseData[T, E]) {
+	if !rc.Client.cb.Ready() {
 		return newResponseData[T, E](http.StatusInternalServerError, nil, nil, nil, errors.New(errServiceNotAvailable))
 	}
 
 	var err error
 	defer func() {
-		err = req.Client.cb.Done(req.Ctx, err)
+		err = rc.Client.cb.Done(rc.Ctx, err)
 	}()
 
-	bytesBody, err := req.getBytesBody()
+	bytesBody, err := rc.getBytesBody()
 	if err != nil {
 		return newResponseData[T, E](http.StatusInternalServerError, nil, nil, nil, err)
 	}
 
-	request, err := http.NewRequestWithContext(req.Ctx, string(req.HttpMethod), req.getUrl(), bytesBody)
-	req.addHeadersInRequest(request)
-	if len(req.MultipartFields) > 0 {
-		request.Header.Add("Content-Type", req.writer.FormDataContentType())
+	request, err := http.NewRequestWithContext(rc.Ctx, string(rc.HttpMethod), rc.getUrl(), bytesBody)
+	rc.addHeadersInRequest(request)
+	if len(rc.MultipartFields) > 0 {
+		request.Header.Add("Content-Type", rc.writer.FormDataContentType())
 	}
-	if correlationIDParam := req.Ctx.Value(logging.CorrelationIDParam); correlationIDParam != nil {
+	if correlationIDParam := rc.Ctx.Value(logging.CorrelationIDParam); correlationIDParam != nil {
 		request.Header.Add("X-Correlation-ID", correlationIDParam.(string))
 	}
 
-	resp, err := req.Client.client.Do(request)
+	resp, err := rc.Client.client.Do(request)
 	if err != nil {
 		return newResponseData[T, E](http.StatusInternalServerError, nil, nil, nil, err)
 	}
