@@ -56,7 +56,7 @@ const (
 	MESSAGING_CLOUD_DEFAULT       string = "CLOUD_DEFAULT"
 	MESSAGING_RABBITMQ            string = "RABBITMQ"
 	SQL_DB_CONNECTION_URI_DEFAULT string = "host=%s port=%s user=%s password=%s dbname=%s application_name='%s' sslmode=%s"
-	VERSION                              = "v0.1.8"
+	VERSION                              = "v0.1.9"
 
 	// Errors messages
 	errorEnvironmentNotConfiguredMsg string = "environment is not configured. Set production, sandbox, development or test"
