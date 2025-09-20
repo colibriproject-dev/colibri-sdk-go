@@ -4,68 +4,70 @@
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=colibri-project-dev_colibri-sdk-go&metric=coverage)](https://sonarcloud.io/summary/new_code?id=colibri-project-dev_colibri-sdk-go)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=colibri-project-dev_colibri-sdk-go&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=colibri-project-dev_colibri-sdk-go)
 
+Available languages: [English](README.md) | [Português](README.pt-BR.md)
+
 # colibri-sdk-go
 
-Uma biblioteca abrangente para desenvolvimento de aplicações Go com suporte para diversos serviços e funcionalidades.
+A comprehensive library for building Go applications with support for multiple services and features.
 
-## Sumário
+## Table of Contents
 
-* [Introdução](#introdução)
-* [Status do Projeto](#status-do-projeto)
-* [Funcionalidades](#funcionalidades)
-* [Instalação](#instalação)
-* [Uso](#uso)
-* [Contribuições](#contribuições)
-* [Licença](#licença)
+* [Introduction](#introduction)
+* [Project Status](#project-status)
+* [Features](#features)
+* [Installation](#installation)
+* [Usage](#usage)
+* [Contributing](#contributing)
+* [License](#license)
 
-## Introdução
+## Introduction
 
-O `colibri-sdk-go` é um conjunto de ferramentas e bibliotecas projetado para facilitar o desenvolvimento de aplicações Go robustas e escaláveis. O SDK fornece abstrações e implementações para diversos serviços e funcionalidades comuns, permitindo que os desenvolvedores se concentrem na lógica de negócios de suas aplicações.
+`colibri-sdk-go` is a set of tools and libraries designed to make it easier to develop robust and scalable Go applications. The SDK provides abstractions and implementations for a variety of common services and features, allowing developers to focus on their application’s business logic.
 
-## Status do Projeto
+## Project Status
 
-Em desenvolvimento ativo.
+Actively under development.
 
-## Funcionalidades
+## Features
 
-O `colibri-sdk-go` oferece as seguintes funcionalidades:
+`colibri-sdk-go` offers the following features:
 
 ### Base
-- **cloud**: Integrações com serviços de nuvem
-- **config**: Gerenciamento de configurações para diferentes ambientes
-- **logging**: Sistema de logging flexível e extensível
-- **monitoring**: Integração com ferramentas de monitoramento e observabilidade
-- **observer**: Implementação do padrão Observer para graceful shutdown
-- **security**: Funcionalidades relacionadas à segurança
-- **test**: Utilitários para testes
-- **transaction**: Gerenciamento de transações
-- **types**: Tipos comuns utilizados em toda a biblioteca
-- **validator**: Utilitários para validação de dados
+- **cloud**: Cloud service integrations
+- **config**: Configuration management for different environments
+- **logging**: Flexible and extensible logging system
+- **monitoring**: Integration with monitoring and observability tools
+- **observer**: Observer pattern implementation for graceful shutdown
+- **security**: Security-related functionality
+- **test**: Testing utilities
+- **transaction**: Transaction management
+- **types**: Common types used across the library
+- **validator**: Data validation utilities
 
-### Banco de Dados
-- **Cache**: Integração com bancos de dados de cache (como Redis)
-- **SQL**: Acesso e gerenciamento de bancos de dados SQL
+### Database
+- **Cache**: Integration with cache databases (such as Redis)
+- **SQL**: Access and management of SQL databases
 
 ### Web
-- **Cliente REST**: Cliente para consumo de APIs REST
-- **Servidor REST**: Servidor para criação de APIs REST
+- **REST Client**: Client for consuming REST APIs
+- **REST Server**: Server for building REST APIs
 
-### Outros
-- **Mensageria**: Serviços de mensageria
-- **Armazenamento**: Serviços de armazenamento
-- **Injeção de Dependência**: Sistema de injeção de dependência
+### Other
+- **Messaging**: Messaging services
+- **Storage**: Storage services
+- **Dependency Injection**: Dependency injection system
 
-## Instalação
+## Installation
 
-Para instalar o `colibri-sdk-go`, utilize o comando go get:
+To install `colibri-sdk-go`, use go get:
 
 ```bash
 go get github.com/colibriproject-dev/colibri-sdk-go
 ```
 
-## Uso
+## Usage
 
-Para inicializar o SDK em sua aplicação:
+To initialize the SDK in your application:
 
 ```go
 package main
@@ -75,25 +77,25 @@ import (
 )
 
 func main() {
-    // Inicializa o SDK
+    // Initialize the SDK
     colibri.InitializeApp()
 
-    // Sua aplicação aqui
+    // Your application here
 }
 ```
 
-## Contribuições
+## Contributing
 
-Contribuições são bem-vindas! Por favor, leia o [Código de Conduta](CODE_OF_CONDUCT.md) antes de contribuir.
+Contributions are welcome! Please read the [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
 
-Para contribuir:
-1. Faça um fork do repositório
-2. Crie uma branch para sua feature (`git checkout -b feature/amazing-feature`)
-3. Faça commit de suas mudanças (`git commit -m 'Add some amazing feature'`)
-4. Faça push para a branch (`git push origin feature/amazing-feature`)
-5. Abra um Pull Request
+To contribute:
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## Licença
+## License
 
-Este projeto está licenciado sob a licença Apache 2.0 - veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
 

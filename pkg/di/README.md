@@ -1,15 +1,15 @@
-# Contêiner de injeção de dependência
+# Dependency Injection Container
 
-Funcionalidades dessa versão:
+Features of this version:
 
- - Injeção automática de dependências 	
- - Identificação automática de implementação de interfaces 	
- - **Desambiguação** por meio de **metadados**
+ - Automatic dependency injection	
+ - Automatic identification of interface implementations	
+ - **Disambiguation** via **metadata**
 
-## Sobre o contêiner de injeção de dependência (DI)	
-A struct `di.Container` representa um contêiner de injeção de dependências e é responsável por instanciar, configurar e montar os componentes mapeados na aplicação (beans). O contêiner recebe instruções sobre os componentes para instanciar, configurar e montar através de funções contrutoras e tags com metadados nas structs.
+## About the dependency injection (DI) container	
+The `di.Container` struct represents a dependency injection container and is responsible for instantiating, configuring, and assembling the components mapped in the application (beans). The container receives instructions about the components to instantiate, configure, and assemble through constructor functions and struct tags with metadata.
 
-Exemplo básico:
+Basic example:
 
     package  main
     
@@ -36,50 +36,50 @@ Exemplo básico:
 		return  Foo{}
     }
 
-No exemplo acima, os construtores foram registrados no container por meio do método `AddDependencies`. Após o registro das dependências, inicia-se a aplicação por meio do método `StartApp`, que recebe como parâmetro uma função responsável por iniciar todo o fluxo da aplicação. Após o recebimento da função de inicialização do sistema, o container identifica e instancia, por meio dos parâmetros dos construtores, as dependências de cada objeto do sistema.
+In the example above, the constructors were registered in the container using the `AddDependencies` method. After registering the dependencies, the application is started through the `StartApp` method, which receives as a parameter a function responsible for starting the entire application flow. After receiving the system initialization function, the container identifies and instantiates, via the constructor parameters, the dependencies of each object in the system.
 
-## Conceitos fundamentais
+## Fundamental concepts
 ### Beans
 
-Os objetos que formam a espinha dorsal da sua aplicação e que são gerenciados pelo contêiner de DI são chamados de beans. Um bean é um objeto instanciado, montado e gerenciado por um contêiner de DI.
+The objects that form the backbone of your application and are managed by the DI container are called beans. A bean is an object instantiated, assembled, and managed by a DI container.
 
-Todos os Beans são construídos por uma função construtora.
+All beans are built by a constructor function.
 
-Cada Bean possuí duas propriedades principais: um nome e um tipo.
+Each bean has two main properties: a name and a type.
 
-Pode haver muitos beans do mesmo tipo, mas o nome do bean é único e é utilizado para identificá-lo.
+There can be many beans of the same type, but the bean name is unique and is used to identify it.
 
-Quanto ao seu comportamento, os beans podem ser classificados em dois tipos:
+Regarding behavior, beans can be classified into two types:
 
- - **Beans locais** são os beans que são criados no momento da injeção
- - **Beans globais** são os beans criados um única vez e injetados em vários outros beans
+ - **Local beans** are beans that are created at injection time
+ - **Global beans** are beans created once and injected into several other beans
 
 ![beans-comparation](beans-comparation.png)
 
-A tabela abaixo relaciona todas as propriedades dos beans:
+The table below lists all the properties of the beans:
 
-| Propriedade | Descrição |
+| Property | Description |
 |--|--|
-| IsFunction | Indica se o bean possuí somente um contrutor ou um objeto já instanciado |
-| IsGlobal | Indica se o bean é global ou locsl |
-| Name | O nome único do bean |
-| constructorType | Objeto que carrega informações completas do construtor |
-| fnValue | Objeto que carrega o contrutor para ser invocado na construção do objeto |
-| constructorReturn | Objeto que carrega o tipo exato do construtor, usado para obter matadados |
-| ParamTypes | Os parametros de contrução do bena |
+| IsFunction | Indicates whether the bean has only a constructor or an already instantiated object |
+| IsGlobal | Indicates whether the bean is global or local |
+| Name | The unique name of the bean |
+| constructorType | Object that holds complete information about the constructor |
+| fnValue | Object that holds the constructor to be invoked for building the object |
+| constructorReturn | Object that holds the exact type of the constructor, used to obtain metadata |
+| ParamTypes | The parameters for building the bean |
 
 
-### Construtores de beans
+### Bean constructors
 
-Contrutores são funções responsáveis por criar os beans.
+Constructors are functions responsible for creating beans.
 
-Os contrutores de beans só podem ter 1 valor de retorno, que é o própio bean.
+Bean constructors can only have 1 return value, which is the bean itself.
 
-Os contrutores de beans devem obrigatoriamente receber outros benas como parametro ou não receber nenhum parametro (construtores raiz)
+Bean constructors must either receive other beans as parameters or receive no parameters (root constructors)
 
-### Desambiguação
+### Disambiguation
 
-Durante o processo de mapeamento e injeção, caso seja encontrado mais de um construtor para um bean, usa-se os metadados das tags para descobrir qual deve ser injetado.
+During the mapping and injection process, if more than one constructor is found for a bean, tag metadata is used to determine which one should be injected.
 
     type  BeanWithMetadata  struct {
     	f  BeanDependency  `di:"NewBeanDependency2"`
@@ -93,26 +93,26 @@ Durante o processo de mapeamento e injeção, caso seja encontrado mais de um co
     	return  BeanDependency{}
     }  
 
-> **Observação:** a desambiguação não funciona em parâmetros variádicos
+> **Note:** disambiguation does not work on variadic parameters
   
-## Fluxo de funcionamento do contêiner
+## Container operation flow
 
-O container de injeção de dependência funciona por meio de um processo de empilhamento e desempilhamento(injeção). Na fase de empilhamento, são identificadas as dependências de um objeto e as dependências dessas dependências, em um ciclo recursivo que termina ao encontrar objetos que não necessitam de injeção de dependência. Na fase de injeção, os objetos mapeados na pilha são criados de forma que os objetos no topo da pilha são utilizados como parâmetros para a criação dos objetos nas camadas inferiores.
+The dependency injection container works through a process of stacking and unstacking (injection). In the stacking phase, the dependencies of an object and the dependencies of those dependencies are identified, in a recursive cycle that ends when objects that do not require dependency injection are found. In the injection phase, the objects mapped in the stack are created so that the objects at the top of the stack are used as parameters to create the objects in the lower layers.
 
 ![flow](flow-1.png)
 
-1. Registram-se os construtores responsáveis por criar todas as dependências da aplicação. As dependências criadas pelos construtores e injetadas nos parâmetros de outros construtores são chamadas de beans.
+1. Register the constructors responsible for creating all the application dependencies. The dependencies created by the constructors and injected into other constructors' parameters are called beans.
 
-2. Registra-se a função responsável por iniciar todo o fluxo aplicação.
+2. Register the function responsible for starting the entire application flow.
 
-3. Identifica-se os beans que essa função recebe como parametro.
+3. Identify the beans that this function receives as parameters.
 
-4. Procura-se no registro de contrutuores os contrutores desse beans.
+4. Look up in the constructor registry the constructors for those beans.
 
-	1. Caso esses contrutores também recebam outros benas como párametros vai se iniciar um ciclo recursivo de procura de bens e identificação de construtores.
+	1. If these constructors also receive other beans as parameters, a recursive cycle of bean lookup and constructor identification will start.
 
-	2.  Esse ciclo se encerra quando se encontram os contrutores que não recebem parametros (contrutores raiz) ou um bean global.
+	2. This cycle ends when constructors that do not receive parameters (root constructors) or a global bean are found.
 
-	3. Caso seja encontrado mais de um construtor para um bean, usa-se os metadados das tags para descobrir qual deve ser injetado.
+	3. If more than one constructor for a bean is found, tag metadata is used to determine which should be injected.
 
-5. Quando se encontram os beans raiz (aqueles que não posuuem parametro), a recursividade da função termina ese inicia o processo de contrução de objetos.
+5. When the root beans are found (those that have no parameters), the recursion ends and the process of object construction begins.

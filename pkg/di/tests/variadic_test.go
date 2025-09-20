@@ -21,13 +21,13 @@ func newStringV() string {
 }
 
 func NewV(a string, s ...int) string {
-	fmt.Println("recebi: ", len(s), " dependencias ")
+	fmt.Println("received: ", len(s), " dependencies ")
 	return "s"
 }
 
 func Test_variadic(t *testing.T) {
 	a := di.NewContainer()
-	// Criação de um array de funções de diferentes tipos
+	// Creating an array of functions of different types
 	funcs := []any{newInt1, newInt2, newStringV}
 	a.AddDependencies(funcs)
 	assert.NotPanics(t, func() { a.StartApp(NewV) })

@@ -11,7 +11,7 @@ type Repository struct {
 }
 
 func (r Repository) GetData() {
-	fmt.Println("Chamando GetData")
+	fmt.Println("Calling GetData")
 }
 
 type RepositoryInterface interface {
@@ -24,7 +24,7 @@ type Service struct {
 
 func (s Service) Apply() {
 	s.R.GetData()
-	fmt.Println("Chamando Apply")
+	fmt.Println("Calling Apply")
 }
 
 type ServiceInterface interface {
@@ -36,7 +36,7 @@ type Controller struct {
 }
 
 func main() {
-	// Criação de um array de funções de diferentes tipos
+	// Creating an array of functions of different types
 	dependencies := []any{newController, newService, newRepository}
 
 	app := di.NewContainer()
@@ -47,19 +47,19 @@ func main() {
 }
 
 func newRepository() Repository {
-	fmt.Println("Criando Repository")
+	fmt.Println("Creating Repository")
 	return Repository{}
 }
 
 func newService(r RepositoryInterface) Service {
-	fmt.Println("Criando Service")
+	fmt.Println("Creating Service")
 	return Service{
 		R: r,
 	}
 }
 
 func newController(s ServiceInterface) Controller {
-	fmt.Println("Criando controller")
+	fmt.Println("Creating controller")
 	return Controller{
 		S: s,
 	}
@@ -67,7 +67,7 @@ func newController(s ServiceInterface) Controller {
 
 func (c Controller) handler(w http.ResponseWriter, r *http.Request) {
 	c.S.Apply()
-	fmt.Fprintf(w, "Olá, Mundo!")
+	fmt.Fprintf(w, "Hello, World!")
 }
 
 func InitializeAPP(c Controller) string {

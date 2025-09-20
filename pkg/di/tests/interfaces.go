@@ -2,31 +2,31 @@ package main
 
 import "fmt"
 
-// Definição de uma interface
+// Definition of an interface
 type MyInterface interface {
 	MyMethod() string
 }
 
-// Criando uma struct que dependa dessa interface
+// Creating a struct that depends on this interface
 type MyDependencyObject struct {
 	M MyInterface
 }
 
-// Criando o construtor dessa streuct dependente
+// Creating the constructor of this dependent struct
 func NewMyDependencyObject(m MyInterface) MyDependencyObject {
-	fmt.Println("criando MyDependencyObject e injetando dependecias")
+	fmt.Println("creating MyDependencyObject and injecting dependencies")
 	return MyDependencyObject{M: m}
 }
 
-// Definição de uma struct que implementa a interface
+// Definition of a struct that implements the interface
 type MyImplementation struct{}
 
 func (m MyImplementation) MyMethod() string {
-	fmt.Println("criando MyImplementation")
+	fmt.Println("creating MyImplementation")
 	return "MyImplementation implementing MyMethod"
 }
 
-// Criando um construtor para Mystruct
+// Creating a constructor for Mystruct
 func newMyImplementation() MyImplementation {
 	return MyImplementation{}
 }

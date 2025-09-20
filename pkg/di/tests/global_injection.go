@@ -3,21 +3,21 @@ package main
 import "fmt"
 
 func globalBeanFloat32() float32 {
-	fmt.Println("criando globalBeanFloat32")
+	fmt.Println("creating globalBeanFloat32")
 	return 3.2
 }
 
 func GlobalBeanString() string {
-	fmt.Println("criando GlobalBeanString")
+	fmt.Println("creating GlobalBeanString")
 	return "value"
 }
 
 func globalBeanInt(s string) int {
-	fmt.Println("criando globalBeanInt")
+	fmt.Println("creating globalBeanInt")
 	return 2
 }
 
 func GlobalInitializeAPP(a int, b float32, s string) string {
-	fmt.Println("criando GlobalInitializeAPP")
+	fmt.Println("creating GlobalInitializeAPP")
 	return fmt.Sprintf("%d - %f", a, b)
 }

@@ -2,12 +2,12 @@ package main
 
 import "fmt"
 
-// Definição de uma interface
+// Definition of an interface
 type fooInterface interface {
 	MyMethod() string
 }
 
-// Criando uma struct que dependa dessa interface
+// Creating a struct that depends on this interface
 type barObjectWithoutTag struct {
 	F fooInterface
 }
@@ -16,27 +16,27 @@ type barObjectWithTag struct {
 	G fooInterface `di:"newFooImplementation2"`
 }
 
-// Criando o construtor dessa streuct dependente
+// Creating the constructor of this dependent struct
 func NewBarObjectWithoutTag(f fooInterface) barObjectWithoutTag {
-	fmt.Println("criando barObjectWithoutTag  e injetando dependecias")
+	fmt.Println("creating barObjectWithoutTag and injecting dependencies")
 	return barObjectWithoutTag{F: f}
 }
 
-// Criando o construtor dessa streuct dependente
+// Creating the constructor of this dependent struct
 func NewBarObjectWithTag(f fooInterface) barObjectWithTag {
-	fmt.Println("criando barObjectWithTag e injetando dependecias")
+	fmt.Println("creating barObjectWithTag and injecting dependencies")
 	return barObjectWithTag{G: f}
 }
 
-// Definição de uma struct que implementa a interface
+// Definition of a struct that implements the interface
 type fooImplementation struct{}
 
 func (f fooImplementation) MyMethod() string {
-	fmt.Println("criando fooImplementation")
+	fmt.Println("creating fooImplementation")
 	return "fooImplementation implementing MyMethod"
 }
 
-// Criando um construtor para Mystruct
+// Creating a constructor for Mystruct
 func newFooImplementation1() fooImplementation {
 	return fooImplementation{}
 }
