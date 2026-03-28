@@ -15,10 +15,7 @@ type cacheDBObserver struct{}
 
 var instance *redis.Client
 
-// Initialize initializes the cache database connection.
-//
-// No parameters.
-// No return values.
+// Initialize starts the connection with the cache database.
 func Initialize() {
 	if instance != nil {
 		logging.Info(context.Background()).Msg("Cache database already connected")

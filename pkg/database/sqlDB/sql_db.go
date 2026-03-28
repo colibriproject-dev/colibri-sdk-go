@@ -29,10 +29,7 @@ const (
 // sqlDBInstance is a pointer to sql.DB
 var sqlDBInstance *sql.DB
 
-// Initialize start connection with sql database and execute migration.
-//
-// No parameters.
-// No return values.
+// Initialize starts the connection with the SQL database and executes migrations.
 func Initialize() {
 	if sqlDBInstance != nil {
 		logging.Info(context.Background()).Msg(dbAlreadyConnected)
@@ -50,12 +47,7 @@ func Initialize() {
 	sqlDBInstance = sqlDB
 }
 
-// NewSQLDatabaseInstance creates a new SQL database instance.
-//
-// Parameters:
-// - name: a string representing the name of the database.
-// - databaseURL: a string representing the URL of the database.
-// Returns a pointer to sql.DB.
+// NewSQLDatabaseInstance creates a new SQL database instance with the given name and URL.
 func NewSQLDatabaseInstance(name, databaseURL string) *sql.DB {
 	sqlDB, err := sql.Open(monitoring.GetSQLDBDriverName(), databaseURL)
 	if err != nil {

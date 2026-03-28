@@ -16,7 +16,7 @@ type subject interface {
 
 var services subject
 
-// Initialize starts the subject observability
+// Initialize starts the observation of system signals to trigger graceful shutdown.
 func Initialize() {
 	ch := make(chan os.Signal, 1)
 	services = &service{
@@ -31,7 +31,7 @@ func Initialize() {
 	}()
 }
 
-// Attach the subject on service observer
+// Attach adds an observer to the notification list for graceful shutdown.
 func Attach(o Observer) {
 	services.attach(o)
 }

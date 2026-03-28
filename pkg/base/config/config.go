@@ -220,32 +220,32 @@ func getEnvWithDefault(key string, defaultValue int) string {
 	return value
 }
 
-// IsProductionEnvironment returns a boolean if is production environment.
+// IsProductionEnvironment returns true if the current environment is production.
 func IsProductionEnvironment() bool {
 	return ENVIRONMENT == ENVIRONMENT_PRODUCTION
 }
 
-// IsSandboxEnvironment returns a boolean if is sandbox environment.
+// IsSandboxEnvironment returns true if the current environment is sandbox.
 func IsSandboxEnvironment() bool {
 	return ENVIRONMENT == ENVIRONMENT_SANDBOX
 }
 
-// IsDevelopmentEnvironment returns a boolean if is development environment.
+// IsDevelopmentEnvironment returns true if the current environment is development.
 func IsDevelopmentEnvironment() bool {
 	return ENVIRONMENT == ENVIRONMENT_DEVELOPMENT
 }
 
-// IsTestEnvironment returns a boolean if is test environment.
+// IsTestEnvironment returns true if the current environment is test.
 func IsTestEnvironment() bool {
 	return ENVIRONMENT == ENVIRONMENT_TEST
 }
 
-// IsCloudEnvironment returns a boolean if is production or sandbox environment.
+// IsCloudEnvironment returns true if the current cloud provider is configured.
 func IsCloudEnvironment() bool {
 	return IsProductionEnvironment() || IsSandboxEnvironment()
 }
 
-// IsLocalEnvironment returns a boolean if is development or test environment.
+// IsLocalEnvironment returns true if no cloud provider is configured.
 func IsLocalEnvironment() bool {
 	return IsDevelopmentEnvironment() || IsTestEnvironment()
 }

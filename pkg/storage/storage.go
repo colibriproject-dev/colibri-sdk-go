@@ -25,10 +25,7 @@ type storage interface {
 
 var instance storage
 
-// Initialize initializes the storage provider based on the configured cloud.
-//
-// No parameters.
-// No return values.
+// Initialize initializes the storage provider based on the configured cloud provider.
 func Initialize() {
 	if instance != nil {
 		logging.Info(context.Background()).Msg(storageAlreadyConnectedMsg)
@@ -46,11 +43,6 @@ func Initialize() {
 }
 
 // DownloadFile downloads a file from the storage provider.
-//
-// ctx: the context for the operation.
-// bucket: the storage bucket from which the file is downloaded.
-// key: the key or identifier of the file to be downloaded.
-// Returns a file pointer and an error.
 func DownloadFile(ctx context.Context, bucket, key string) (*os.File, error) {
 	txn := monitoring.GetTransactionInContext(ctx)
 	if txn != nil {
@@ -66,12 +58,6 @@ func DownloadFile(ctx context.Context, bucket, key string) (*os.File, error) {
 }
 
 // UploadFile uploads a file to the storage provider.
-//
-// ctx: the context for the operation.
-// bucket: the storage bucket to upload the file to.
-// key: the key or identifier of the file to be uploaded.
-// file: the file to be uploaded.
-// Returns the location of the uploaded file and an error, if any.
 func UploadFile(ctx context.Context, bucket, key string, file *multipart.File) (string, error) {
 	txn := monitoring.GetTransactionInContext(ctx)
 	if txn != nil {
@@ -87,11 +73,6 @@ func UploadFile(ctx context.Context, bucket, key string, file *multipart.File) (
 }
 
 // DeleteFile deletes a file from the storage provider.
-//
-// ctx: the context for the operation.
-// bucket: the storage bucket from which the file is deleted.
-// key: the key or identifier of the file to be deleted.
-// Returns an error.
 func DeleteFile(ctx context.Context, bucket, key string) error {
 	txn := monitoring.GetTransactionInContext(ctx)
 	if txn != nil {

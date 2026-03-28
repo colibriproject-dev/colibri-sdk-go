@@ -50,6 +50,7 @@ func (o *messagingObserver) Close() {
 	o.closed = true
 }
 
+// Initialize starts the messaging module and connects to the message broker.
 func Initialize() {
 	if instance != nil {
 		logging.Info(context.Background()).Msg(messagingAlreadyConnected)

@@ -12,10 +12,7 @@ type Validator struct {
 
 var instance *Validator
 
-// Initialize initializes the Validator instance with playValidator and formDecoder, then registers custom types.
-//
-// No parameters.
-// No return values.
+// Initialize initializes the global Validator instance and registers custom types and validations.
 func Initialize() {
 	instance = &Validator{
 		validator:   playValidator.New(),
@@ -26,31 +23,17 @@ func Initialize() {
 	registerCustomValidations()
 }
 
-// RegisterCustomValidation registers a custom validation function with the provided tag.
-//
-// Parameters:
-// - tag: the tag to be registered
-// - fn: the function to be registered
-// No return values.
+// RegisterCustomValidation registers a custom validation function for the given tag.
 func RegisterCustomValidation(tag string, fn playValidator.Func) {
 	instance.validator.RegisterValidation(tag, fn)
 }
 
-// Struct performs validation on the provided object using the validator instance.
-//
-// Parameter:
-// - object: the object to be validated
-// Return type: error
+// Struct performs validation on the provided object.
 func Struct(object any) error {
 	return instance.validator.Struct(object)
 }
 
-// FormDecode decodes the values from the map[string][]string into the provided object using the formDecoder instance.
-//
-// Parameters:
-// - object: the object to be decoded
-// - values: the map containing the values to be decoded
-// Return type: error
+// FormDecode decodes values from a map into the provided object using the form decoder.
 func FormDecode(object any, values map[string][]string) error {
 	return instance.formDecoder.Decode(object, values)
 }
