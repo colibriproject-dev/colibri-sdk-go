@@ -18,32 +18,38 @@ var (
 	errUserUnauthenticated = errors.New("user not authenticated")
 )
 
-// Server is the contract to http server implementation
+// Server defines the contract for the HTTP server implementation.
 type Server interface {
+	// initialize prepares the server for running.
 	initialize()
+	// shutdown gracefully closes the server.
 	shutdown() error
+	// injectMiddlewares adds standard middlewares to the server.
 	injectMiddlewares()
+	// injectCustomMiddlewares adds user-defined middlewares to the server.
 	injectCustomMiddlewares()
+	// injectRoutes registers all routes in the server.
 	injectRoutes()
+	// listenAndServe starts the server and listens for requests.
 	listenAndServe() error
 }
 
-// AddRoutes add a list of routes in the webrest server
+// AddRoutes adds a list of routes to the web rest server.
 func AddRoutes(routes []Route) {
 	srvRoutes = append(srvRoutes, routes...)
 }
 
-// CustomAuthMiddleware add custom authentication middleware to the web server
+// CustomAuthMiddleware adds a custom authentication middleware to the web server.
 func CustomAuthMiddleware(fn CustomAuthenticationMiddleware) {
 	customAuth = fn
 }
 
-// Use add custom middleware to the web server
+// Use adds a custom middleware to the web server.
 func Use(m CustomMiddleware) {
 	customMiddlewares = append(customMiddlewares, m)
 }
 
-// ListenAndServe initialize, configure and expose the web rest server
+// ListenAndServe initializes, configures, and starts the web rest server.
 func ListenAndServe() {
 	addHealthCheckRoute()
 	addDocumentationRoute()

@@ -22,6 +22,9 @@ const banner = `
             project (%s)
 `
 
+// InitializeApp initializes all the components of the Colibri application.
+// It loads the configuration, prints the banner and application name, and initializes
+// the validator, observer, monitoring, and cloud services.
 func InitializeApp() {
 	if err := config.Load(); err != nil {
 		logging.Fatal(context.Background()).Err(err).Msgf("an error on try load config")
