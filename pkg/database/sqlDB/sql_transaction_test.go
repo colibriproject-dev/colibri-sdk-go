@@ -89,6 +89,30 @@ func TestSqlTransaction(t *testing.T) {
 		assert.NoError(t, query2Err)
 		assert.Nil(t, query2Result)
 	})
+
+	t.Run("Should rollback transaction on panic", func(t *testing.T) {
+		transaction := NewTransaction()
+		email := "panic@email.com"
+
+		func() {
+			defer func() {
+				_ = recover()
+			}()
+
+			_ = transaction.Execute(ctx, func(ctx context.Context) error {
+				insertContact := "INSERT INTO contacts (name, email) VALUES ($1, $2) "
+				stmt := NewStatement(ctx, insertContact, "Contact Panic", email)
+				if err := stmt.Execute(); err != nil {
+					return err
+				}
+				panic("simulated panic")
+			})
+		}()
+
+		queryResult, queryErr := NewQuery[contact](ctx, "SELECT name, email FROM contacts WHERE email = $1", email).One()
+		assert.NoError(t, queryErr)
+		assert.Nil(t, queryResult)
+	})
 }
 
 func TestSqlTransactionIsolationLevel(t *testing.T) {
