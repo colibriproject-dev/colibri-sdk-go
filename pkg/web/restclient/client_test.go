@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"k8s.io/apimachinery/pkg/util/net"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
@@ -47,6 +48,7 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	logging.Initialize()
 	monitoring.Initialize()
 	test.InitializeCacheDBTest()
 	wiremock = test.UseWiremockContainer(context.Background(), test.MountAbsolutPath(test.WIREMOCK_ENVIRONMENT_PATH))

@@ -20,7 +20,13 @@ func TestLogging(t *testing.T) {
 	ctx := context.Background()
 	ctx = InjectCorrelationIDInContext(ctx, "test-correlation-id")
 
+	cleanupFunc := func() {
+		os.Unsetenv("LOG_LEVEL")
+		logger = nil
+	}
+
 	t.Run("Should initialize logger with default level when LOG_LEVEL is not set", func(t *testing.T) {
+		defer cleanupFunc()
 		os.Unsetenv("LOG_LEVEL")
 
 		Initialize()
@@ -29,26 +35,54 @@ func TestLogging(t *testing.T) {
 	})
 
 	t.Run("Should initialize logger with specified level when LOG_LEVEL is set", func(t *testing.T) {
+		defer cleanupFunc()
 		os.Setenv("LOG_LEVEL", "debug")
 
 		Initialize()
 
 		assert.NotNil(t, logger)
+		assert.Equal(t, "debug", logLevel)
+	})
+
+	t.Run("Should initialize logger with specified level when LOG_LEVEL is set in upper case", func(t *testing.T) {
+		defer cleanupFunc()
+		os.Setenv(config.ENV_LOG_LEVEL, "DEBUG")
+
+		Initialize()
+
+		assert.NotNil(t, logger)
+		assert.Equal(t, "debug", logLevel)
+	})
+
+	t.Run("Should initialize logger with debug level and show debug messages", func(t *testing.T) {
+		defer cleanupFunc()
+		buf.Reset()
+		os.Setenv(config.ENV_LOG_LEVEL, "debug")
+		Initialize()
+
+		Debug(ctx).Msg("debug message test")
+
+		output := buf.String()
+		assert.Contains(t, output, "debug message test")
+		assert.Contains(t, output, "level=DEBUG")
 	})
 
 	t.Run("Should create logging instance with correlation ID when context has correlation ID", func(t *testing.T) {
+		defer cleanupFunc()
 		log := Info(ctx)
 
 		assert.Equal(t, "test-correlation-id", log.correlationID)
 	})
 
 	t.Run("Should add parameters to logging instance when AddParam is called", func(t *testing.T) {
+		defer cleanupFunc()
 		log := Info(ctx).AddParam("testKey", "testValue")
 
 		assert.Equal(t, "testValue", log.params["testKey"])
 	})
 
 	t.Run("Should add error to logging instance when Err is called", func(t *testing.T) {
+		defer cleanupFunc()
 		testErr := errors.New("test error")
 
 		log := Error(ctx).Err(testErr)
@@ -57,6 +91,9 @@ func TestLogging(t *testing.T) {
 	})
 
 	t.Run("Should format message correctly when Msg is called", func(t *testing.T) {
+		defer cleanupFunc()
+		Initialize()
+
 		Info(ctx).AddParam("test", "value").Msg("Test message 123")
 
 		output := buf.String()
@@ -65,6 +102,9 @@ func TestLogging(t *testing.T) {
 	})
 
 	t.Run("Should format message correctly when Msgf is called", func(t *testing.T) {
+		defer cleanupFunc()
+		Initialize()
+
 		Info(ctx).AddParam("test", "value").Msgf("Test %s %d", "message", 456)
 
 		output := buf.String()
@@ -73,12 +113,14 @@ func TestLogging(t *testing.T) {
 	})
 
 	t.Run("Should panic when Fatal is called with Msg", func(t *testing.T) {
+		defer cleanupFunc()
 		assert.Panics(t, func() {
 			Fatal(ctx).Msg("fatal message")
 		})
 	})
 
 	t.Run("Should return correct log level when parseLevel is called", func(t *testing.T) {
+		defer cleanupFunc()
 		testCases := []struct {
 			input    string
 			expected slog.Level
@@ -101,6 +143,7 @@ func TestLogging(t *testing.T) {
 	})
 
 	t.Run("Should clean function name correctly when cleanFunctionName is called", func(t *testing.T) {
+		defer cleanupFunc()
 		testCases := []struct {
 			input    string
 			expected string

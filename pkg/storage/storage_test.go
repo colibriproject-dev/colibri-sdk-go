@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/test"
 	"github.com/stretchr/testify/assert"
 )
@@ -20,6 +21,7 @@ const (
 )
 
 func TestMain(m *testing.M) {
+	logging.Initialize()
 	test.InitializeTestLocalstack()
 
 	Initialize()
