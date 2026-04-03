@@ -65,7 +65,7 @@ func (t DateTime) Time() time.Time {
 }
 
 // AddDate adds years, months, and days to the date time
-func (t DateTime) AddDate(years int, months int, days int) DateTime {
+func (t DateTime) AddDate(years, months, days int) DateTime {
 	return DateTime(time.Time(t).AddDate(years, months, days))
 }
 
