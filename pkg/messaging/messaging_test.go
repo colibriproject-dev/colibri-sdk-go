@@ -40,6 +40,8 @@ func (q *queueConsumerTest) QueueName() string {
 }
 
 func TestMessaging(t *testing.T) {
+	logging.Initialize()
+
 	t.Run("TestMessaging_GCP", func(t *testing.T) {
 		test.InitializeGcpEmulator()
 		Initialize()

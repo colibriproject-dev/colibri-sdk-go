@@ -33,20 +33,18 @@ type Logging struct {
 	correlationID string
 }
 
-func init() {
-	Initialize()
-}
-
 // Initialize initializes the logging.
 func Initialize() {
-	logger = slog.New(createLogHandler())
+	if logger == nil {
+		logger = slog.New(createLogHandler())
+	}
 }
 
 // createLogHandler creates and returns the appropriate log handler based on the environment and log level.
 // If the application is running in a development environment,
 // it returns a text-based log handler. Otherwise, it returns a JSON handler.
 func createLogHandler() slog.Handler {
-	logLevel = os.Getenv(config.ENV_LOG_LEVEL)
+	logLevel = strings.ToLower(os.Getenv(config.ENV_LOG_LEVEL))
 	if !slices.Contains([]string{"debug", "info", "warn", "warning", "error"}, logLevel) {
 		logLevel = "info"
 	}

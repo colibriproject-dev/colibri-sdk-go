@@ -33,6 +33,7 @@ func InitializeApp() {
 	printBanner()
 	printApplicationName()
 
+	logging.Initialize()
 	validator.Initialize()
 	observer.Initialize()
 	monitoring.Initialize()

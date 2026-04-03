@@ -6,10 +6,13 @@ import (
 	"time"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetWaitGroup(t *testing.T) {
+	logging.Initialize()
+
 	for i := 0; i < 10; i++ {
 		GetWaitGroup()
 	}

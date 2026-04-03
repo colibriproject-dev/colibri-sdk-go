@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,6 +23,8 @@ func TestInitializeBaseTest(t *testing.T) {
 }
 
 func TestInitializeCacheDBTest(t *testing.T) {
+	logging.Initialize()
+
 	t.Run("should initialize cache database test when InitializeCacheDBTest is called", func(t *testing.T) {
 		originalEnv := os.Getenv("ENVIRONMENT")
 		defer os.Setenv("ENVIRONMENT", originalEnv)
