@@ -100,7 +100,7 @@ func (i IsoDate) Compare(i2 IsoDate) int {
 }
 
 // AddDate adds years, months, and days to the iso date
-func (i IsoDate) AddDate(years int, months int, days int) IsoDate {
+func (i IsoDate) AddDate(years, months, days int) IsoDate {
 	return IsoDate(i.Time().AddDate(years, months, days))
 }
 

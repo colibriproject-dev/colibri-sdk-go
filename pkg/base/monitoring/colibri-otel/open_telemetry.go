@@ -22,7 +22,7 @@ import (
 )
 
 // splitAndTrim splits s by sep and trims spaces on each part, ignoring empty parts.
-func splitAndTrim(s string, sep string) []string {
+func splitAndTrim(s, sep string) []string {
 	parts := strings.Split(s, sep)
 	res := make([]string, 0, len(parts))
 	for _, p := range parts {
@@ -119,7 +119,7 @@ func (m *MonitoringOpenTelemetry) StartTransactionSegment(ctx context.Context, n
 	return span
 }
 
-func (m *MonitoringOpenTelemetry) AddTransactionAttribute(transaction any, key string, value string) {
+func (m *MonitoringOpenTelemetry) AddTransactionAttribute(transaction any, key, value string) {
 	transaction.(trace.Span).SetAttributes(attribute.String(key, value))
 }
 

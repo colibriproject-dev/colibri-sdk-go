@@ -29,7 +29,7 @@ func StartTransaction(ctx context.Context, name string, kind colibrimonitoringba
 	return instance.StartTransaction(ctx, name, kind)
 }
 
-func AddTransactionAttribute(transaction any, key string, value string) {
+func AddTransactionAttribute(transaction any, key, value string) {
 	instance.AddTransactionAttribute(transaction, key, value)
 }
 
