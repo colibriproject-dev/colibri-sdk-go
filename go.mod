@@ -1,8 +1,8 @@
 module github.com/colibriproject-dev/colibri-sdk-go
 
-go 1.24.0
+go 1.25
 
-toolchain go1.24.10
+toolchain go1.25.8
 
 require (
 	cloud.google.com/go/pubsub v1.50.0
