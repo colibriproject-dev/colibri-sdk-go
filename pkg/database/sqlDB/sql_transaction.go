@@ -16,7 +16,6 @@ const (
 	SqlTxContext SqlTxContextKey = "SqlTxContext"
 
 	transactionIsolationWarnMsg string = "transaction isolation just use first parameter, others will be ignored"
-	transactionRollbackErrorMsg string = "error when executing transaction rollback: %v: %w"
 	transactionCommitErrorMsg   string = "could not commit transaction: %w"
 	transactionStartErrorMsg    string = "could not start database transaction: %v"
 )
@@ -62,17 +61,11 @@ func (t *sqlTransaction) ExecuteInInstance(ctx context.Context, instance *sql.DB
 		return err
 	}
 	defer close(transactionChannel)
+	defer tx.Rollback()
 
 	ctx = context.WithValue(ctx, SqlTxContext, tx)
 
 	if err = fn(ctx); err != nil {
-		if rbErr := tx.Rollback(); rbErr != nil {
-			fErr := fmt.Errorf(transactionRollbackErrorMsg, err, rbErr)
-			logging.Error(ctx).Err(fErr)
-			transactionChannel <- fErr
-			return fErr
-		}
-
 		logging.Error(ctx).Err(err)
 		transactionChannel <- err
 		return err
