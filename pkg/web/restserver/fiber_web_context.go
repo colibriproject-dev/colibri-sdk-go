@@ -97,7 +97,7 @@ func (f *fiberWebContext) DecodeFormData(value any) error {
 	return validator.Struct(value)
 }
 
-func (f *fiberWebContext) AddHeader(key string, value string) {
+func (f *fiberWebContext) AddHeader(key, value string) {
 	f.ctx.Response().Header.Add(key, value)
 }
 

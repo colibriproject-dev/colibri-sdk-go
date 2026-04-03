@@ -47,7 +47,7 @@ type WebContext interface {
 	FormValue(key string) string
 
 	// AddHeader add header into http response
-	AddHeader(key string, value string)
+	AddHeader(key, value string)
 	// AddHeaders add a map of headers into an http response
 	AddHeaders(headers map[string]string)
 	// Redirect http response with redirect headers
