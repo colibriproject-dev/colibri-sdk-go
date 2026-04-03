@@ -28,7 +28,7 @@ func searchDisambiguation(returnType reflect.Type, dependenciesFound []Dependenc
 }
 
 // Checks whether a struct implements an interface
-func implementsInterface(structType reflect.Type, interfaceType reflect.Type) bool {
+func implementsInterface(structType, interfaceType reflect.Type) bool {
 	return structType.Implements(interfaceType)
 }
 

@@ -118,7 +118,7 @@ func (c *PostgresContainer) Dataset(basePath string, scripts ...string) error {
 	return nil
 }
 
-func (c *PostgresContainer) loadScript(basePath string, fileName string) (string, error) {
+func (c *PostgresContainer) loadScript(basePath, fileName string) (string, error) {
 	if !strings.HasSuffix(basePath, "/") {
 		basePath += "/"
 	}
@@ -150,7 +150,7 @@ func (c *PostgresContainer) setDatabaseEnv(testDbPort nat.Port) {
 	c.setEnv(config.ENV_SQL_DB_MIGRATION, "true")
 }
 
-func (c *PostgresContainer) setEnv(env string, value string) {
+func (c *PostgresContainer) setEnv(env, value string) {
 	if err := os.Setenv(env, value); err != nil {
 		logging.Fatal(c.ctx).Msgf("could not set env[%s] value[%s]: %v", env, value, err)
 	}
