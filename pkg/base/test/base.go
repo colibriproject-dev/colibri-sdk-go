@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/cloud"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
@@ -34,20 +35,24 @@ const (
 var m sync.Mutex
 
 func InitializeBaseTest() {
+	logging.Initialize()
 	loadConfig()
 }
 
 func InitializeCacheDBTest() {
+	logging.Initialize()
 	UseRedisContainer(context.Background())
 	loadConfig()
 }
 
 func InitializeSqlDBTest() {
+	logging.Initialize()
 	UsePostgresContainer(context.Background())
 	loadConfig()
 }
 
 func InitializeTestLocalstack(path ...string) {
+	logging.Initialize()
 	m.Lock()
 	ctx := context.WithValue(context.Background(), localstackID, uuid.New().String())
 	_ = UseLocalstackContainer(ctx, getLocalstackBasePath(path...))
@@ -64,6 +69,7 @@ func getLocalstackBasePath(path ...string) string {
 }
 
 func InitializeGcpEmulator(path ...string) {
+	logging.Initialize()
 	m.Lock()
 	ctx := context.WithValue(context.Background(), gcpEmulatorID, uuid.New().String())
 	_ = UseGcpEmulatorContainer(ctx, getGcpEmulatorBasePath(path...))
@@ -82,6 +88,7 @@ func getGcpEmulatorBasePath(path ...string) string {
 }
 
 func InitializeRabbitmq(path ...string) {
+	logging.Initialize()
 	m.Lock()
 	ctx := context.WithValue(context.Background(), rabbitmqID, uuid.New().String())
 	_ = UseRabbitmqContainer(ctx, getRabbitmqBasePath(path...))
