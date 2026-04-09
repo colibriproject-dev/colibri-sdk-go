@@ -41,6 +41,13 @@ const (
 	ENV_LOG_LEVEL             string = "LOG_LEVEL"
 	ENV_COLIBRI_MESSAGING     string = "COLIBRI_MESSAGING"
 
+	ENV_CORS_ALLOW_ORIGINS     string = "CORS_ALLOW_ORIGINS"
+	ENV_CORS_ALLOW_METHODS     string = "CORS_ALLOW_METHODS"
+	ENV_CORS_ALLOW_HEADERS     string = "CORS_ALLOW_HEADERS"
+	ENV_CORS_EXPOSE_HEADERS    string = "CORS_EXPOSE_HEADERS"
+	ENV_CORS_ALLOW_CREDENTIALS string = "CORS_ALLOW_CREDENTIALS"
+	ENV_CORS_MAX_AGE           string = "CORS_MAX_AGE"
+
 	// Environment values
 	ENVIRONMENT_PRODUCTION        string = "production"
 	ENVIRONMENT_SANDBOX           string = "sandbox"
@@ -97,6 +104,13 @@ var (
 
 	CACHE_URI      = ""
 	CACHE_PASSWORD = ""
+
+	CORS_ALLOW_ORIGINS     = "*"
+	CORS_ALLOW_METHODS     = "OPTIONS, GET, POST, PUT, PATCH, DELETE"
+	CORS_ALLOW_HEADERS     = "Origin, Content-Type, Authorization, X-User-Id, X-Tenant-Id"
+	CORS_EXPOSE_HEADERS    = ""
+	CORS_ALLOW_CREDENTIALS = false
+	CORS_MAX_AGE           = 0
 )
 
 // Load loads and validates all environment variables. It's used in app initialization.
@@ -175,6 +189,25 @@ func Load() error {
 		SQL_DB_NAME,
 		APP_NAME,
 		os.Getenv(ENV_SQL_DB_SSL_MODE))
+
+	if v := os.Getenv(ENV_CORS_ALLOW_ORIGINS); v != "" {
+		CORS_ALLOW_ORIGINS = v
+	}
+	if v := os.Getenv(ENV_CORS_ALLOW_METHODS); v != "" {
+		CORS_ALLOW_METHODS = v
+	}
+	if v := os.Getenv(ENV_CORS_ALLOW_HEADERS); v != "" {
+		CORS_ALLOW_HEADERS = v
+	}
+	if v := os.Getenv(ENV_CORS_EXPOSE_HEADERS); v != "" {
+		CORS_EXPOSE_HEADERS = v
+	}
+	if err := convertBoolEnv(&CORS_ALLOW_CREDENTIALS, ENV_CORS_ALLOW_CREDENTIALS); err != nil {
+		return err
+	}
+	if err := convertIntEnvWithDefault(&CORS_MAX_AGE, ENV_CORS_MAX_AGE, CORS_MAX_AGE); err != nil {
+		return err
+	}
 
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
@@ -85,9 +86,12 @@ func newOpenTelemetryFiberMiddleware() fiber.Handler {
 
 func accessControlFiberMiddleware() fiber.Handler {
 	return cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowMethods: "OPTIONS, GET, POST, PUT, PATCH, DELETE",
-		AllowHeaders: fmt.Sprintf("Origin, Content-Type, %s, %s, %s", authorizationHeader, userIDHeader, tenantIDHeader),
+		AllowOrigins:     config.CORS_ALLOW_ORIGINS,
+		AllowMethods:     config.CORS_ALLOW_METHODS,
+		AllowHeaders:     config.CORS_ALLOW_HEADERS,
+		ExposeHeaders:    config.CORS_EXPOSE_HEADERS,
+		AllowCredentials: config.CORS_ALLOW_CREDENTIALS,
+		MaxAge:           config.CORS_MAX_AGE,
 	})
 }
 
