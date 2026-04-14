@@ -351,6 +351,119 @@ func TestGeneralEnvs(t *testing.T) {
 	})
 }
 
+func TestCorsAllowOrigins(t *testing.T) {
+	loadTestEnvs(t)
+
+	t.Run("Should return default value when environment is empty", func(t *testing.T) {
+		Load()
+		assert.Equal(t, "*", CORS_ALLOW_ORIGINS)
+	})
+
+	t.Run("Should return cors allow origins when environment is not empty", func(t *testing.T) {
+		assert.NoError(t, os.Setenv(ENV_CORS_ALLOW_ORIGINS, "https://example.com"))
+
+		Load()
+		assert.Equal(t, "https://example.com", CORS_ALLOW_ORIGINS)
+	})
+}
+
+func TestCorsAllowMethods(t *testing.T) {
+	loadTestEnvs(t)
+
+	t.Run("Should return default value when environment is empty", func(t *testing.T) {
+		Load()
+		assert.Equal(t, "OPTIONS, GET, POST, PUT, PATCH, DELETE", CORS_ALLOW_METHODS)
+	})
+
+	t.Run("Should return cors allow methods when environment is not empty", func(t *testing.T) {
+		assert.NoError(t, os.Setenv(ENV_CORS_ALLOW_METHODS, "GET, POST"))
+
+		Load()
+		assert.Equal(t, "GET, POST", CORS_ALLOW_METHODS)
+	})
+}
+
+func TestCorsAllowHeaders(t *testing.T) {
+	loadTestEnvs(t)
+
+	t.Run("Should return default value when environment is empty", func(t *testing.T) {
+		Load()
+		assert.Equal(t, "Origin, Content-Type, Authorization, X-User-Id, X-Tenant-Id", CORS_ALLOW_HEADERS)
+	})
+
+	t.Run("Should return cors allow headers when environment is not empty", func(t *testing.T) {
+		assert.NoError(t, os.Setenv(ENV_CORS_ALLOW_HEADERS, "Authorization, X-Custom-Header"))
+
+		Load()
+		assert.Equal(t, "Authorization, X-Custom-Header", CORS_ALLOW_HEADERS)
+	})
+}
+
+func TestCorsExposeHeaders(t *testing.T) {
+	loadTestEnvs(t)
+
+	t.Run("Should return default value when environment is empty", func(t *testing.T) {
+		Load()
+		assert.Equal(t, "", CORS_EXPOSE_HEADERS)
+	})
+
+	t.Run("Should return cors expose headers when environment is not empty", func(t *testing.T) {
+		assert.NoError(t, os.Setenv(ENV_CORS_EXPOSE_HEADERS, "X-Custom-Header"))
+
+		Load()
+		assert.Equal(t, "X-Custom-Header", CORS_EXPOSE_HEADERS)
+	})
+}
+
+func TestCorsAllowCredentials(t *testing.T) {
+	loadTestEnvs(t)
+
+	t.Run("Should return default value when environment is empty", func(t *testing.T) {
+		Load()
+		assert.False(t, CORS_ALLOW_CREDENTIALS)
+	})
+
+	t.Run("Should return error when value is invalid", func(t *testing.T) {
+		assert.NoError(t, os.Setenv(ENV_CORS_ALLOW_CREDENTIALS, invalidValue))
+		assert.NotNil(t, Load())
+	})
+
+	t.Run("Should return true when environment is true", func(t *testing.T) {
+		assert.NoError(t, os.Setenv(ENV_CORS_ALLOW_CREDENTIALS, "true"))
+
+		Load()
+		assert.True(t, CORS_ALLOW_CREDENTIALS)
+	})
+
+	t.Run("Should return false when environment is false", func(t *testing.T) {
+		assert.NoError(t, os.Setenv(ENV_CORS_ALLOW_CREDENTIALS, "false"))
+
+		Load()
+		assert.False(t, CORS_ALLOW_CREDENTIALS)
+	})
+}
+
+func TestCorsMaxAge(t *testing.T) {
+	loadTestEnvs(t)
+
+	t.Run("Should return default value when environment is empty", func(t *testing.T) {
+		Load()
+		assert.Equal(t, 0, CORS_MAX_AGE)
+	})
+
+	t.Run("Should return error when value is invalid", func(t *testing.T) {
+		assert.NoError(t, os.Setenv(ENV_CORS_MAX_AGE, invalidValue))
+		assert.NotNil(t, Load())
+	})
+
+	t.Run("Should return cors max age when environment is not empty", func(t *testing.T) {
+		assert.NoError(t, os.Setenv(ENV_CORS_MAX_AGE, "3600"))
+
+		Load()
+		assert.Equal(t, 3600, CORS_MAX_AGE)
+	})
+}
+
 func loadTestEnvs(t *testing.T) {
 	assert.NoError(t, os.Setenv(ENV_ENVIRONMENT, ENVIRONMENT_TEST))
 	assert.NoError(t, os.Setenv(ENV_APP_NAME, appNameValue))
