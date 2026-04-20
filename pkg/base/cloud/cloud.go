@@ -3,7 +3,7 @@ package cloud
 import (
 	"context"
 
-	firebase "firebase.google.com/go"
+	firebase "firebase.google.com/go/v4"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
