@@ -27,13 +27,12 @@ var (
 type gcpEmulatorContainer struct {
 	lsContainerRequest *testcontainers.ContainerRequest
 	lsContainer        testcontainers.Container
-	ctx                context.Context
 }
 
 func UseGcpEmulatorContainer(ctx context.Context, configPath string) *gcpEmulatorContainer {
 	if gcpEmulatorContainerInstance == nil {
 		gcpEmulatorContainerInstance = newGcpEmulatorContainer(ctx, configPath)
-		gcpEmulatorContainerInstance.start()
+		gcpEmulatorContainerInstance.start(ctx)
 	}
 	return gcpEmulatorContainerInstance
 }
@@ -62,30 +61,30 @@ func newGcpEmulatorContainer(ctx context.Context, configPath string) *gcpEmulato
 		),
 	}
 
-	return &gcpEmulatorContainer{lsContainerRequest: req, ctx: ctx}
+	return &gcpEmulatorContainer{lsContainerRequest: req}
 }
 
-func (c *gcpEmulatorContainer) start() {
+func (c *gcpEmulatorContainer) start(ctx context.Context) {
 	var err error
-	c.lsContainer, err = testcontainers.GenericContainer(c.ctx, testcontainers.GenericContainerRequest{
+	c.lsContainer, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: *c.lsContainerRequest,
 		Started:          true,
 	})
 	if err != nil {
-		logging.Fatal(c.ctx).Err(err)
+		logging.Fatal(ctx).Err(err)
 	}
 
-	pubSubPort, err := c.lsContainer.MappedPort(c.ctx, gcpEmulatorPubSubSvcPort)
+	pubSubPort, err := c.lsContainer.MappedPort(ctx, gcpEmulatorPubSubSvcPort)
 	if err != nil {
-		logging.Fatal(c.ctx).Err(err)
+		logging.Fatal(ctx).Err(err)
 	}
 
-	storagePort, err := c.lsContainer.MappedPort(c.ctx, gcpEmulatorStorageSvcPort)
+	storagePort, err := c.lsContainer.MappedPort(ctx, gcpEmulatorStorageSvcPort)
 	if err != nil {
-		logging.Fatal(c.ctx).Err(err)
+		logging.Fatal(ctx).Err(err)
 	}
 
-	logging.Info(c.ctx).Msgf("Test gcp emulator started. Pub/Sub at %s and Storage at %s", pubSubPort, storagePort)
+	logging.Info(ctx).Msgf("Test gcp emulator started. Pub/Sub at %s and Storage at %s", pubSubPort, storagePort)
 	c.setEnv(pubSubPort, storagePort)
 }
 

@@ -27,18 +27,17 @@ var (
 type LocalstackContainer struct {
 	lsContainerRequest *testcontainers.ContainerRequest
 	lsContainer        testcontainers.Container
-	ctx                context.Context
 }
 
 func UseLocalstackContainer(ctx context.Context, configPath string) *LocalstackContainer {
 	if localstackContainerInstance == nil {
-		localstackContainerInstance = newLocalstackContainer(ctx, configPath)
-		localstackContainerInstance.start()
+		localstackContainerInstance = newLocalstackContainer(configPath)
+		localstackContainerInstance.start(ctx)
 	}
 	return localstackContainerInstance
 }
 
-func newLocalstackContainer(ctx context.Context, configPath string) *LocalstackContainer {
+func newLocalstackContainer(configPath string) *LocalstackContainer {
 	req := &testcontainers.ContainerRequest{
 		Image:        localstackDockerImage,
 		ExposedPorts: []string{localstackSvcPort},
@@ -65,25 +64,25 @@ func newLocalstackContainer(ctx context.Context, configPath string) *LocalstackC
 		),
 	}
 
-	return &LocalstackContainer{lsContainerRequest: req, ctx: ctx}
+	return &LocalstackContainer{lsContainerRequest: req}
 }
 
-func (c *LocalstackContainer) start() {
+func (c *LocalstackContainer) start(ctx context.Context) {
 	var err error
-	c.lsContainer, err = testcontainers.GenericContainer(c.ctx, testcontainers.GenericContainerRequest{
+	c.lsContainer, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: *c.lsContainerRequest,
 		Started:          true,
 	})
 	if err != nil {
-		logging.Fatal(c.ctx).Err(err)
+		logging.Fatal(ctx).Err(err)
 	}
 
-	localstackPort, err := c.lsContainer.MappedPort(c.ctx, localstackSvcPort)
+	localstackPort, err := c.lsContainer.MappedPort(ctx, localstackSvcPort)
 	if err != nil {
-		logging.Fatal(c.ctx).Err(err)
+		logging.Fatal(ctx).Err(err)
 	}
 
-	logging.Info(c.ctx).Msgf("Test localstack started at port: %s", localstackPort)
+	logging.Info(ctx).Msgf("Test localstack started at port: %s", localstackPort)
 	c.setEnv(localstackPort)
 }
 

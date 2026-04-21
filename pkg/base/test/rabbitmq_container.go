@@ -28,14 +28,12 @@ var (
 type RabbitmqContainer struct {
 	rabbitmqContainerRequest *testcontainers.ContainerRequest
 	rabbitmqContainer        testcontainers.Container
-	ctx                      context.Context
 }
 
 func UseRabbitmqContainer(ctx context.Context, configPath string) *RabbitmqContainer {
 	if rabbitmqContainerInstance == nil {
 		rabbitmqContainerInstance = newRabbitmqContainer(configPath)
-		rabbitmqContainerInstance.ctx = ctx
-		rabbitmqContainerInstance.start()
+		rabbitmqContainerInstance.start(ctx)
 	}
 	return rabbitmqContainerInstance
 }
@@ -71,34 +69,34 @@ func newRabbitmqContainer(configPath string) *RabbitmqContainer {
 	return &RabbitmqContainer{rabbitmqContainerRequest: req}
 }
 
-func (c *RabbitmqContainer) start() {
+func (c *RabbitmqContainer) start(ctx context.Context) {
 	var err error
-	c.rabbitmqContainer, err = testcontainers.GenericContainer(c.ctx, testcontainers.GenericContainerRequest{
+	c.rabbitmqContainer, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: *c.rabbitmqContainerRequest,
 		Started:          true,
 	})
 	if err != nil {
-		logging.Fatal(c.ctx).Err(err)
+		logging.Fatal(ctx).Err(err)
 	}
 
-	amqpPort, err := c.rabbitmqContainer.MappedPort(c.ctx, rabbitmqAMQPPort)
+	amqpPort, err := c.rabbitmqContainer.MappedPort(ctx, rabbitmqAMQPPort)
 	if err != nil {
-		logging.Fatal(c.ctx).Err(err)
+		logging.Fatal(ctx).Err(err)
 	}
 
-	managementPort, err := c.rabbitmqContainer.MappedPort(c.ctx, rabbitmqManagementPort)
+	managementPort, err := c.rabbitmqContainer.MappedPort(ctx, rabbitmqManagementPort)
 	if err != nil {
-		logging.Fatal(c.ctx).Err(err)
+		logging.Fatal(ctx).Err(err)
 	}
 
-	c.setRabbitmqEnv(amqpPort, managementPort)
+	c.setRabbitmqEnv(ctx, amqpPort, managementPort)
 
-	logging.Info(c.ctx).Msgf("Test RabbitMQ AMQP started at port: %s", amqpPort)
-	logging.Info(c.ctx).Msgf("Test RabbitMQ Management Interface available at: http://localhost:%s", managementPort)
+	logging.Info(ctx).Msgf("Test RabbitMQ AMQP started at port: %s", amqpPort)
+	logging.Info(ctx).Msgf("Test RabbitMQ Management Interface available at: http://localhost:%s", managementPort)
 }
 
-func (c *RabbitmqContainer) setRabbitmqEnv(amqpPort, managementPort nat.Port) {
+func (c *RabbitmqContainer) setRabbitmqEnv(ctx context.Context, amqpPort, managementPort nat.Port) {
 	_ = os.Setenv("RABBITMQ_URL", fmt.Sprintf("amqp://test:test@localhost:%s/", amqpPort.Port()))
-	logging.Info(c.ctx).Msgf("RabbitMQ URL: %s", os.Getenv("RABBITMQ_URL"))
-	logging.Info(c.ctx).Msgf("RabbitMQ Management URL: http://localhost:%s", managementPort.Port())
+	logging.Info(ctx).Msgf("RabbitMQ URL: %s", os.Getenv("RABBITMQ_URL"))
+	logging.Info(ctx).Msgf("RabbitMQ Management URL: http://localhost:%s", managementPort.Port())
 }
