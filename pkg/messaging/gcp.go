@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"os"
 
-	"cloud.google.com/go/pubsub"
+	"cloud.google.com/go/pubsub/v2"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 )
 
@@ -33,7 +33,7 @@ func newGcpMessaging() *gcpMessaging {
 }
 
 func (m *gcpMessaging) producer(ctx context.Context, p *Producer, msg *ProviderMessage) error {
-	topic := m.client.Topic(p.topic)
+	topic := m.client.Publisher(p.topic)
 	result := topic.Publish(ctx, &pubsub.Message{Data: []byte(msg.String())})
 	_, err := result.Get(ctx)
 	return err
@@ -41,7 +41,7 @@ func (m *gcpMessaging) producer(ctx context.Context, p *Producer, msg *ProviderM
 
 func (m *gcpMessaging) consumer(ctx context.Context, c *consumer) (chan *ProviderMessage, error) {
 	ch := make(chan *ProviderMessage, 1)
-	sub := m.client.Subscription(c.queue)
+	sub := m.client.Subscriber(c.queue)
 
 	go func() {
 		if err := sub.Receive(ctx, func(innerCtx context.Context, msg *pubsub.Message) {
