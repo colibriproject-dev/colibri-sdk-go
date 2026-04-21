@@ -190,6 +190,14 @@ func Load() error {
 		APP_NAME,
 		os.Getenv(ENV_SQL_DB_SSL_MODE))
 
+	if err := configCors(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func configCors() error {
 	if v := os.Getenv(ENV_CORS_ALLOW_ORIGINS); v != "" {
 		CORS_ALLOW_ORIGINS = v
 	}
@@ -208,7 +216,6 @@ func Load() error {
 	if err := convertIntEnvWithDefault(&CORS_MAX_AGE, ENV_CORS_MAX_AGE, CORS_MAX_AGE); err != nil {
 		return err
 	}
-
 	return nil
 }
 

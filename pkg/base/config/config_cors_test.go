@@ -8,6 +8,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func setEnvVars(t *testing.T, envVars map[string]string) {
+	t.Helper()
+	for key, value := range envVars {
+		if value != "" {
+			require.NoError(t, os.Setenv(key, value))
+		}
+	}
+}
+
 func resetCORSDefaults() {
 	CORS_ALLOW_ORIGINS = "*"
 	CORS_ALLOW_METHODS = "OPTIONS, GET, POST, PUT, PATCH, DELETE"
@@ -251,13 +260,7 @@ func TestLoad_CORSConfigurations(t *testing.T) {
 				resetCORSDefaults()
 			})
 
-			// Set test env vars
-			for key, value := range tt.envVars {
-				if value != "" {
-					err := os.Setenv(key, value)
-					require.NoError(t, err)
-				}
-			}
+			setEnvVars(t, tt.envVars)
 
 			err := Load()
 
