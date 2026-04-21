@@ -25,14 +25,12 @@ type RedisContainer struct {
 	redisContainerRequest *testcontainers.ContainerRequest
 	redisContainer        testcontainers.Container
 	redisClient           *redis.Client
-	ctx                   context.Context
 }
 
 func UseRedisContainer(ctx context.Context) *RedisContainer {
 	if redisContainerInstance == nil {
 		redisContainerInstance = newRedisContainer()
-		redisContainerInstance.ctx = ctx
-		redisContainerInstance.start()
+		redisContainerInstance.start(ctx)
 	}
 	return redisContainerInstance
 }
@@ -50,28 +48,28 @@ func newRedisContainer() *RedisContainer {
 	return &RedisContainer{redisContainerRequest: req}
 }
 
-func (c *RedisContainer) start() {
+func (c *RedisContainer) start(ctx context.Context) {
 	var err error
-	c.redisContainer, err = testcontainers.GenericContainer(c.ctx, testcontainers.GenericContainerRequest{
+	c.redisContainer, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: *c.redisContainerRequest,
 		Started:          true,
 	})
 	if err != nil {
-		logging.Fatal(c.ctx).Err(err)
+		logging.Fatal(ctx).Err(err)
 	}
 
-	testDbPort, err := c.redisContainer.MappedPort(c.ctx, testRedisSvcPort)
+	testDbPort, err := c.redisContainer.MappedPort(ctx, testRedisSvcPort)
 	if err != nil {
-		logging.Fatal(c.ctx).Err(err)
+		logging.Fatal(ctx).Err(err)
 	}
 
 	c.setRedisEnv(testDbPort)
 	opts := &redis.Options{Addr: fmt.Sprintf("localhost:%s", testDbPort.Port())}
 	c.redisClient = redis.NewClient(opts)
 
-	logging.Info(c.ctx).Msgf("Test redis started at port: %s", testDbPort)
+	logging.Info(ctx).Msgf("Test redis started at port: %s", testDbPort)
 }
 
-func (c RedisContainer) setRedisEnv(port nat.Port) {
+func (c *RedisContainer) setRedisEnv(port nat.Port) {
 	_ = os.Setenv(config.ENV_CACHE_URI, fmt.Sprintf("localhost:%s", port.Port()))
 }

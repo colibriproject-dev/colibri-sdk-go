@@ -24,14 +24,12 @@ type WiremockContainer struct {
 	wContainer        testcontainers.Container
 	configPath        string
 	instancePort      int
-	ctx               context.Context
 }
 
 func UseWiremockContainer(ctx context.Context, configPath string) *WiremockContainer {
 	if wiremockContainerInstance == nil {
 		wiremockContainerInstance = newWiremockContainer(configPath)
-		wiremockContainerInstance.ctx = ctx
-		wiremockContainerInstance.start()
+		wiremockContainerInstance.start(ctx)
 	}
 	return wiremockContainerInstance
 }
@@ -57,20 +55,20 @@ func newWiremockContainer(configPath string) *WiremockContainer {
 	return &WiremockContainer{wContainerRequest: &req, configPath: configPath}
 }
 
-func (c *WiremockContainer) start() {
+func (c *WiremockContainer) start(ctx context.Context) {
 	var err error
-	c.wContainer, err = testcontainers.GenericContainer(c.ctx, testcontainers.GenericContainerRequest{
+	c.wContainer, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: *c.wContainerRequest,
 		Started:          true,
 	})
 	if err != nil {
-		logging.Fatal(c.ctx).Err(err)
+		logging.Fatal(ctx).Err(err)
 	}
 
-	runningPort, _ := c.wContainer.MappedPort(c.ctx, wiremockSvcPort)
+	runningPort, _ := c.wContainer.MappedPort(ctx, wiremockSvcPort)
 	c.instancePort = runningPort.Int()
 
-	logging.Info(c.ctx).Msgf("Test wiremock started at port: %s", runningPort.Port())
+	logging.Info(ctx).Msgf("Test wiremock started at port: %s", runningPort.Port())
 }
 
 func (c *WiremockContainer) Port() int {
