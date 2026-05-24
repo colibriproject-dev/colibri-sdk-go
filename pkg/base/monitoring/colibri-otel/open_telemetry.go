@@ -44,6 +44,13 @@ func normalizeEndpoint(endpoint string) string {
 	return endpoint
 }
 
+// isInsecureEndpoint reports whether the OTLP exporter should send without TLS.
+// An explicit https:// scheme enables TLS; anything else (http:// or no scheme)
+// stays insecure for backwards compatibility with the previous hardcoded behavior.
+func isInsecureEndpoint(endpoint string) bool {
+	return !strings.HasPrefix(endpoint, "https://")
+}
+
 // splitAndTrim splits s by sep and trims spaces on each part, ignoring empty parts.
 func splitAndTrim(s, sep string) []string {
 	parts := strings.Split(s, sep)
@@ -121,7 +128,9 @@ func StartOpenTelemetryMonitoring() colibrimonitoringbase.Monitoring {
 	// ── Trace exporter + provider ─────────────────────────────────────────────
 	traceOptions := []otlptracehttp.Option{
 		otlptracehttp.WithEndpoint(normalizeEndpoint(config.OTEL_EXPORTER_OTLP_ENDPOINT)),
-		otlptracehttp.WithInsecure(),
+	}
+	if isInsecureEndpoint(config.OTEL_EXPORTER_OTLP_ENDPOINT) {
+		traceOptions = append(traceOptions, otlptracehttp.WithInsecure())
 	}
 	if len(parsedHeaders) > 0 {
 		traceOptions = append(traceOptions, otlptracehttp.WithHeaders(parsedHeaders))
@@ -147,7 +156,9 @@ func StartOpenTelemetryMonitoring() colibrimonitoringbase.Monitoring {
 
 	metricOptions := []otlpmetrichttp.Option{
 		otlpmetrichttp.WithEndpoint(normalizeEndpoint(metricsEndpoint)),
-		otlpmetrichttp.WithInsecure(),
+	}
+	if isInsecureEndpoint(metricsEndpoint) {
+		metricOptions = append(metricOptions, otlpmetrichttp.WithInsecure())
 	}
 	if len(parsedHeaders) > 0 {
 		metricOptions = append(metricOptions, otlpmetrichttp.WithHeaders(parsedHeaders))
