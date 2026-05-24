@@ -6,8 +6,7 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 )
 
-type others struct {
-}
+type others struct{}
 
 func NewOthers() Monitoring {
 	return &others{}
@@ -50,3 +49,34 @@ func (m *others) NoticeError(_ any, err error) {
 func (m *others) GetSQLDBDriverName() string {
 	return "postgres"
 }
+
+func (m *others) Counter(name, _, _ string) Counter {
+	logging.Debug(context.Background()).Msgf("Creating noop counter %s", name)
+	return &noopCounter{}
+}
+
+func (m *others) Histogram(name, _, _ string) Histogram {
+	logging.Debug(context.Background()).Msgf("Creating noop histogram %s", name)
+	return &noopHistogram{}
+}
+
+func (m *others) Gauge(name, _, _ string) Gauge {
+	logging.Debug(context.Background()).Msgf("Creating noop gauge %s", name)
+	return &noopGauge{}
+}
+
+func (m *others) Close() {
+	logging.Debug(context.Background()).Msg("Closing noop monitoring")
+}
+
+type noopCounter struct{}
+
+func (c *noopCounter) Add(_ context.Context, _ int64, _ map[string]string) {}
+
+type noopHistogram struct{}
+
+func (h *noopHistogram) Record(_ context.Context, _ float64, _ map[string]string) {}
+
+type noopGauge struct{}
+
+func (g *noopGauge) Record(_ context.Context, _ float64, _ map[string]string) {}

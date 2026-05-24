@@ -4,22 +4,45 @@ import (
 	"context"
 	"os"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	colibrimonitoringbase "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
+	"github.com/google/uuid"
 	"go.nhat.io/otelsql"
 	"go.opentelemetry.io/contrib"
+	otelruntime "go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
 )
+
+// normalizeEndpoint strips the scheme (http:// or https://) and any trailing path from
+// an OTLP endpoint, leaving just host:port as expected by WithEndpoint options.
+func normalizeEndpoint(endpoint string) string {
+	for _, scheme := range []string{"https://", "http://"} {
+		if strings.HasPrefix(endpoint, scheme) {
+			endpoint = strings.TrimPrefix(endpoint, scheme)
+			break
+		}
+	}
+	// Drop any path component (e.g. /v1/traces → keep only host:port).
+	if idx := strings.Index(endpoint, "/"); idx >= 0 {
+		endpoint = endpoint[:idx]
+	}
+	return endpoint
+}
 
 // splitAndTrim splits s by sep and trims spaces on each part, ignoring empty parts.
 func splitAndTrim(s, sep string) []string {
@@ -34,68 +57,141 @@ func splitAndTrim(s, sep string) []string {
 	return res
 }
 
+// parseHeaders parses a comma-separated "key=value" header string.
+func parseHeaders(raw string) map[string]string {
+	headers := map[string]string{}
+	for _, part := range splitAndTrim(raw, ",") {
+		kv := splitAndTrim(part, "=")
+		if len(kv) == 2 {
+			headers[kv[0]] = kv[1]
+		}
+	}
+	return headers
+}
+
+// attrsFromMap converts a string map to OTEL attribute slice.
+func attrsFromMap(m map[string]string) []attribute.KeyValue {
+	kv := make([]attribute.KeyValue, 0, len(m))
+	for k, v := range m {
+		kv = append(kv, attribute.String(k, v))
+	}
+	return kv
+}
+
 type MonitoringOpenTelemetry struct {
-	tracerProvider trace.TracerProvider
+	tracerProvider *sdktrace.TracerProvider
+	meterProvider  *sdkmetric.MeterProvider
 	tracer         trace.Tracer
+	meter          metric.Meter
+
+	countersMu sync.Mutex
+	counters   map[string]metric.Int64Counter
+
+	histogramsMu sync.Mutex
+	histograms   map[string]metric.Float64Histogram
+
+	gaugesMu sync.Mutex
+	gauges   map[string]metric.Float64Gauge
 }
 
 func StartOpenTelemetryMonitoring() colibrimonitoringbase.Monitoring {
 	ctx := context.Background()
 
-	var appName string
-	if otelSrvName := os.Getenv("OTEL_SERVICE_NAME"); otelSrvName != "" {
-		appName = otelSrvName
-	} else {
+	appName := os.Getenv("OTEL_SERVICE_NAME")
+	if appName == "" {
 		appName = config.APP_NAME
 	}
 
-	options := []otlptracehttp.Option{
-		otlptracehttp.WithEndpoint(config.OTEL_EXPORTER_OTLP_ENDPOINT),
+	parsedHeaders := parseHeaders(config.OTEL_EXPORTER_OTLP_HEADERS)
+
+	// ── Shared resource ──────────────────────────────────────────────────────
+	res, err := resource.Merge(
+		resource.Default(),
+		resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceNameKey.String(appName),
+			semconv.ServiceVersionKey.String(config.VERSION),
+			semconv.ServiceInstanceIDKey.String(uuid.New().String()),
+		),
+	)
+	if err != nil {
+		logging.Fatal(ctx).Msgf("Building OTEL resource: %v", err)
+	}
+
+	// ── Trace exporter + provider ─────────────────────────────────────────────
+	traceOptions := []otlptracehttp.Option{
+		otlptracehttp.WithEndpoint(normalizeEndpoint(config.OTEL_EXPORTER_OTLP_ENDPOINT)),
 		otlptracehttp.WithInsecure(),
 	}
-
-	if config.OTEL_EXPORTER_OTLP_HEADERS != "" {
-		headers := map[string]string{}
-		pairs := config.OTEL_EXPORTER_OTLP_HEADERS
-
-		for _, part := range splitAndTrim(pairs, ",") {
-			kv := splitAndTrim(part, "=")
-			if len(kv) == 2 {
-				headers[kv[0]] = kv[1]
-			}
-		}
-
-		if len(headers) > 0 {
-			options = append(options, otlptracehttp.WithHeaders(headers))
-		}
+	if len(parsedHeaders) > 0 {
+		traceOptions = append(traceOptions, otlptracehttp.WithHeaders(parsedHeaders))
 	}
 
-	exporter, err := otlptracehttp.New(ctx, options...)
+	traceExporter, err := otlptracehttp.New(ctx, traceOptions...)
 	if err != nil {
-		logging.Fatal(ctx).Msgf("Creating OTLP HTTP exporter: %v", err)
+		logging.Fatal(ctx).Msgf("Creating OTLP trace exporter: %v", err)
 	}
 
-	res := resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceNameKey.String(appName),
-	)
-
-	bsp := sdktrace.NewBatchSpanProcessor(exporter)
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(res),
-		sdktrace.WithSpanProcessor(bsp),
+		sdktrace.WithSpanProcessor(sdktrace.NewBatchSpanProcessor(traceExporter)),
 	)
 	otel.SetTracerProvider(tracerProvider)
+
+	// ── Metric exporter + provider ────────────────────────────────────────────
+	metricsEndpoint := config.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+	if metricsEndpoint == "" {
+		metricsEndpoint = config.OTEL_EXPORTER_OTLP_ENDPOINT
+	}
+
+	metricOptions := []otlpmetrichttp.Option{
+		otlpmetrichttp.WithEndpoint(normalizeEndpoint(metricsEndpoint)),
+		otlpmetrichttp.WithInsecure(),
+	}
+	if len(parsedHeaders) > 0 {
+		metricOptions = append(metricOptions, otlpmetrichttp.WithHeaders(parsedHeaders))
+	}
+
+	metricExporter, err := otlpmetrichttp.New(ctx, metricOptions...)
+	if err != nil {
+		logging.Fatal(ctx).Msgf("Creating OTLP metric exporter: %v", err)
+	}
+
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithResource(res),
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExporter)),
+	)
+	otel.SetMeterProvider(meterProvider)
+
+	// ── Runtime metrics ───────────────────────────────────────────────────────
+	// Non-critical: if runtime metrics fail to start (e.g. already running), continue.
+	_ = otelruntime.Start(otelruntime.WithMinimumReadMemStatsInterval(time.Second))
+
+	// ── Propagators ───────────────────────────────────────────────────────────
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
 
 	tracer := tracerProvider.Tracer(
 		"github.com/colibriproject-dev/colibri-sdk-go",
 		trace.WithInstrumentationVersion(contrib.Version()),
 	)
+	meter := meterProvider.Meter(
+		"github.com/colibriproject-dev/colibri-sdk-go",
+		metric.WithInstrumentationVersion(contrib.Version()),
+	)
 
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
-
-	return &MonitoringOpenTelemetry{tracer: tracer}
+	return &MonitoringOpenTelemetry{
+		tracerProvider: tracerProvider,
+		meterProvider:  meterProvider,
+		tracer:         tracer,
+		meter:          meter,
+		counters:       make(map[string]metric.Int64Counter),
+		histograms:     make(map[string]metric.Float64Histogram),
+		gauges:         make(map[string]metric.Float64Gauge),
+	}
 }
 
 func (m *MonitoringOpenTelemetry) StartTransaction(ctx context.Context, name string, kind colibrimonitoringbase.SpanKind) (any, context.Context) {
@@ -109,13 +205,7 @@ func (m *MonitoringOpenTelemetry) EndTransaction(span any) {
 
 func (m *MonitoringOpenTelemetry) StartTransactionSegment(ctx context.Context, name string, attributes map[string]string) any {
 	_, span := m.tracer.Start(ctx, name)
-
-	kv := make([]attribute.KeyValue, 0, len(attributes))
-	for key, value := range attributes {
-		kv = append(kv, attribute.String(key, value))
-	}
-	span.SetAttributes(kv...)
-
+	span.SetAttributes(attrsFromMap(attributes)...)
 	return span
 }
 
@@ -144,12 +234,101 @@ func (m *MonitoringOpenTelemetry) GetSQLDBDriverName() string {
 		otelsql.TraceRowsAffected(),
 		otelsql.WithDatabaseName(os.Getenv(config.SQL_DB_NAME)),
 		otelsql.WithSystem(semconv.DBSystemNamePostgreSQL),
+		otelsql.WithMeterProvider(m.meterProvider),
 	)
 	if err != nil {
 		logging.Fatal(context.Background()).Msgf("could not get sql db driver name: %v", err)
 	}
 	return driverName
 }
+
+// ── Metrics ───────────────────────────────────────────────────────────────────
+
+func (m *MonitoringOpenTelemetry) Counter(name, description, unit string) colibrimonitoringbase.Counter {
+	m.countersMu.Lock()
+	defer m.countersMu.Unlock()
+	if c, ok := m.counters[name]; ok {
+		return &otelCounter{instrument: c}
+	}
+	c, err := m.meter.Int64Counter(name,
+		metric.WithDescription(description),
+		metric.WithUnit(unit),
+	)
+	if err != nil {
+		logging.Fatal(context.Background()).Msgf("Creating counter %s: %v", name, err)
+	}
+	m.counters[name] = c
+	return &otelCounter{instrument: c}
+}
+
+func (m *MonitoringOpenTelemetry) Histogram(name, description, unit string) colibrimonitoringbase.Histogram {
+	m.histogramsMu.Lock()
+	defer m.histogramsMu.Unlock()
+	if h, ok := m.histograms[name]; ok {
+		return &otelHistogram{instrument: h}
+	}
+	h, err := m.meter.Float64Histogram(name,
+		metric.WithDescription(description),
+		metric.WithUnit(unit),
+	)
+	if err != nil {
+		logging.Fatal(context.Background()).Msgf("Creating histogram %s: %v", name, err)
+	}
+	m.histograms[name] = h
+	return &otelHistogram{instrument: h}
+}
+
+func (m *MonitoringOpenTelemetry) Gauge(name, description, unit string) colibrimonitoringbase.Gauge {
+	m.gaugesMu.Lock()
+	defer m.gaugesMu.Unlock()
+	if g, ok := m.gauges[name]; ok {
+		return &otelGauge{instrument: g}
+	}
+	g, err := m.meter.Float64Gauge(name,
+		metric.WithDescription(description),
+		metric.WithUnit(unit),
+	)
+	if err != nil {
+		logging.Fatal(context.Background()).Msgf("Creating gauge %s: %v", name, err)
+	}
+	m.gauges[name] = g
+	return &otelGauge{instrument: g}
+}
+
+// ── Lifecycle ─────────────────────────────────────────────────────────────────
+
+func (m *MonitoringOpenTelemetry) Close() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := m.tracerProvider.Shutdown(ctx); err != nil {
+		logging.Warn(ctx).Msgf("OTEL tracer provider shutdown: %v", err)
+	}
+	if err := m.meterProvider.Shutdown(ctx); err != nil {
+		logging.Warn(ctx).Msgf("OTEL meter provider shutdown: %v", err)
+	}
+}
+
+// ── Instrument wrappers ───────────────────────────────────────────────────────
+
+type otelCounter struct{ instrument metric.Int64Counter }
+
+func (c *otelCounter) Add(ctx context.Context, value int64, attributes map[string]string) {
+	c.instrument.Add(ctx, value, metric.WithAttributes(attrsFromMap(attributes)...))
+}
+
+type otelHistogram struct{ instrument metric.Float64Histogram }
+
+func (h *otelHistogram) Record(ctx context.Context, value float64, attributes map[string]string) {
+	h.instrument.Record(ctx, value, metric.WithAttributes(attrsFromMap(attributes)...))
+}
+
+type otelGauge struct{ instrument metric.Float64Gauge }
+
+func (g *otelGauge) Record(ctx context.Context, value float64, attributes map[string]string) {
+	g.instrument.Record(ctx, value, metric.WithAttributes(attrsFromMap(attributes)...))
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 func kindToOpenTelemetry(kind colibrimonitoringbase.SpanKind) trace.SpanKind {
 	switch kind {

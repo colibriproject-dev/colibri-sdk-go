@@ -17,8 +17,9 @@ const (
 	ENV_APP_TYPE    string = "APP_TYPE"
 	ENV_CLOUD       string = "CLOUD"
 
-	ENV_OTEL_EXPORTER_OTLP_ENDPOINT string = "OTEL_EXPORTER_OTLP_ENDPOINT"
-	ENV_OTEL_EXPORTER_OTLP_HEADERS  string = "OTEL_EXPORTER_OTLP_HEADERS"
+	ENV_OTEL_EXPORTER_OTLP_ENDPOINT         string = "OTEL_EXPORTER_OTLP_ENDPOINT"
+	ENV_OTEL_EXPORTER_OTLP_HEADERS          string = "OTEL_EXPORTER_OTLP_HEADERS"
+	ENV_OTEL_EXPORTER_OTLP_METRICS_ENDPOINT string = "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT"
 
 	ENV_PORT                  string = "PORT"
 	ENV_SQL_DB_MIGRATION      string = "SQL_DB_MIGRATION"
@@ -63,7 +64,7 @@ const (
 	MESSAGING_CLOUD_DEFAULT       string = "CLOUD_DEFAULT"
 	MESSAGING_RABBITMQ            string = "RABBITMQ"
 	SQL_DB_CONNECTION_URI_DEFAULT string = "host=%s port=%s user=%s password=%s dbname=%s application_name='%s' sslmode=%s"
-	VERSION                              = "v0.1.12"
+	VERSION                              = "v0.2.0"
 
 	// Errors messages
 	errorEnvironmentNotConfiguredMsg string = "environment is not configured. Set production, sandbox, development or test"
@@ -81,8 +82,9 @@ var (
 	APP_VERSION                = ""
 	WAIT_GROUP_TIMEOUT_SECONDS = 90 // 1.5 minutes
 
-	OTEL_EXPORTER_OTLP_ENDPOINT = ""
-	OTEL_EXPORTER_OTLP_HEADERS  = ""
+	OTEL_EXPORTER_OTLP_ENDPOINT         = ""
+	OTEL_EXPORTER_OTLP_HEADERS          = ""
+	OTEL_EXPORTER_OTLP_METRICS_ENDPOINT = ""
 
 	PORT = 8080
 
@@ -139,6 +141,7 @@ func Load() error {
 
 	OTEL_EXPORTER_OTLP_ENDPOINT = os.Getenv(ENV_OTEL_EXPORTER_OTLP_ENDPOINT)
 	OTEL_EXPORTER_OTLP_HEADERS = os.Getenv(ENV_OTEL_EXPORTER_OTLP_HEADERS)
+	OTEL_EXPORTER_OTLP_METRICS_ENDPOINT = os.Getenv(ENV_OTEL_EXPORTER_OTLP_METRICS_ENDPOINT)
 
 	if err := convertIntEnv(&PORT, ENV_PORT); err != nil {
 		return err

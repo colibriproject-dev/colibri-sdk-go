@@ -84,6 +84,44 @@ func main() {
 }
 ```
 
+## Observabilidade
+
+O SDK exporta traces e métricas OpenTelemetry via OTLP HTTP. Configure as variáveis de ambiente abaixo para habilitá-lo:
+
+| Variável | Obrigatória | Descrição |
+|---|---|---|
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Sim | Endpoint do coletor OTLP — aceita `host:porta` ou URL completa (ex: `http://localhost:4318`) |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Não | Headers no formato `chave=valor` separados por vírgula (ex: `api-key=secret,x-env=prod`) |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Não | Substitui o endpoint apenas para o sinal de métricas. Padrão: `OTEL_EXPORTER_OTLP_ENDPOINT` |
+| `OTEL_SERVICE_NAME` | Não | Nome do serviço reportado ao backend. Padrão: valor de `APP_NAME` |
+
+Quando `OTEL_EXPORTER_OTLP_ENDPOINT` está configurado, o SDK automaticamente:
+- Exporta **traces** e **métricas** para o coletor OTLP configurado
+- Emite métricas de servidor e cliente HTTP (`http.server.request.duration`, `http.client.request.duration`) via `otelfiber` / `otelhttp`
+- Emite métricas de banco de dados (`db.client.operation.duration`) via `otelsql`
+- Emite métricas de runtime do Go (heap, GC, goroutines) via `opentelemetry-contrib/instrumentation/runtime`
+- Enriquece cada resource com `service.name`, `service.version` e `service.instance.id`
+
+> **Atenção:** `OTEL_EXPORTER_OTLP_ENDPOINT` deve ser o endpoint base sem o caminho específico do sinal. O SDK adiciona automaticamente `/v1/traces` e `/v1/metrics`.
+
+### Métricas customizadas
+
+```go
+import "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
+
+// Counter — incremento monotônico
+requests := monitoring.Counter("app.requests", "Total de requisições HTTP", "1")
+requests.Add(ctx, 1, map[string]string{"route": "/api/users"})
+
+// Histogram — distribuição de valores
+duration := monitoring.Histogram("app.request.duration", "Duração das requisições", "ms")
+duration.Record(ctx, elapsed.Milliseconds(), map[string]string{"status": "200"})
+
+// Gauge — valor corrente
+activeConns := monitoring.Gauge("app.connections.active", "Conexões ativas", "1")
+activeConns.Record(ctx, float64(count), nil)
+```
+
 ## Contribuições
 
 Contribuições são bem-vindas! Por favor, leia o [Código de Conduta](CODE_OF_CONDUCT.md) antes de contribuir.
