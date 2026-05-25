@@ -272,7 +272,7 @@ func (m *MonitoringOpenTelemetry) Counter(name, description, unit string) colibr
 	return &otelCounter{instrument: c}
 }
 
-func (m *MonitoringOpenTelemetry) Histogram(name, description, unit string) colibrimonitoringbase.Histogram {
+func (m *MonitoringOpenTelemetry) Histogram(name, description, unit string) colibrimonitoringbase.HistogramRecorder {
 	m.histogramsMu.Lock()
 	defer m.histogramsMu.Unlock()
 	if h, ok := m.histograms[name]; ok {
@@ -289,7 +289,7 @@ func (m *MonitoringOpenTelemetry) Histogram(name, description, unit string) coli
 	return &otelHistogram{instrument: h}
 }
 
-func (m *MonitoringOpenTelemetry) Gauge(name, description, unit string) colibrimonitoringbase.Gauge {
+func (m *MonitoringOpenTelemetry) Gauge(name, description, unit string) colibrimonitoringbase.GaugeRecorder {
 	m.gaugesMu.Lock()
 	defer m.gaugesMu.Unlock()
 	if g, ok := m.gauges[name]; ok {

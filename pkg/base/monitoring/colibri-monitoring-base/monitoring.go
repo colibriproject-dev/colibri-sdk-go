@@ -19,13 +19,13 @@ type Counter interface {
 	Add(ctx context.Context, value int64, attributes map[string]string)
 }
 
-// Histogram records a distribution of values.
-type Histogram interface {
+// HistogramRecorder records a distribution of values.
+type HistogramRecorder interface {
 	Record(ctx context.Context, value float64, attributes map[string]string)
 }
 
-// Gauge records the current value of a measurement.
-type Gauge interface {
+// GaugeRecorder records the current value of a measurement.
+type GaugeRecorder interface {
 	Record(ctx context.Context, value float64, attributes map[string]string)
 }
 
@@ -41,8 +41,8 @@ type Monitoring interface {
 	GetSQLDBDriverName() string
 
 	Counter(name, description, unit string) Counter
-	Histogram(name, description, unit string) Histogram
-	Gauge(name, description, unit string) Gauge
+	Histogram(name, description, unit string) HistogramRecorder
+	Gauge(name, description, unit string) GaugeRecorder
 
 	Close()
 }

@@ -55,12 +55,12 @@ func (m *others) Counter(name, _, _ string) Counter {
 	return &noopCounter{}
 }
 
-func (m *others) Histogram(name, _, _ string) Histogram {
+func (m *others) Histogram(name, _, _ string) HistogramRecorder {
 	logging.Debug(context.Background()).Msgf("Creating noop histogram %s", name)
 	return &noopHistogram{}
 }
 
-func (m *others) Gauge(name, _, _ string) Gauge {
+func (m *others) Gauge(name, _, _ string) GaugeRecorder {
 	logging.Debug(context.Background()).Msgf("Creating noop gauge %s", name)
 	return &noopGauge{}
 }

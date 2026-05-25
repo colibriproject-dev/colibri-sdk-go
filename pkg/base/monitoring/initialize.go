@@ -71,11 +71,11 @@ func Counter(name, description, unit string) colibrimonitoringbase.Counter {
 }
 
 // Histogram returns a named histogram instrument for recording value distributions.
-func Histogram(name, description, unit string) colibrimonitoringbase.Histogram {
+func Histogram(name, description, unit string) colibrimonitoringbase.HistogramRecorder {
 	return instance.Histogram(name, description, unit)
 }
 
 // Gauge returns a named gauge instrument for recording current values.
-func Gauge(name, description, unit string) colibrimonitoringbase.Gauge {
+func Gauge(name, description, unit string) colibrimonitoringbase.GaugeRecorder {
 	return instance.Gauge(name, description, unit)
 }
