@@ -71,12 +71,18 @@ func (m *others) Close() {
 
 type noopCounter struct{}
 
-func (c *noopCounter) Add(_ context.Context, _ int64, _ map[string]string) {}
+func (c *noopCounter) Add(_ context.Context, value int64, attributes map[string]string) {
+	logging.Debug(context.Background()).Msgf("Add counter: value[%d];attributes[%v]", value, attributes)
+}
 
 type noopHistogram struct{}
 
-func (h *noopHistogram) Record(_ context.Context, _ float64, _ map[string]string) {}
+func (h *noopHistogram) Record(_ context.Context, value float64, attributes map[string]string) {
+	logging.Debug(context.Background()).Msgf("Record histogram: value[%f];attributes[%v]", value, attributes)
+}
 
 type noopGauge struct{}
 
-func (g *noopGauge) Record(_ context.Context, _ float64, _ map[string]string) {}
+func (g *noopGauge) Record(_ context.Context, value float64, attributes map[string]string) {
+	logging.Debug(context.Background()).Msgf("Record gauge: value[%f];attributes[%v]", value, attributes)
+}
