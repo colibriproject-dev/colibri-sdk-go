@@ -6,8 +6,7 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 )
 
-type others struct {
-}
+type others struct{}
 
 func NewOthers() Monitoring {
 	return &others{}
@@ -49,4 +48,41 @@ func (m *others) NoticeError(_ any, err error) {
 
 func (m *others) GetSQLDBDriverName() string {
 	return "postgres"
+}
+
+func (m *others) Counter(name, _, _ string) Counter {
+	logging.Debug(context.Background()).Msgf("Creating noop counter %s", name)
+	return &noopCounter{}
+}
+
+func (m *others) Histogram(name, _, _ string) HistogramRecorder {
+	logging.Debug(context.Background()).Msgf("Creating noop histogram %s", name)
+	return &noopHistogram{}
+}
+
+func (m *others) Gauge(name, _, _ string) GaugeRecorder {
+	logging.Debug(context.Background()).Msgf("Creating noop gauge %s", name)
+	return &noopGauge{}
+}
+
+func (m *others) Close() {
+	logging.Debug(context.Background()).Msg("Closing noop monitoring")
+}
+
+type noopCounter struct{}
+
+func (c *noopCounter) Add(_ context.Context, value int64, attributes map[string]string) {
+	logging.Debug(context.Background()).Msgf("Add counter: value[%d];attributes[%v]", value, attributes)
+}
+
+type noopHistogram struct{}
+
+func (h *noopHistogram) Record(_ context.Context, value float64, attributes map[string]string) {
+	logging.Debug(context.Background()).Msgf("Record histogram: value[%f];attributes[%v]", value, attributes)
+}
+
+type noopGauge struct{}
+
+func (g *noopGauge) Record(_ context.Context, value float64, attributes map[string]string) {
+	logging.Debug(context.Background()).Msgf("Record gauge: value[%f];attributes[%v]", value, attributes)
 }

@@ -84,6 +84,44 @@ func main() {
 }
 ```
 
+## Observability
+
+The SDK exports OpenTelemetry traces and metrics via OTLP HTTP. Configure the following environment variables to enable it:
+
+| Variable | Required | Description |
+|---|---|---|
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Yes | OTLP collector endpoint — accepts `host:port` or full URL (e.g. `http://localhost:4318`) |
+| `OTEL_EXPORTER_OTLP_HEADERS` | No | Comma-separated `key=value` headers (e.g. `api-key=secret,x-env=prod`) |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | No | Override endpoint for the metrics signal only. Defaults to `OTEL_EXPORTER_OTLP_ENDPOINT` |
+| `OTEL_SERVICE_NAME` | No | Service name reported to the backend. Defaults to `APP_NAME` |
+
+When `OTEL_EXPORTER_OTLP_ENDPOINT` is set the SDK automatically:
+- Exports **traces** and **metrics** to the configured OTLP collector
+- Emits HTTP server and client metrics (`http.server.request.duration`, `http.client.request.duration`) via `otelfiber` / `otelhttp`
+- Emits database metrics (`db.client.operation.duration`) via `otelsql`
+- Emits Go runtime metrics (heap, GC, goroutines) via `opentelemetry-contrib/instrumentation/runtime`
+- Enriches every resource with `service.name`, `service.version`, and `service.instance.id`
+
+> **Note:** `OTEL_EXPORTER_OTLP_ENDPOINT` should be the base endpoint without signal-specific paths. The SDK appends `/v1/traces` and `/v1/metrics` automatically.
+
+### Custom metrics
+
+```go
+import "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
+
+// Counter — monotonically increasing
+requests := monitoring.Counter("app.requests", "Total HTTP requests", "1")
+requests.Add(ctx, 1, map[string]string{"route": "/api/users"})
+
+// Histogram — value distribution
+duration := monitoring.Histogram("app.request.duration", "Request duration", "ms")
+duration.Record(ctx, elapsed.Milliseconds(), map[string]string{"status": "200"})
+
+// Gauge — current value
+activeConns := monitoring.Gauge("app.connections.active", "Active connections", "1")
+activeConns.Record(ctx, float64(count), nil)
+```
+
 ## Contributing
 
 Contributions are welcome! Please read the [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.

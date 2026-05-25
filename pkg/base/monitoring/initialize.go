@@ -6,6 +6,7 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	colibrimonitoringbase "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
 	colibriotel "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-otel"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
 )
 
 var instance colibrimonitoringbase.Monitoring
@@ -14,6 +15,7 @@ var instance colibrimonitoringbase.Monitoring
 func Initialize() {
 	if UseOTELMonitoring() {
 		instance = colibriotel.StartOpenTelemetryMonitoring()
+		observer.Attach(instance.(observer.Observer))
 	} else {
 		instance = colibrimonitoringbase.NewOthers()
 	}
@@ -61,4 +63,19 @@ func NoticeError(transaction any, err error) {
 // GetSQLDBDriverName return driver name for monitoring provider
 func GetSQLDBDriverName() string {
 	return instance.GetSQLDBDriverName()
+}
+
+// Counter returns a named counter instrument for recording monotonically increasing values.
+func Counter(name, description, unit string) colibrimonitoringbase.Counter {
+	return instance.Counter(name, description, unit)
+}
+
+// Histogram returns a named histogram instrument for recording value distributions.
+func Histogram(name, description, unit string) colibrimonitoringbase.HistogramRecorder {
+	return instance.Histogram(name, description, unit)
+}
+
+// Gauge returns a named gauge instrument for recording current values.
+func Gauge(name, description, unit string) colibrimonitoringbase.GaugeRecorder {
+	return instance.Gauge(name, description, unit)
 }
