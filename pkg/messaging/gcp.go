@@ -52,14 +52,18 @@ func (m *gcpMessaging) consumer(ctx context.Context, c *consumer) (chan *Provide
 	sub.ReceiveSettings.MaxOutstandingMessages = 1
 	sub.ReceiveSettings.NumGoroutines = 1
 
-	receiveCtx, cancel := context.WithCancel(ctx)
-	go func() {
-		<-c.done
-		cancel()
-	}()
-
 	go func() {
 		defer c.Done()
+
+		receiveCtx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		// stop receiving when the consumer is closed; canceling an already
+		// canceled context is a no-op
+		go func() {
+			<-c.done
+			cancel()
+		}()
 
 		if err := sub.Receive(receiveCtx, func(_ context.Context, msg *pubsub.Message) {
 			var pm ProviderMessage

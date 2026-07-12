@@ -152,27 +152,7 @@ func executeMessagingTest(t *testing.T, opts messagingProviderOpts) {
 		var invocations atomic.Int32
 
 		qc := queueConsumerTest{
-			fn: func(ctx context.Context, message *ProviderMessage) error {
-				n := invocations.Add(1)
-
-				if opts.redelivers {
-					// first delivery fails; the broker must redeliver so the second succeeds
-					if n == 1 {
-						return fmt.Errorf("email not valid")
-					}
-					if n == 2 {
-						close(done)
-					}
-					return nil
-				}
-
-				// terminal nack (RabbitMQ): a failed handler routes the message straight
-				// to the DLX, so it must be invoked exactly once and never redelivered
-				if n == 1 {
-					close(done)
-				}
-				return fmt.Errorf("email not valid")
-			},
+			fn:    settleHandler(opts.redelivers, &invocations, done),
 			qName: testFailQueueName,
 		}
 
@@ -194,19 +174,52 @@ func executeMessagingTest(t *testing.T, opts messagingProviderOpts) {
 			t.Fatalf("Test didn't finish after %s (invocations: %d)", opts.waitTimeout, invocations.Load())
 		}
 
-		if opts.redelivers {
-			assert.GreaterOrEqual(t, invocations.Load(), int32(2), "failed message should have been redelivered")
-			if opts.assertDLQ != nil {
-				// only the poison message dead-letters; the valid one succeeded on redelivery
-				opts.assertDLQ(t, 1)
-			}
-		} else if opts.assertDLQ != nil {
-			// poison message + failed valid message are both routed to the DLQ
-			opts.assertDLQ(t, 2)
-
-			assert.Equal(t, int32(1), invocations.Load(), "terminal nack should not redeliver")
-		}
+		assertFailedMessageSettlement(t, opts, invocations.Load())
 	})
+}
+
+// settleHandler returns a consumer handler that fails the first delivery. With
+// redelivery semantics the second delivery succeeds and closes done; with
+// terminal-nack semantics every delivery fails and done closes on the first call.
+func settleHandler(redelivers bool, invocations *atomic.Int32, done chan struct{}) func(context.Context, *ProviderMessage) error {
+	return func(_ context.Context, _ *ProviderMessage) error {
+		n := invocations.Add(1)
+
+		if !redelivers {
+			// terminal nack (RabbitMQ): a failed handler routes the message straight
+			// to the DLX, so it must be invoked exactly once and never redelivered
+			if n == 1 {
+				close(done)
+			}
+			return fmt.Errorf("email not valid")
+		}
+
+		// first delivery fails; the broker must redeliver so the second succeeds
+		switch n {
+		case 1:
+			return fmt.Errorf("email not valid")
+		case 2:
+			close(done)
+		}
+		return nil
+	}
+}
+
+func assertFailedMessageSettlement(t *testing.T, opts messagingProviderOpts, invocations int32) {
+	if opts.redelivers {
+		assert.GreaterOrEqual(t, invocations, int32(2), "failed message should have been redelivered")
+		if opts.assertDLQ != nil {
+			// only the poison message dead-letters; the valid one succeeded on redelivery
+			opts.assertDLQ(t, 1)
+		}
+		return
+	}
+
+	if opts.assertDLQ != nil {
+		// poison message + failed valid message are both routed to the DLQ
+		opts.assertDLQ(t, 2)
+		assert.Equal(t, int32(1), invocations, "terminal nack should not redeliver")
+	}
 }
 
 func awsNackRequeueTest(t *testing.T) {
