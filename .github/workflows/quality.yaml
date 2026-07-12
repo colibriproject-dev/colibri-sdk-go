@@ -42,14 +42,22 @@ jobs:
       # Sonar itself runs in the deferred "SonarCloud" workflow (triggered via
       # workflow_run), which has access to secrets even for PRs from Dependabot /
       # forks. Here we only publish the coverage report and the analysis context.
+      # PR fields (esp. head.ref) are user-controlled, so bind them to env vars
+      # instead of interpolating into the shell to avoid script injection.
       - name: Save analysis metadata
+        env:
+          SONAR_EVENT: ${{ github.event_name }}
+          SONAR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
           {
-            echo "SONAR_EVENT=${{ github.event_name }}"
-            echo "SONAR_SHA=${{ github.event.pull_request.head.sha || github.sha }}"
-            echo "PR_NUMBER=${{ github.event.pull_request.number }}"
-            echo "PR_HEAD_REF=${{ github.event.pull_request.head.ref }}"
-            echo "PR_BASE_REF=${{ github.event.pull_request.base.ref }}"
+            echo "SONAR_EVENT=$SONAR_EVENT"
+            echo "SONAR_SHA=$SONAR_SHA"
+            echo "PR_NUMBER=$PR_NUMBER"
+            echo "PR_HEAD_REF=$PR_HEAD_REF"
+            echo "PR_BASE_REF=$PR_BASE_REF"
           } > sonar-meta.env
 
       - name: Upload analysis data
