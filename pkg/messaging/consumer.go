@@ -69,14 +69,14 @@ func processMessage(c *consumer, msg *ProviderMessage) {
 
 	if err := c.fn(ctx, msg); err != nil {
 		logging.Error(ctx).Err(err).Msgf(couldNotProcessMsg, msg.ID)
-		if err := msg.Nack(false, err); err != nil {
+		if err := msg.Nack(ctx, false, err); err != nil {
 			logging.Error(ctx).Err(err).Msgf("error sending nack for message %s", msg.ID)
 		}
 		monitoring.NoticeError(txn, err)
 		return
 	}
 
-	if err := msg.Ack(); err != nil {
+	if err := msg.Ack(ctx); err != nil {
 		logging.Error(ctx).Err(err).Msgf("error sending ack for message %s", msg.ID)
 	}
 

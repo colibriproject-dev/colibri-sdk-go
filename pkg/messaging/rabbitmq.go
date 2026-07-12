@@ -26,11 +26,11 @@ type rabbitMQOriginalMessage struct {
 	d amqp.Delivery
 }
 
-func (r rabbitMQOriginalMessage) Ack() error {
+func (r rabbitMQOriginalMessage) Ack(_ context.Context) error {
 	return r.d.Ack(false)
 }
 
-func (r rabbitMQOriginalMessage) Nack(requeue bool, _ error) error {
+func (r rabbitMQOriginalMessage) Nack(_ context.Context, requeue bool, _ error) error {
 	return r.d.Reject(requeue)
 }
 

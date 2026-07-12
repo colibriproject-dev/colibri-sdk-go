@@ -30,15 +30,14 @@ type awsMessaging struct {
 }
 
 type awsOriginalMessage struct {
-	ctx           context.Context
 	sqsService    *sqs.SQS
 	queueUrl      *string
 	receiptHandle *string
 }
 
 // Ack deletes the message from the queue after successful processing.
-func (a awsOriginalMessage) Ack() error {
-	_, err := a.sqsService.DeleteMessageWithContext(a.ctx, &sqs.DeleteMessageInput{
+func (a awsOriginalMessage) Ack(ctx context.Context) error {
+	_, err := a.sqsService.DeleteMessageWithContext(ctx, &sqs.DeleteMessageInput{
 		QueueUrl:      a.queueUrl,
 		ReceiptHandle: a.receiptHandle,
 	})
@@ -49,12 +48,12 @@ func (a awsOriginalMessage) Ack() error {
 // Nack leaves the message in the queue. With requeue it becomes visible again
 // immediately; otherwise it reappears after the visibility timeout and the
 // queue's redrive policy routes it to the DLQ once maxReceiveCount is exceeded.
-func (a awsOriginalMessage) Nack(requeue bool, _ error) error {
+func (a awsOriginalMessage) Nack(ctx context.Context, requeue bool, _ error) error {
 	if !requeue {
 		return nil
 	}
 
-	_, err := a.sqsService.ChangeMessageVisibilityWithContext(a.ctx, &sqs.ChangeMessageVisibilityInput{
+	_, err := a.sqsService.ChangeMessageVisibilityWithContext(ctx, &sqs.ChangeMessageVisibilityInput{
 		QueueUrl:          a.queueUrl,
 		ReceiptHandle:     a.receiptHandle,
 		VisibilityTimeout: aws.Int64(0),
@@ -133,7 +132,6 @@ func (m *awsMessaging) handleMessage(ctx context.Context, c *consumer, queueUrl 
 	}
 
 	pm.addOriginBrokerNotification(awsOriginalMessage{
-		ctx:           ctx,
 		sqsService:    m.sqsService,
 		queueUrl:      queueUrl.QueueUrl,
 		receiptHandle: msg.ReceiptHandle,

@@ -222,16 +222,16 @@ func awsNackRequeueTest(t *testing.T) {
 	}
 
 	first := awsReceiveOne(t, sqsClient, queue.QueueUrl)
-	om := awsOriginalMessage{ctx: context.Background(), sqsService: sqsClient, queueUrl: queue.QueueUrl, receiptHandle: first.ReceiptHandle}
+	om := awsOriginalMessage{sqsService: sqsClient, queueUrl: queue.QueueUrl, receiptHandle: first.ReceiptHandle}
 
-	assert.NoError(t, om.Nack(false, nil), "nack without requeue should be a no-op")
-	assert.NoError(t, om.Nack(true, nil), "nack with requeue should reset the visibility timeout")
+	assert.NoError(t, om.Nack(context.Background(), false, nil), "nack without requeue should be a no-op")
+	assert.NoError(t, om.Nack(context.Background(), true, nil), "nack with requeue should reset the visibility timeout")
 
 	// after nack with requeue the message must be receivable again long before
 	// the 60s visibility timeout set on the first receive expires
 	second := awsReceiveOne(t, sqsClient, queue.QueueUrl)
-	om = awsOriginalMessage{ctx: context.Background(), sqsService: sqsClient, queueUrl: queue.QueueUrl, receiptHandle: second.ReceiptHandle}
-	assert.NoError(t, om.Ack())
+	om = awsOriginalMessage{sqsService: sqsClient, queueUrl: queue.QueueUrl, receiptHandle: second.ReceiptHandle}
+	assert.NoError(t, om.Ack(context.Background()))
 }
 
 func awsReceiveOne(t *testing.T, sqsClient *sqs.SQS, queueUrl *string) *sqs.Message {

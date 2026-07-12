@@ -18,14 +18,14 @@ type gcpOriginalMessage struct {
 }
 
 // Ack acknowledges the message after successful processing.
-func (g gcpOriginalMessage) Ack() error {
+func (g gcpOriginalMessage) Ack(_ context.Context) error {
 	g.msg.Ack()
 	return nil
 }
 
 // Nack rejects the message; the subscription's retry policy redelivers it and the
 // dead-letter policy (if configured) forwards it to the dead-letter topic.
-func (g gcpOriginalMessage) Nack(_ bool, _ error) error {
+func (g gcpOriginalMessage) Nack(_ context.Context, _ bool, _ error) error {
 	g.msg.Nack()
 	return nil
 }

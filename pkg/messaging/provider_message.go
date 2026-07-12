@@ -69,9 +69,9 @@ func (msg *ProviderMessage) addOriginBrokerNotification(n any) {
 }
 
 // Ack acknowledges the message.
-func (msg *ProviderMessage) Ack() error {
+func (msg *ProviderMessage) Ack(ctx context.Context) error {
 	if originalMessage, ok := msg.n.(OriginalMessage); ok {
-		return originalMessage.Ack()
+		return originalMessage.Ack(ctx)
 	}
 	return nil
 }
@@ -79,9 +79,9 @@ func (msg *ProviderMessage) Ack() error {
 // Nack rejects the message.
 // If requeue is true, the message will be put back in the original queue.
 // If requeue is false, the message will be discarded or sent to a DLQ.
-func (msg *ProviderMessage) Nack(requeue bool, err error) error {
+func (msg *ProviderMessage) Nack(ctx context.Context, requeue bool, err error) error {
 	if originalMessage, ok := msg.n.(OriginalMessage); ok {
-		return originalMessage.Nack(requeue, err)
+		return originalMessage.Nack(ctx, requeue, err)
 	}
 	return nil
 }
