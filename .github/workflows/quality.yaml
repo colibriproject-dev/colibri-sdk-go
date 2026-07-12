@@ -39,17 +39,24 @@ jobs:
           make test
           make cover
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@299e4b793aaa83bf2aba7c9c14bedbb485688ec4
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      # Sonar itself runs in the deferred "SonarCloud" workflow (triggered via
+      # workflow_run), which has access to secrets even for PRs from Dependabot /
+      # forks. Here we only publish the coverage report and the analysis context.
+      - name: Save analysis metadata
+        run: |
+          {
+            echo "SONAR_EVENT=${{ github.event_name }}"
+            echo "SONAR_SHA=${{ github.event.pull_request.head.sha || github.sha }}"
+            echo "PR_NUMBER=${{ github.event.pull_request.number }}"
+            echo "PR_HEAD_REF=${{ github.event.pull_request.head.ref }}"
+            echo "PR_BASE_REF=${{ github.event.pull_request.base.ref }}"
+          } > sonar-meta.env
+
+      - name: Upload analysis data
+        uses: actions/upload-artifact@v4
         with:
-          args: >
-            -Dsonar.organization=colibri-project-dev
-            -Dsonar.projectKey=colibri-project-dev_colibri-sdk-go
-            -Dsonar.sources=.
-            -Dsonar.exclusions=**/*_test.go,**/*.sql,**/*_mock.go,colibri.go,development-environment/**,pkg/di/examples/**,**/test_*.go
-            -Dsonar.tests=.
-            -Dsonar.test.inclusions=**/*_test.go
-            -Dsonar.go.coverage.reportPaths=coverage.txt
-            -Dsonar.coverage.exclusions=pkg/base/test/**
+          name: sonar-data
+          path: |
+            coverage.txt
+            sonar-meta.env
+          retention-days: 1
