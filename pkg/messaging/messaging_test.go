@@ -85,6 +85,7 @@ func TestMessaging(t *testing.T) {
 			redelivers:  true,
 			waitTimeout: 15 * time.Second,
 		})
+		t.Run("Should make message immediately visible when nack with requeue", awsNackRequeueTest)
 		t.Cleanup(func() {
 			instance = nil
 			logging.Info(context.Background()).Msg("Cleaning up AWS localstack")
@@ -206,6 +207,52 @@ func executeMessagingTest(t *testing.T, opts messagingProviderOpts) {
 			assert.Equal(t, int32(1), invocations.Load(), "terminal nack should not redeliver")
 		}
 	})
+}
+
+func awsNackRequeueTest(t *testing.T) {
+	sqsClient := sqs.New(cloud.GetAwsSession())
+
+	queue, err := sqsClient.CreateQueue(&sqs.CreateQueueInput{QueueName: aws.String("COLIBRI_PROJECT_NACK_REQUEUE_TEST")})
+	if err != nil {
+		t.Fatalf("could not create queue: %v", err)
+	}
+
+	if _, err = sqsClient.SendMessage(&sqs.SendMessageInput{QueueUrl: queue.QueueUrl, MessageBody: aws.String("{}")}); err != nil {
+		t.Fatalf("could not send message: %v", err)
+	}
+
+	first := awsReceiveOne(t, sqsClient, queue.QueueUrl)
+	om := awsOriginalMessage{ctx: context.Background(), sqsService: sqsClient, queueUrl: queue.QueueUrl, receiptHandle: first.ReceiptHandle}
+
+	assert.NoError(t, om.Nack(false, nil), "nack without requeue should be a no-op")
+	assert.NoError(t, om.Nack(true, nil), "nack with requeue should reset the visibility timeout")
+
+	// after nack with requeue the message must be receivable again long before
+	// the 60s visibility timeout set on the first receive expires
+	second := awsReceiveOne(t, sqsClient, queue.QueueUrl)
+	om = awsOriginalMessage{ctx: context.Background(), sqsService: sqsClient, queueUrl: queue.QueueUrl, receiptHandle: second.ReceiptHandle}
+	assert.NoError(t, om.Ack())
+}
+
+func awsReceiveOne(t *testing.T, sqsClient *sqs.SQS, queueUrl *string) *sqs.Message {
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		out, err := sqsClient.ReceiveMessage(&sqs.ReceiveMessageInput{
+			QueueUrl:            queueUrl,
+			MaxNumberOfMessages: aws.Int64(1),
+			WaitTimeSeconds:     aws.Int64(2),
+			VisibilityTimeout:   aws.Int64(60),
+		})
+		if err != nil {
+			t.Fatalf("could not receive message: %v", err)
+		}
+		if len(out.Messages) > 0 {
+			return out.Messages[0]
+		}
+	}
+
+	t.Fatal("no message received before deadline")
+	return nil
 }
 
 func awsPublishRaw(t *testing.T, topic string, body []byte) {
