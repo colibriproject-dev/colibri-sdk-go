@@ -40,6 +40,7 @@ func NewConsumer(qc QueueConsumer) {
 	}
 
 	observer.Attach(consumerObserver{c: c})
+	c.Add(1)
 	startListener(c)
 }
 

@@ -22,7 +22,7 @@ const (
 	couldNotReceiveMsg           string = "error on receive message from queue %s"
 	couldNotProcessMsg           string = "could not process message %s"
 	couldNotReadMsgBody          string = "could not read message body with id %s from queue %s"
-	couldNotDeleteMsg            string = "could not delete message with id %s from queue %s"
+	messagingNotSupported        string = "messaging is not supported for cloud %s"
 	couldNotSendMsg              string = "could not send message with id %s to topic %s"
 	safelyCloseMsg               string = "waiting to safely close messaging module"
 	timeoutCloseMsg              string = "waiting timed out, forcing close the messaging module"
@@ -66,6 +66,11 @@ func Initialize() {
 		case config.CLOUD_GCP, config.CLOUD_FIREBASE:
 			instance = newGcpMessaging()
 		}
+	}
+
+	if instance == nil {
+		logging.Fatal(context.Background()).Msgf(messagingNotSupported, config.CLOUD)
+		return
 	}
 
 	observer.Attach(&messagingObserver{})

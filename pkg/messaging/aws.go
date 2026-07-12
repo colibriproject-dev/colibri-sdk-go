@@ -29,14 +29,38 @@ type awsMessaging struct {
 	sqsService *sqs.SQS
 }
 
-type awsOriginalMessage struct{}
-
-func (a awsOriginalMessage) Ack() error {
-	return nil
+type awsOriginalMessage struct {
+	ctx           context.Context
+	sqsService    *sqs.SQS
+	queueUrl      *string
+	receiptHandle *string
 }
 
-func (a awsOriginalMessage) Nack(_ bool, _ error) error {
-	return nil
+// Ack deletes the message from the queue after successful processing.
+func (a awsOriginalMessage) Ack() error {
+	_, err := a.sqsService.DeleteMessageWithContext(a.ctx, &sqs.DeleteMessageInput{
+		QueueUrl:      a.queueUrl,
+		ReceiptHandle: a.receiptHandle,
+	})
+
+	return err
+}
+
+// Nack leaves the message in the queue. With requeue it becomes visible again
+// immediately; otherwise it reappears after the visibility timeout and the
+// queue's redrive policy routes it to the DLQ once maxReceiveCount is exceeded.
+func (a awsOriginalMessage) Nack(requeue bool, _ error) error {
+	if !requeue {
+		return nil
+	}
+
+	_, err := a.sqsService.ChangeMessageVisibilityWithContext(a.ctx, &sqs.ChangeMessageVisibilityInput{
+		QueueUrl:          a.queueUrl,
+		ReceiptHandle:     a.receiptHandle,
+		VisibilityTimeout: aws.Int64(0),
+	})
+
+	return err
 }
 
 func newAwsMessaging() *awsMessaging {
@@ -79,30 +103,42 @@ func (m *awsMessaging) consumer(ctx context.Context, c *consumer) (chan *Provide
 			msgs, err := m.readMessages(ctx, queueUrl)
 			if err != nil {
 				logging.Error(ctx).Err(err).Msgf(couldNotReceiveMsg, c.queue)
+				continue
 			}
 
 			if len(msgs.Messages) > 0 {
-				msg := msgs.Messages[0]
-
-				var n sqsNotification
-				if err = json.Unmarshal([]byte(*msg.Body), &n); err != nil {
-					logging.Error(ctx).Err(err).Msgf(couldNotReadMsgBody, *msg.MessageId, c.queue)
-				}
-
-				var pm ProviderMessage
-				if err = json.Unmarshal([]byte(n.Message), &pm); err != nil {
-					logging.Error(ctx).Err(err).Msgf(couldNotReadMsgBody, *msg.MessageId, c.queue)
-					return
-				}
-
-				pm.addOriginBrokerNotification(awsOriginalMessage{})
-				ch <- &pm
-				m.removeMessageFromQueue(ctx, queueUrl, msg)
+				m.handleMessage(ctx, c, queueUrl, msgs.Messages[0], ch)
 			}
 		}
 	}()
 
 	return ch, nil
+}
+
+// handleMessage unwraps the SNS notification and delivers the message to the consumer
+// channel with a real ack/nack bound to the SQS receipt handle. Malformed messages are
+// skipped without deletion so they redeliver after the visibility timeout and the
+// queue's redrive policy can route them to the DLQ.
+func (m *awsMessaging) handleMessage(ctx context.Context, c *consumer, queueUrl *sqs.GetQueueUrlOutput, msg *sqs.Message, ch chan *ProviderMessage) {
+	var n sqsNotification
+	if err := json.Unmarshal([]byte(*msg.Body), &n); err != nil {
+		logging.Error(ctx).Err(err).Msgf(couldNotReadMsgBody, *msg.MessageId, c.queue)
+		return
+	}
+
+	var pm ProviderMessage
+	if err := json.Unmarshal([]byte(n.Message), &pm); err != nil {
+		logging.Error(ctx).Err(err).Msgf(couldNotReadMsgBody, *msg.MessageId, c.queue)
+		return
+	}
+
+	pm.addOriginBrokerNotification(awsOriginalMessage{
+		ctx:           ctx,
+		sqsService:    m.sqsService,
+		queueUrl:      queueUrl.QueueUrl,
+		receiptHandle: msg.ReceiptHandle,
+	})
+	ch <- &pm
 }
 
 func (m *awsMessaging) readMessages(ctx context.Context, queueResult *sqs.GetQueueUrlOutput) (*sqs.ReceiveMessageOutput, error) {
@@ -114,15 +150,6 @@ func (m *awsMessaging) readMessages(ctx context.Context, queueResult *sqs.GetQue
 	})
 
 	return msgs, err
-}
-
-func (m *awsMessaging) removeMessageFromQueue(ctx context.Context, queueResult *sqs.GetQueueUrlOutput, msg *sqs.Message) {
-	if _, err := m.sqsService.DeleteMessageWithContext(ctx, &sqs.DeleteMessageInput{
-		QueueUrl:      queueResult.QueueUrl,
-		ReceiptHandle: msg.ReceiptHandle,
-	}); err != nil {
-		logging.Error(ctx).Err(err).Msgf(couldNotDeleteMsg, *msg.MessageId, *queueResult.QueueUrl)
-	}
 }
 
 func (m *awsMessaging) getQueueUrl(ctx context.Context, queue string) *sqs.GetQueueUrlOutput {

@@ -5,7 +5,12 @@ type OriginalMessage interface {
 	// Ack acknowledges the message.
 	Ack() error
 	// Nack rejects the message.
-	// If requeue is true, the message will be put back in the original queue.
-	// If requeue is false, the message will be discarded or sent to a DLQ.
+	// If requeue is true, the message is put back in the original queue for immediate redelivery.
+	// If requeue is false, the message is left to the broker's dead-letter handling:
+	// RabbitMQ rejects it without requeue (routed to the configured DLX, or dropped if none);
+	// SQS leaves it in-flight until the visibility timeout expires, after which the queue's
+	// redrive policy moves it to the DLQ once maxReceiveCount is exceeded;
+	// GCP Pub/Sub nacks it, so the subscription's retry policy redelivers it until the
+	// dead-letter policy (if configured) forwards it to the dead-letter topic.
 	Nack(requeue bool, err error) error
 }
