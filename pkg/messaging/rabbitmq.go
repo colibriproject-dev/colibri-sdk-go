@@ -13,10 +13,8 @@ import (
 const (
 	rabbitMQDefaultURL = "amqp://guest:guest@localhost:5672/"
 	rabbitMQURLEnvVar  = "RABBITMQ_URL"
-	dlqExchangeSuffix  = "dlx"
 
-	couldNotSendToDLQ = "could not send message %s to DLQ"
-	messageSentToDLQ  = "message %s sent to DLQ %s due to: %s"
+	messageRejectedToDLQ = "message %s from queue %s rejected without requeue due to: %s"
 )
 
 type rabbitMQMessaging struct {
@@ -25,16 +23,14 @@ type rabbitMQMessaging struct {
 }
 
 type rabbitMQOriginalMessage struct {
-	m *rabbitMQMessaging
 	d amqp.Delivery
-	q string
 }
 
-func (r rabbitMQOriginalMessage) Ack() error {
+func (r rabbitMQOriginalMessage) Ack(_ context.Context) error {
 	return r.d.Ack(false)
 }
 
-func (r rabbitMQOriginalMessage) Nack(requeue bool, _ error) error {
+func (r rabbitMQOriginalMessage) Nack(_ context.Context, requeue bool, _ error) error {
 	return r.d.Reject(requeue)
 }
 
@@ -114,12 +110,21 @@ func (m *rabbitMQMessaging) startConsuming(queueName string) (<-chan amqp.Delive
 	)
 }
 
-// processMessages handles incoming messages from RabbitMQ
+// processMessages handles incoming messages from RabbitMQ until the delivery
+// channel closes or the consumer is canceled
 func (m *rabbitMQMessaging) processMessages(ctx context.Context, c *consumer, msgs <-chan amqp.Delivery, providerMsgs chan<- *ProviderMessage) {
 	defer c.Done()
 
-	for d := range msgs {
-		m.handleMessage(ctx, c, d, providerMsgs)
+	for {
+		select {
+		case <-c.done:
+			return
+		case d, ok := <-msgs:
+			if !ok {
+				return
+			}
+			m.handleMessage(ctx, c, d, providerMsgs)
+		}
 	}
 }
 
@@ -132,16 +137,17 @@ func (m *rabbitMQMessaging) handleMessage(ctx context.Context, c *consumer, d am
 		return
 	}
 
-	pm.addOriginBrokerNotification(rabbitMQOriginalMessage{m: m, d: d, q: c.queue})
+	pm.addOriginBrokerNotification(rabbitMQOriginalMessage{d: d})
 	providerMsgs <- &pm
 }
 
-// handleUnmarshalError handles errors when unmarshalling a message
+// handleUnmarshalError rejects a malformed message without requeue so the broker
+// routes it to the configured DLX instead of redelivering or dropping it silently
 func (m *rabbitMQMessaging) handleUnmarshalError(ctx context.Context, c *consumer, d amqp.Delivery, err error) {
 	logging.Error(ctx).Err(err).Msgf(couldNotReadMsgBody, d.MessageId, c.queue)
 
-	logging.Debug(ctx).Msgf(messageSentToDLQ, d.MessageId, c.queue, err.Error())
-	if ackErr := d.Ack(false); ackErr != nil {
-		logging.Error(ctx).Err(ackErr).Msgf("Could not ack message %s after DLQ", d.MessageId)
+	logging.Debug(ctx).Msgf(messageRejectedToDLQ, d.MessageId, c.queue, err.Error())
+	if rejectErr := d.Reject(false); rejectErr != nil {
+		logging.Error(ctx).Err(rejectErr).Msgf("could not reject message %s", d.MessageId)
 	}
 }

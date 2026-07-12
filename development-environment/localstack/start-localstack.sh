@@ -7,8 +7,9 @@ awslocal sns subscribe --topic-arn arn:aws:sns:us-east-1:000000000000:COLIBRI_PR
          --notification-endpoint arn:aws:sqs:us-east-1:000000000000:COLIBRI_PROJECT_USER_CREATE_APP_CONSUMER
 
 awslocal sns create-topic --name COLIBRI_PROJECT_FAIL_USER_CREATE
-awslocal sqs create-queue --queue-name COLIBRI_PROJECT_FAIL_USER_CREATE_APP_CONSUMER
 awslocal sqs create-queue --queue-name COLIBRI_PROJECT_FAIL_USER_CREATE_APP_CONSUMER_DLQ
+awslocal sqs create-queue --queue-name COLIBRI_PROJECT_FAIL_USER_CREATE_APP_CONSUMER \
+         --attributes '{"VisibilityTimeout":"1","RedrivePolicy":"{\"deadLetterTargetArn\":\"arn:aws:sqs:us-east-1:000000000000:COLIBRI_PROJECT_FAIL_USER_CREATE_APP_CONSUMER_DLQ\",\"maxReceiveCount\":\"2\"}"}'
 awslocal sns subscribe --topic-arn arn:aws:sns:us-east-1:000000000000:COLIBRI_PROJECT_FAIL_USER_CREATE \
          --protocol sqs \
          --notification-endpoint arn:aws:sqs:us-east-1:000000000000:COLIBRI_PROJECT_FAIL_USER_CREATE_APP_CONSUMER

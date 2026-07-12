@@ -52,3 +52,4 @@ jobs:
             -Dsonar.tests=.
             -Dsonar.test.inclusions=**/*_test.go
             -Dsonar.go.coverage.reportPaths=coverage.txt
+            -Dsonar.coverage.exclusions=pkg/base/test/**
