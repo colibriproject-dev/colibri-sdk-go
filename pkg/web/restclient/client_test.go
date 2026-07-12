@@ -17,6 +17,7 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/test"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/database/cacheDB"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type userResponseTestStruct struct {
@@ -97,6 +98,7 @@ func TestGet(t *testing.T) {
 
 		assert.NotNil(t, response)
 		assert.EqualValues(t, http.StatusOK, response.StatusCode())
+		require.NotNil(t, response.SuccessBody())
 		assert.Equal(t, 5, len(*response.SuccessBody()))
 		assert.EqualValues(t, expected, *response.SuccessBody())
 		assert.Nil(t, response.ErrorBody())
@@ -137,7 +139,7 @@ func TestPost(t *testing.T) {
 
 		assert.NotNil(t, response)
 		assert.EqualValues(t, http.StatusCreated, response.StatusCode())
-		assert.NotNil(t, response.SuccessBody())
+		require.NotNil(t, response.SuccessBody())
 		assert.Equal(t, uint(10), response.SuccessBody().ID)
 		assert.Equal(t, newUser.Name, response.SuccessBody().Name)
 		assert.Equal(t, newUser.Email, response.SuccessBody().Email)
@@ -231,7 +233,7 @@ func TestPostWithMultipart(t *testing.T) {
 
 		assert.NotNil(t, response)
 		assert.EqualValues(t, http.StatusCreated, response.StatusCode())
-		assert.NotNil(t, response.SuccessBody())
+		require.NotNil(t, response.SuccessBody())
 		assert.Equal(t, uint(10), response.SuccessBody().ID)
 		assert.Equal(t, newUser.Name, response.SuccessBody().Name)
 		assert.Equal(t, newUser.Email, response.SuccessBody().Email)
@@ -277,7 +279,7 @@ func TestPut(t *testing.T) {
 		assert.NotNil(t, response)
 		assert.EqualValues(t, http.StatusOK, response.StatusCode())
 		assert.NoError(t, response.Error())
-		assert.NotNil(t, response.SuccessBody())
+		require.NotNil(t, response.SuccessBody())
 		assert.Equal(t, newUser.ID, response.SuccessBody().ID)
 		assert.Equal(t, newUser.Name, response.SuccessBody().Name)
 		assert.Equal(t, newUser.Email, response.SuccessBody().Email)
@@ -318,7 +320,7 @@ func TestPatch(t *testing.T) {
 
 		assert.NotNil(t, response)
 		assert.EqualValues(t, http.StatusOK, response.StatusCode())
-		assert.NotNil(t, response.SuccessBody())
+		require.NotNil(t, response.SuccessBody())
 		assert.Equal(t, uint(10), response.SuccessBody().ID)
 		assert.Equal(t, newUser.Name, response.SuccessBody().Name)
 		assert.NotNil(t, response.SuccessBody().Email)
@@ -359,7 +361,7 @@ func TestDelete(t *testing.T) {
 
 		assert.NotNil(t, response)
 		assert.EqualValues(t, http.StatusOK, response.StatusCode())
-		assert.NotNil(t, response.SuccessBody())
+		require.NotNil(t, response.SuccessBody())
 		assert.Equal(t, uint(11), response.SuccessBody().ID)
 		assert.Equal(t, "User 11 deleted", response.SuccessBody().Name)
 		assert.Nil(t, response.ErrorBody())
@@ -419,6 +421,7 @@ func TestPostNotEmptyResponseBodyError(t *testing.T) {
 		assert.NotNil(t, response)
 		assert.EqualValues(t, http.StatusInternalServerError, response.StatusCode())
 		assert.Nil(t, response.SuccessBody())
+		require.NotNil(t, response.ErrorBody())
 		assert.EqualValues(t, "Error message post user", response.ErrorBody().Message)
 		assert.EqualError(t, response.Error(), "error body decoded with 500 status code")
 	})
@@ -460,7 +463,7 @@ func TestPostWithBodyString(t *testing.T) {
 
 		assert.NotNil(t, response)
 		assert.EqualValues(t, http.StatusOK, response.StatusCode())
-		assert.NotNil(t, response.SuccessBody())
+		require.NotNil(t, response.SuccessBody())
 		assert.Equal(t, uint(100), response.SuccessBody().ID)
 		assert.Equal(t, "user_100@email.com", response.SuccessBody().Email)
 		assert.Equal(t, "User 100", response.SuccessBody().Name)

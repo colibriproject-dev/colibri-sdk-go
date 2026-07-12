@@ -48,8 +48,11 @@ func newWiremockContainer(configPath string) *WiremockContainer {
 				Target: "/home/wiremock",
 			})
 		},
-		Cmd:        []string{"--local-response-templating"},
-		WaitingFor: wait.ForListeningPort(wiremockSvcPort),
+		Cmd: []string{"--local-response-templating"},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(wiremockSvcPort),
+			wait.ForHTTP("/__admin/mappings").WithPort(wiremockSvcPort),
+		),
 	}
 
 	return &WiremockContainer{wContainerRequest: &req, configPath: configPath}
@@ -62,10 +65,13 @@ func (c *WiremockContainer) start(ctx context.Context) {
 		Started:          true,
 	})
 	if err != nil {
-		logging.Fatal(ctx).Err(err)
+		logging.Fatal(ctx).Err(err).Msg("could not start wiremock container")
 	}
 
-	runningPort, _ := c.wContainer.MappedPort(ctx, wiremockSvcPort)
+	runningPort, err := c.wContainer.MappedPort(ctx, wiremockSvcPort)
+	if err != nil {
+		logging.Fatal(ctx).Err(err).Msg("could not get wiremock container mapped port")
+	}
 	c.instancePort = runningPort.Int()
 
 	logging.Info(ctx).Msgf("Test wiremock started at port: %s", runningPort.Port())
