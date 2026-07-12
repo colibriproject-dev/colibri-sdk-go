@@ -19,7 +19,12 @@ jobs:
   sonar:
     name: SonarCloud Scan
     runs-on: ubuntu-24.04
-    if: github.event.workflow_run.conclusion == 'success'
+    # Only run when the analyzed commit lives in this repository (push, Dependabot
+    # or maintainer branches). PRs from forks are skipped so untrusted code is
+    # never checked out and executed in this secrets-enabled context.
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_repository.full_name == github.event.workflow_run.repository.full_name
     steps:
       # Downloaded to runner.temp so it survives the checkout clean below.
       - name: Download analysis data
