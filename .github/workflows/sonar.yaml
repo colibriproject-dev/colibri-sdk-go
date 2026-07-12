@@ -13,6 +13,7 @@ on:
 permissions:
   contents: read
   actions: read
+  statuses: write
 
 jobs:
   sonar:
@@ -52,6 +53,7 @@ jobs:
         run: cp "${{ runner.temp }}/sonar-data/coverage.txt" coverage.txt
 
       - name: SonarCloud Scan
+        id: sonar
         uses: SonarSource/sonarqube-scan-action@299e4b793aaa83bf2aba7c9c14bedbb485688ec4
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -66,3 +68,19 @@ jobs:
             -Dsonar.go.coverage.reportPaths=coverage.txt
             -Dsonar.coverage.exclusions=pkg/base/test/**
             ${{ env.SONAR_ARGS }}
+
+      # workflow_run runs are not attached to the PR checks list, so publish a
+      # commit status on the PR head SHA to surface the result on the PR (and
+      # make it usable as a required status check in branch protection).
+      - name: Report status to PR
+        if: always() && env.SONAR_EVENT == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          state=success
+          [ "${{ steps.sonar.outcome }}" = "success" ] || state=failure
+          gh api -X POST "repos/${{ github.repository }}/statuses/$SONAR_SHA" \
+            -f state="$state" \
+            -f context="SonarCloud" \
+            -f description="SonarCloud analysis $state" \
+            -f target_url="${{ github.event.workflow_run.html_url }}"
