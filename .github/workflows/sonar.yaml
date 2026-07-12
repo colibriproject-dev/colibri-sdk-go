@@ -1,0 +1,68 @@
+name: SonarCloud
+
+# Runs after the "Quality" workflow finishes (for both push and pull_request).
+# Being triggered by workflow_run, it executes in the context of the base
+# repository and therefore HAS access to secrets, even for PRs from Dependabot
+# or forks. This is the single place where Sonar analysis runs.
+on:
+  workflow_run:
+    workflows: ["Quality"]
+    types:
+      - completed
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  sonar:
+    name: SonarCloud Scan
+    runs-on: ubuntu-24.04
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      # Downloaded to runner.temp so it survives the checkout clean below.
+      - name: Download analysis data
+        uses: actions/download-artifact@v4
+        with:
+          name: sonar-data
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/sonar-data
+
+      - name: Load analysis metadata
+        run: cat "${{ runner.temp }}/sonar-data/sonar-meta.env" >> "$GITHUB_ENV"
+
+      # Pull requests need explicit PR params (workflow_run context can't auto-detect
+      # them); push to master analyzes the main branch with no extra args.
+      - name: Compose Sonar args
+        run: |
+          if [ "$SONAR_EVENT" = "pull_request" ]; then
+            echo "SONAR_ARGS=-Dsonar.pullrequest.key=$PR_NUMBER -Dsonar.pullrequest.branch=$PR_HEAD_REF -Dsonar.pullrequest.base=$PR_BASE_REF -Dsonar.scm.revision=$SONAR_SHA" >> "$GITHUB_ENV"
+          else
+            echo "SONAR_ARGS=" >> "$GITHUB_ENV"
+          fi
+
+      - name: Checkout analyzed commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SONAR_SHA }}
+          fetch-depth: 0
+
+      - name: Restore coverage report
+        run: cp "${{ runner.temp }}/sonar-data/coverage.txt" coverage.txt
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@299e4b793aaa83bf2aba7c9c14bedbb485688ec4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=colibri-project-dev
+            -Dsonar.projectKey=colibri-project-dev_colibri-sdk-go
+            -Dsonar.sources=.
+            -Dsonar.exclusions=**/*_test.go,**/*.sql,**/*_mock.go,colibri.go,development-environment/**,pkg/di/examples/**,**/test_*.go
+            -Dsonar.tests=.
+            -Dsonar.test.inclusions=**/*_test.go
+            -Dsonar.go.coverage.reportPaths=coverage.txt
+            -Dsonar.coverage.exclusions=pkg/base/test/**
+            ${{ env.SONAR_ARGS }}
