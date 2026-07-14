@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
 	"github.com/google/uuid"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -72,7 +72,7 @@ func (c *WiremockContainer) start(ctx context.Context) {
 	if err != nil {
 		logging.Fatal(ctx).Err(err).Msg("could not get wiremock container mapped port")
 	}
-	c.instancePort = runningPort.Int()
+	c.instancePort = int(runningPort.Num())
 
 	logging.Info(ctx).Msgf("Test wiremock started at port: %s", runningPort.Port())
 }

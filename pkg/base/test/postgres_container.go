@@ -11,7 +11,7 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/google/uuid"
 
-	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/network"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -54,7 +54,7 @@ func newPostgresContainer() *PostgresContainer {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForListeningPort(testPostgresSvcPort),
-			wait.ForSQL(testPostgresSvcPort, "postgres", func(host string, port nat.Port) string {
+			wait.ForSQL(testPostgresSvcPort, "postgres", func(host string, port network.Port) string {
 				return fmt.Sprintf(
 					"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 					host,
@@ -138,7 +138,7 @@ func (c *PostgresContainer) execScript(script string) error {
 	return nil
 }
 
-func (c *PostgresContainer) setDatabaseEnv(ctx context.Context, testDbPort nat.Port) {
+func (c *PostgresContainer) setDatabaseEnv(ctx context.Context, testDbPort network.Port) {
 	c.setEnv(ctx, config.ENV_SQL_DB_HOST, testDbHost)
 	c.setEnv(ctx, config.ENV_SQL_DB_PORT, testDbPort.Port())
 	c.setEnv(ctx, config.ENV_SQL_DB_NAME, testDbName)

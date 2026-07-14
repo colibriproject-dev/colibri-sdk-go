@@ -6,10 +6,10 @@ import (
 	"os"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/go-connections/nat"
 	"github.com/google/uuid"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/network"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -88,7 +88,7 @@ func (c *gcpEmulatorContainer) start(ctx context.Context) {
 	c.setEnv(pubSubPort, storagePort)
 }
 
-func (c *gcpEmulatorContainer) setEnv(pubSubPort, storagePort nat.Port) {
+func (c *gcpEmulatorContainer) setEnv(pubSubPort, storagePort network.Port) {
 	os.Setenv("PUBSUB_PROJECT_ID", "test-project")
 	os.Setenv("PUBSUB_EMULATOR_HOST", fmt.Sprintf("localhost:%s", pubSubPort.Port()))
 	os.Setenv("STORAGE_EMULATOR_HOST", fmt.Sprintf("localhost:%s", storagePort.Port()))

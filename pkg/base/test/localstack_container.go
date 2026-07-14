@@ -7,10 +7,10 @@ import (
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/go-connections/nat"
 	"github.com/google/uuid"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/network"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -86,7 +86,7 @@ func (c *LocalstackContainer) start(ctx context.Context) {
 	c.setEnv(localstackPort)
 }
 
-func (c *LocalstackContainer) setEnv(port nat.Port) {
+func (c *LocalstackContainer) setEnv(port network.Port) {
 	os.Setenv(config.ENV_CLOUD_HOST, fmt.Sprintf("http://localhost:%s", port.Port()))
 	os.Setenv(config.ENV_CLOUD_REGION, "us-east-1")
 	os.Setenv(config.ENV_CLOUD_SECRET, "no_secret")
