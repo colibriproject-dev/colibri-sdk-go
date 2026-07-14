@@ -7,9 +7,9 @@ import (
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
-	"github.com/docker/go-connections/nat"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
+	"github.com/moby/moby/api/types/network"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -70,6 +70,6 @@ func (c *RedisContainer) start(ctx context.Context) {
 	logging.Info(ctx).Msgf("Test redis started at port: %s", testDbPort)
 }
 
-func (c *RedisContainer) setRedisEnv(port nat.Port) {
+func (c *RedisContainer) setRedisEnv(port network.Port) {
 	_ = os.Setenv(config.ENV_CACHE_URI, fmt.Sprintf("localhost:%s", port.Port()))
 }

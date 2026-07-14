@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/go-connections/nat"
 	"github.com/google/uuid"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/network"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -95,7 +95,7 @@ func (c *RabbitmqContainer) start(ctx context.Context) {
 	logging.Info(ctx).Msgf("Test RabbitMQ Management Interface available at: http://localhost:%s", managementPort)
 }
 
-func (c *RabbitmqContainer) setRabbitmqEnv(ctx context.Context, amqpPort, managementPort nat.Port) {
+func (c *RabbitmqContainer) setRabbitmqEnv(ctx context.Context, amqpPort, managementPort network.Port) {
 	_ = os.Setenv("RABBITMQ_URL", fmt.Sprintf("amqp://test:test@localhost:%s/", amqpPort.Port()))
 	logging.Info(ctx).Msgf("RabbitMQ URL: %s", os.Getenv("RABBITMQ_URL"))
 	logging.Info(ctx).Msgf("RabbitMQ Management URL: http://localhost:%s", managementPort.Port())
