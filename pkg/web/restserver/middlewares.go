@@ -10,10 +10,10 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
-	"github.com/gofiber/contrib/otelfiber/v2"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/utils"
+	otelfiber "github.com/gofiber/contrib/v3/otel"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/cors"
+	"github.com/gofiber/utils/v2"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -49,7 +49,7 @@ type CustomAuthenticationMiddleware interface {
 }
 
 func authenticationContextFiberMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		if !strings.Contains(c.Request().URI().String(), string(AuthenticatedApi)) {
 			return c.Next()
 		}
@@ -58,8 +58,8 @@ func authenticationContextFiberMiddleware() fiber.Handler {
 		userID := string(c.Request().Header.Peek(userIDHeader))
 		authCtx := security.NewAuthenticationContext(tenantID, userID)
 		if authCtx.Valid() {
-			newCtx := authCtx.SetInContext(c.UserContext())
-			c.SetUserContext(newCtx)
+			newCtx := authCtx.SetInContext(c.Context())
+			c.SetContext(newCtx)
 			return c.Next()
 		}
 
@@ -70,7 +70,7 @@ func authenticationContextFiberMiddleware() fiber.Handler {
 }
 
 func customAuthenticationContextFiberMiddleware() fiber.Handler {
-	return func(ctx *fiber.Ctx) error {
+	return func(ctx fiber.Ctx) error {
 		webCtx := &fiberWebContext{ctx: ctx}
 		authCtx, err := customAuth.Apply(webCtx)
 		if err != nil {
@@ -78,8 +78,8 @@ func customAuthenticationContextFiberMiddleware() fiber.Handler {
 			return ctx.JSON(err)
 		}
 
-		newCtx := authCtx.SetInContext(ctx.UserContext())
-		ctx.SetUserContext(newCtx)
+		newCtx := authCtx.SetInContext(ctx.Context())
+		ctx.SetContext(newCtx)
 		return ctx.Next()
 	}
 }
@@ -87,7 +87,7 @@ func customAuthenticationContextFiberMiddleware() fiber.Handler {
 func newOpenTelemetryFiberMiddleware() fiber.Handler {
 	return otelfiber.Middleware(
 		otelfiber.WithoutMetrics(true),
-		otelfiber.WithSpanNameFormatter(func(ctx *fiber.Ctx) string {
+		otelfiber.WithSpanNameFormatter(func(ctx fiber.Ctx) string {
 			// utils.CopyString: GetRespHeader returns an UnsafeString backed by fasthttp's
 			// buffer, which is reused for the next request on the same keep-alive connection.
 			// Without copying, the span/metric attribute value mutates after the request ends
@@ -97,7 +97,7 @@ func newOpenTelemetryFiberMiddleware() fiber.Handler {
 			if route == "" {
 				route = ctx.Route().Path
 			}
-			trace.SpanFromContext(ctx.UserContext()).SetAttributes(attribute.String("http.route", route))
+			trace.SpanFromContext(ctx.Context()).SetAttributes(attribute.String("http.route", route))
 			return fmt.Sprintf("%s %s", ctx.Method(), route)
 		}),
 	)
@@ -126,9 +126,9 @@ func httpMetricsFiberMiddleware() fiber.Handler {
 		metric.WithDescription("Size of HTTP server response bodies"),
 	)
 
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		start := time.Now()
-		ctx := c.UserContext()
+		ctx := c.Context()
 
 		reqAttrs := []attribute.KeyValue{
 			attribute.String("url.scheme", c.Protocol()),
@@ -164,20 +164,39 @@ func httpMetricsFiberMiddleware() fiber.Handler {
 
 func accessControlFiberMiddleware() fiber.Handler {
 	return cors.New(cors.Config{
-		AllowOrigins:     config.CORS_ALLOW_ORIGINS,
-		AllowMethods:     config.CORS_ALLOW_METHODS,
-		AllowHeaders:     config.CORS_ALLOW_HEADERS,
-		ExposeHeaders:    config.CORS_EXPOSE_HEADERS,
+		AllowOrigins:     splitCORSValues(config.CORS_ALLOW_ORIGINS),
+		AllowMethods:     splitCORSValues(config.CORS_ALLOW_METHODS),
+		AllowHeaders:     splitCORSValues(config.CORS_ALLOW_HEADERS),
+		ExposeHeaders:    splitCORSValues(config.CORS_EXPOSE_HEADERS),
 		AllowCredentials: config.CORS_ALLOW_CREDENTIALS,
 		MaxAge:           config.CORS_MAX_AGE,
 	})
 }
 
+// splitCORSValues converts a comma-separated CORS config string into the []string
+// slice required by Fiber v3's cors.Config. Empty values yield a nil slice so the
+// middleware falls back to its own defaults instead of a single empty entry.
+func splitCORSValues(value string) []string {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+
+	parts := strings.Split(value, ",")
+	values := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			values = append(values, trimmed)
+		}
+	}
+
+	return values
+}
+
 func panicRecoverMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) (err error) {
+	return func(c fiber.Ctx) (err error) {
 		defer func() {
 			if r := recover(); r != nil {
-				logging.Error(c.UserContext()).
+				logging.Error(c.Context()).
 					Err(fmt.Errorf("%v", r)).
 					AddParam("path", c.Path()).
 					AddParam("method", c.Method()).
@@ -193,14 +212,14 @@ func panicRecoverMiddleware() fiber.Handler {
 }
 
 func correlationIdMiddleware() fiber.Handler {
-	return func(ctx *fiber.Ctx) error {
+	return func(ctx fiber.Ctx) error {
 		correlationID := ctx.Get("X-Correlation-ID")
 		if correlationID == "" {
 			correlationID = uuid.New().String()
 		}
-		ctx.SetUserContext(logging.InjectCorrelationIDInContext(ctx.UserContext(), correlationID))
+		ctx.SetContext(logging.InjectCorrelationIDInContext(ctx.Context(), correlationID))
 		if monitoring.UseOTELMonitoring() {
-			txn := monitoring.GetTransactionInContext(ctx.UserContext())
+			txn := monitoring.GetTransactionInContext(ctx.Context())
 			monitoring.AddTransactionAttribute(txn, logging.CorrelationIDParam, correlationID)
 		}
 		return ctx.Next()

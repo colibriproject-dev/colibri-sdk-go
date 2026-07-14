@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 const (
@@ -44,7 +44,7 @@ func NewRequestTest(request *RequestTest, handlerFn func(ctx WebContext)) *TestR
 	app.Use(authenticationContextFiberMiddleware())
 
 	path := convertUriToFiberUri(request.Path)
-	app.Add(request.Method, path, func(ctx *fiber.Ctx) error {
+	app.Add([]string{request.Method}, path, func(ctx fiber.Ctx) error {
 		webContext := newFiberWebContext(ctx)
 
 		handlerFn(webContext)
@@ -79,7 +79,7 @@ func NewRequestTest(request *RequestTest, handlerFn func(ctx WebContext)) *TestR
 		req.Header.Add(key, value)
 	}
 
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 0, FailOnTimeout: false})
 	if err != nil {
 		panic(err)
 	}

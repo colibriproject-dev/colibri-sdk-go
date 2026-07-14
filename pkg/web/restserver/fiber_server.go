@@ -9,8 +9,8 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/swagger"
+	swagger "github.com/gofiber/contrib/v3/swaggo"
+	"github.com/gofiber/fiber/v3"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 )
@@ -25,9 +25,8 @@ func createFiberServer() Server {
 
 func (f *fiberWebServer) initialize() {
 	f.srv = fiber.New(fiber.Config{
-		ServerHeader:          "colibri-sdk-go",
-		AppName:               config.APP_NAME,
-		DisableStartupMessage: true,
+		ServerHeader: "colibri-sdk-go",
+		AppName:      config.APP_NAME,
 	})
 }
 
@@ -86,7 +85,7 @@ func (f *fiberWebServer) injectRoutes() {
 		fn := route.Function
 		beforeEnter := route.BeforeEnter
 
-		f.srv.Add(route.Method, routeUri, func(fctx *fiber.Ctx) error {
+		f.srv.Add([]string{route.Method}, routeUri, func(fctx fiber.Ctx) error {
 			fctx.Set(parameterizedURLHeaderKey, routeUri)
 			webContext := newFiberWebContext(fctx)
 			if beforeEnter != nil {
@@ -107,15 +106,15 @@ func (f *fiberWebServer) injectRoutes() {
 }
 
 func (f *fiberWebServer) listenAndServe() error {
-	return f.srv.Listen(fmt.Sprintf(":%d", config.PORT))
+	return f.srv.Listen(fmt.Sprintf(":%d", config.PORT), fiber.ListenConfig{DisableStartupMessage: true})
 }
 
 func (f *fiberWebServer) addMetricsRoute() {
 	const route = "/metrics"
 
 	p := fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler())
-	f.srv.Get(route, func(c *fiber.Ctx) error {
-		p(c.Context())
+	f.srv.Get(route, func(c fiber.Ctx) error {
+		p(c.RequestCtx())
 		return nil
 	})
 }
@@ -127,7 +126,7 @@ func (f *fiberWebServer) addSwaggerUI() {
 }
 
 func (f *fiberWebServer) registerCustomMiddleware(m CustomMiddleware) {
-	fn := func(ctx *fiber.Ctx) error {
+	fn := func(ctx fiber.Ctx) error {
 		webCtx := &fiberWebContext{ctx: ctx}
 		if err := m.Apply(webCtx); err != nil {
 			ctx.Status(err.StatusCode)

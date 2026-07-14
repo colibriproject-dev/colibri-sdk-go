@@ -10,19 +10,19 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/validator"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 type fiberWebContext struct {
-	ctx *fiber.Ctx
+	ctx fiber.Ctx
 }
 
-func newFiberWebContext(ctx *fiber.Ctx) *fiberWebContext {
+func newFiberWebContext(ctx fiber.Ctx) *fiberWebContext {
 	return &fiberWebContext{ctx: ctx}
 }
 
 func (f *fiberWebContext) Context() context.Context {
-	return f.ctx.UserContext()
+	return f.ctx.Context()
 }
 
 func (f *fiberWebContext) AuthenticationContext() *security.AuthenticationContext {
@@ -36,7 +36,7 @@ func (f *fiberWebContext) RequestHeader(key string) []string {
 func (f *fiberWebContext) RequestHeaders() map[string][]string {
 	headers := make(map[string][]string)
 
-	f.ctx.Context().Request.Header.VisitAll(func(key, value []byte) {
+	f.ctx.Request().Header.VisitAll(func(key, value []byte) {
 		headers[string(key)] = strings.Split(string(value), ";")
 	})
 
@@ -129,7 +129,7 @@ func (f *fiberWebContext) EmptyResponse(statusCode int) {
 }
 
 func (f *fiberWebContext) Redirect(url string, statusCode int) {
-	if err := f.ctx.Redirect(url, statusCode); err != nil {
+	if err := f.ctx.Redirect().Status(statusCode).To(url); err != nil {
 		logging.
 			Error(f.Context()).
 			Err(err).
