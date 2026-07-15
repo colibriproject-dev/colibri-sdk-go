@@ -74,6 +74,7 @@ func (m *gcpMessaging) consumer(ctx context.Context, c *consumer) (chan *Provide
 			}
 
 			pm.addOriginBrokerNotification(gcpOriginalMessage{msg: msg})
+			pm.setReceiptMetadata(msg.Attributes, msg.DeliveryAttempt)
 			ch <- &pm
 		}); err != nil {
 			logging.Error(ctx).Err(err).Msgf(couldNotReceiveMsg, c.queue)

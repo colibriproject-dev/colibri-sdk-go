@@ -49,6 +49,62 @@ func TestAwsHandleMessage(t *testing.T) {
 	})
 }
 
+func TestAwsReceiptMetadata(t *testing.T) {
+	t.Run("Should flatten system and message attributes and derive the delivery attempt", func(t *testing.T) {
+		msg := &sqs.Message{
+			Attributes: map[string]*string{
+				"ApproximateReceiveCount": aws.String("4"),
+			},
+			MessageAttributes: map[string]*sqs.MessageAttributeValue{
+				"tenant": {StringValue: aws.String("acme")},
+			},
+		}
+
+		attrs := awsAttributes(msg)
+		assert.Equal(t, "4", attrs["ApproximateReceiveCount"])
+		assert.Equal(t, "acme", attrs["tenant"])
+
+		attempt := awsDeliveryAttempt(msg)
+		if assert.NotNil(t, attempt) {
+			assert.Equal(t, 4, *attempt)
+		}
+	})
+
+	t.Run("Should return nil metadata when the message carries none", func(t *testing.T) {
+		msg := &sqs.Message{}
+
+		assert.Nil(t, awsAttributes(msg))
+		assert.Nil(t, awsDeliveryAttempt(msg))
+	})
+}
+
+func TestRabbitMQReceiptMetadata(t *testing.T) {
+	t.Run("Should stringify headers and derive the delivery attempt from x-death", func(t *testing.T) {
+		d := amqp.Delivery{
+			Headers: amqp.Table{
+				"x-death": []interface{}{
+					amqp.Table{"count": int64(6), "reason": "rejected"},
+				},
+			},
+		}
+
+		attrs := rabbitMQAttributes(d)
+		assert.Contains(t, attrs, "x-death")
+
+		attempt := rabbitMQDeliveryAttempt(d)
+		if assert.NotNil(t, attempt) {
+			assert.Equal(t, 6, *attempt)
+		}
+	})
+
+	t.Run("Should return nil metadata when there are no headers", func(t *testing.T) {
+		d := amqp.Delivery{}
+
+		assert.Nil(t, rabbitMQAttributes(d))
+		assert.Nil(t, rabbitMQDeliveryAttempt(d))
+	})
+}
+
 func TestRabbitMQProcessMessages(t *testing.T) {
 	m := &rabbitMQMessaging{}
 

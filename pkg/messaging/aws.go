@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sns"
@@ -136,7 +137,42 @@ func (m *awsMessaging) handleMessage(ctx context.Context, c *consumer, queueUrl 
 		queueUrl:      queueUrl.QueueUrl,
 		receiptHandle: msg.ReceiptHandle,
 	})
+	pm.setReceiptMetadata(awsAttributes(msg), awsDeliveryAttempt(msg))
 	ch <- &pm
+}
+
+// awsAttributes flattens the SQS system attributes and the user message attributes
+// into a single string map so consumers can read broker metadata uniformly.
+func awsAttributes(msg *sqs.Message) map[string]string {
+	attrs := make(map[string]string, len(msg.Attributes)+len(msg.MessageAttributes))
+	for k, v := range msg.Attributes {
+		if v != nil {
+			attrs[k] = *v
+		}
+	}
+	for k, v := range msg.MessageAttributes {
+		if v != nil && v.StringValue != nil {
+			attrs[k] = *v.StringValue
+		}
+	}
+	if len(attrs) == 0 {
+		return nil
+	}
+	return attrs
+}
+
+// awsDeliveryAttempt derives the delivery count from the SQS ApproximateReceiveCount
+// system attribute when present.
+func awsDeliveryAttempt(msg *sqs.Message) *int {
+	v, ok := msg.Attributes["ApproximateReceiveCount"]
+	if !ok || v == nil {
+		return nil
+	}
+	n, err := strconv.Atoi(*v)
+	if err != nil {
+		return nil
+	}
+	return &n
 }
 
 func (m *awsMessaging) readMessages(ctx context.Context, queueResult *sqs.GetQueueUrlOutput) (*sqs.ReceiveMessageOutput, error) {
@@ -144,6 +180,7 @@ func (m *awsMessaging) readMessages(ctx context.Context, queueResult *sqs.GetQue
 		QueueUrl:              queueResult.QueueUrl,
 		MaxNumberOfMessages:   aws.Int64(1),
 		WaitTimeSeconds:       aws.Int64(1),
+		AttributeNames:        aws.StringSlice([]string{"All"}),
 		MessageAttributeNames: aws.StringSlice([]string{"All"}),
 	})
 
