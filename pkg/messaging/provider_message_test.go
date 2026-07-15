@@ -111,3 +111,33 @@ func TestProviderMessage_addOriginBrokerNotification(t *testing.T) {
 		assert.Equal(t, notification, providerMessage.n)
 	})
 }
+
+func TestProviderMessage_ReceiptMetadata(t *testing.T) {
+	t.Run("should return nil metadata when message was not consumed", func(t *testing.T) {
+		providerMessage := NewProviderMessage(context.Background(), "test", "test")
+
+		assert.Nil(t, providerMessage.Attributes())
+		assert.Nil(t, providerMessage.DeliveryAttempt())
+	})
+
+	t.Run("should expose attributes and delivery attempt after they are set on consumption", func(t *testing.T) {
+		providerMessage := NewProviderMessage(context.Background(), "test", "test")
+		attempt := 3
+
+		providerMessage.setReceiptMetadata(map[string]string{"CloudPubSubDeadLetterSourceDeliveryCount": "5"}, &attempt)
+
+		assert.Equal(t, "5", providerMessage.Attributes()["CloudPubSubDeadLetterSourceDeliveryCount"])
+		assert.Equal(t, 3, *providerMessage.DeliveryAttempt())
+	})
+
+	t.Run("should not serialize receipt metadata into the published envelope", func(t *testing.T) {
+		attempt := 7
+		providerMessage := NewProviderMessage(context.Background(), "test", TestMessage{Field: "value"})
+		providerMessage.setReceiptMetadata(map[string]string{"some-attr": "x"}, &attempt)
+
+		result := providerMessage.String()
+
+		assert.NotContains(t, result, "some-attr")
+		assert.NotContains(t, result, "deliveryAttempt")
+	})
+}

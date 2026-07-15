@@ -3,6 +3,7 @@ package messaging
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"time"
 
@@ -138,7 +139,42 @@ func (m *rabbitMQMessaging) handleMessage(ctx context.Context, c *consumer, d am
 	}
 
 	pm.addOriginBrokerNotification(rabbitMQOriginalMessage{d: d})
+	pm.setReceiptMetadata(rabbitMQAttributes(d), rabbitMQDeliveryAttempt(d))
 	providerMsgs <- &pm
+}
+
+// rabbitMQAttributes stringifies the AMQP delivery headers into a uniform string map.
+func rabbitMQAttributes(d amqp.Delivery) map[string]string {
+	if len(d.Headers) == 0 {
+		return nil
+	}
+	attrs := make(map[string]string, len(d.Headers))
+	for k, v := range d.Headers {
+		attrs[k] = fmt.Sprintf("%v", v)
+	}
+	return attrs
+}
+
+// rabbitMQDeliveryAttempt derives the delivery count from the x-death header the broker
+// adds when a message is dead-lettered, when present.
+func rabbitMQDeliveryAttempt(d amqp.Delivery) *int {
+	death, ok := d.Headers["x-death"]
+	if !ok {
+		return nil
+	}
+	entries, ok := death.([]interface{})
+	if !ok || len(entries) == 0 {
+		return nil
+	}
+	first, ok := entries[0].(amqp.Table)
+	if !ok {
+		return nil
+	}
+	if count, ok := first["count"].(int64); ok {
+		n := int(count)
+		return &n
+	}
+	return nil
 }
 
 // handleUnmarshalError rejects a malformed message without requeue so the broker
