@@ -59,6 +59,11 @@ func TestWaitGroup(t *testing.T) {
 }
 
 func TestWaitRunningTimeout(t *testing.T) {
+	// restored so a repeated run does not start with the shortened timeout, which the tests
+	// waiting for work to complete would then give up on
+	previousTimeout := config.WAIT_GROUP_TIMEOUT_SECONDS
+	t.Cleanup(func() { config.WAIT_GROUP_TIMEOUT_SECONDS = previousTimeout })
+
 	config.WAIT_GROUP_TIMEOUT_SECONDS = 2
 	for i := 0; i <= 50; i++ {
 		go func() {
@@ -74,8 +79,65 @@ func TestWaitRunningTimeout(t *testing.T) {
 }
 
 func process(delaySeconds int) {
-	wg := GetWaitGroup()
-	wg.Add(1)
-	defer wg.Done()
+	AddRunning()
+	defer DoneRunning()
 	time.Sleep(time.Duration(delaySeconds) * time.Second)
+}
+
+func TestWaitRunningTimeoutIsReusableAfterTimeout(t *testing.T) {
+	previousTimeout := config.WAIT_GROUP_TIMEOUT_SECONDS
+	t.Cleanup(func() { config.WAIT_GROUP_TIMEOUT_SECONDS = previousTimeout })
+
+	// earlier tests in this package leave work running for a few seconds; start from idle
+	config.WAIT_GROUP_TIMEOUT_SECONDS = 30
+	if WaitRunningTimeout() {
+		t.Fatal("previous tests left work running")
+	}
+
+	config.WAIT_GROUP_TIMEOUT_SECONDS = 1
+	release := make(chan struct{})
+	go func() {
+		AddRunning()
+		defer DoneRunning()
+		<-release
+	}()
+
+	// give the goroutine time to register before waiting on it
+	time.Sleep(100 * time.Millisecond)
+	assert.True(t, WaitRunningTimeout(), "should have given up on the work still running")
+
+	close(release)
+	assert.False(t, WaitRunningTimeout(), "should observe the drain after the previous wait timed out")
+
+	// a new round must be observable after the counter went back to zero
+	AddRunning()
+	DoneRunning()
+	assert.False(t, WaitRunningTimeout())
+}
+
+func TestGetWaitGroupConcurrent(t *testing.T) {
+	logging.Initialize()
+
+	const goroutines = 32
+
+	var start sync.WaitGroup
+	var done sync.WaitGroup
+	start.Add(1)
+	done.Add(goroutines)
+
+	instances := make([]*sync.WaitGroup, goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func(idx int) {
+			defer done.Done()
+			start.Wait()
+			instances[idx] = GetWaitGroup()
+		}(i)
+	}
+
+	start.Done()
+	done.Wait()
+
+	for i := 1; i < goroutines; i++ {
+		assert.Same(t, instances[0], instances[i])
+	}
 }

@@ -30,8 +30,11 @@ func (f *fiberWebServer) initialize() {
 	})
 }
 
+// shutdown stops accepting connections and waits for the requests in flight, bounded by the
+// same timeout the graceful shutdown drains with: waiting past it would only delay a shutdown
+// that has already given up on the running work.
 func (f *fiberWebServer) shutdown() error {
-	return f.srv.ShutdownWithTimeout(10 * time.Second)
+	return f.srv.ShutdownWithTimeout(time.Duration(config.WAIT_GROUP_TIMEOUT_SECONDS) * time.Second)
 }
 
 func (f *fiberWebServer) injectMiddlewares() {

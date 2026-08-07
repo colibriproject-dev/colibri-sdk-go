@@ -15,6 +15,7 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/cloud"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/test"
@@ -71,7 +72,8 @@ func TestMessaging(t *testing.T) {
 			waitTimeout: 15 * time.Second,
 		})
 		t.Cleanup(func() {
-			instance = nil
+			shutdownMessagingModule()
+			setInstance(nil)
 			logging.Info(context.Background()).Msg("Cleaning up GCP emulator")
 		})
 	})
@@ -87,7 +89,8 @@ func TestMessaging(t *testing.T) {
 		})
 		t.Run("Should make message immediately visible when nack with requeue", awsNackRequeueTest)
 		t.Cleanup(func() {
-			instance = nil
+			shutdownMessagingModule()
+			setInstance(nil)
 			logging.Info(context.Background()).Msg("Cleaning up AWS localstack")
 		})
 	})
@@ -102,7 +105,8 @@ func TestMessaging(t *testing.T) {
 			waitTimeout: 15 * time.Second,
 		})
 		t.Cleanup(func() {
-			instance = nil
+			shutdownMessagingModule()
+			setInstance(nil)
 			_ = os.Unsetenv("RABBITMQ_URL")
 			_ = os.Unsetenv("COLIBRI_MESSAGING")
 			config.COLIBRI_MESSAGING = config.MESSAGING_CLOUD_DEFAULT
@@ -376,4 +380,15 @@ func rabbitmqAssertDLQ(t *testing.T, min int) {
 	}
 
 	t.Fatalf("expected at least %d messages in DLQ, got %d", min, count)
+}
+
+// shutdownMessagingModule runs the module through the shutdown pipeline, the same phases the
+// observer notification goes through, so each provider block stops and drains its consumers
+// and closes its broker connection instead of leaving listener goroutines running into the
+// next test.
+func shutdownMessagingModule() {
+	o := &messagingObserver{}
+	o.Stop()
+	observer.WaitRunningTimeout()
+	o.Close()
 }
