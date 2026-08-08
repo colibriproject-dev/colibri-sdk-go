@@ -18,7 +18,6 @@ const (
 	dbConnectionError     string = "an error occurred while trying to connect to the %s database"
 	dbMigrationError      string = "an error occurred when validate database migrations"
 	dbWaitingSafeClose    string = "waiting to safely close the %s database connection"
-	dbWaitingForceClose   string = "waiting timed out, forcing to close the %s database connection"
 	dbCloseError          string = "error on closing the %s database connection"
 	dbCloseSuccess        string = "%s database closed"
 	dbNotInitializedError string = "database not initialized"
@@ -58,7 +57,7 @@ func NewSQLDatabaseInstance(name, databaseURL string) *sql.DB {
 		logging.Fatal(context.Background()).Err(err).Msgf(dbConnectionError, name)
 	}
 
-	observer.Attach(sqlDBObserver{name, sqlDB})
+	observer.AttachWithPriority(sqlDBObserver{name, sqlDB}, observer.PriorityDefault)
 	logging.Info(context.Background()).Msgf(dbConnectionSuccess, name)
 
 	return sqlDB

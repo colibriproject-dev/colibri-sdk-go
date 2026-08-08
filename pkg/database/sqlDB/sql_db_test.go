@@ -2,6 +2,8 @@ package sqlDB
 
 import (
 	"context"
+	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"testing"
 	"time"
@@ -42,6 +44,18 @@ var (
 type closeable struct{}
 type closeableError struct{}
 
+// notConnectingConnector builds a *sql.DB that never opens a connection, so the observer can
+// be closed without a database behind it.
+type notConnectingConnector struct{}
+
+func (notConnectingConnector) Connect(context.Context) (driver.Conn, error) {
+	return nil, errors.New("not connected")
+}
+
+func (notConnectingConnector) Driver() driver.Driver {
+	return nil
+}
+
 func (c closeable) Close() error {
 	open = false
 	return nil
@@ -62,26 +76,40 @@ func TestCloser(t *testing.T) {
 	})
 }
 
-func TestCloserWithTimeout(t *testing.T) {
-	t.Run("Should close the database observer with timed out", func(t *testing.T) {
-		open = true
-		c := closeable{}
-		assert.NotNil(t, c)
-		assert.True(t, open)
-		config.WAIT_GROUP_TIMEOUT_SECONDS = 1
-		observer.GetWaitGroup().Add(1)
-		defer observer.GetWaitGroup().Done()
-
-		closer(c)
-		assert.False(t, open)
-	})
-
+func TestCloserWithError(t *testing.T) {
 	t.Run("Should return an error to close the database", func(t *testing.T) {
 		open = true
 
 		closer(closeableError{})
 
 		assert.True(t, open)
+	})
+}
+
+func TestSqlDBObserverClose(t *testing.T) {
+	t.Run("Should close without draining the work, which the shutdown pipeline already did", func(t *testing.T) {
+		previousTimeout := config.WAIT_GROUP_TIMEOUT_SECONDS
+		config.WAIT_GROUP_TIMEOUT_SECONDS = 30
+		t.Cleanup(func() { config.WAIT_GROUP_TIMEOUT_SECONDS = previousTimeout })
+
+		// work that outlives the close, the way a shutdown reaching the closing phase after
+		// the drain timed out leaves it
+		observer.AddRunning()
+		t.Cleanup(observer.DoneRunning)
+
+		o := sqlDBObserver{name: "test", instance: sql.OpenDB(notConnectingConnector{})}
+
+		returned := make(chan struct{})
+		go func() {
+			defer close(returned)
+			o.Close()
+		}()
+
+		select {
+		case <-returned:
+		case <-time.After(time.Second):
+			t.Fatal("Close waited for the running work, which belongs to the drain phase")
+		}
 	})
 }
 

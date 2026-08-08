@@ -60,7 +60,7 @@ func ListenAndServe() {
 	srv.injectCustomMiddlewares()
 	srv.injectRoutes()
 
-	observer.Attach(restObserver{})
+	observer.AttachWithPriority(restObserver{}, observer.PriorityDefault)
 	logging.Info(context.Background()).Msgf("Service '%s' running in %d port", "WEB-REST", config.PORT)
 	if err := srv.listenAndServe(); err != nil {
 		logging.

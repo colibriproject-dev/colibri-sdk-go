@@ -8,6 +8,7 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
 )
 
 const (
@@ -15,6 +16,7 @@ const (
 	storageAlreadyConnectedMsg string = "storage provider already connected"
 	storageConnectedMsg        string = "storage provider connected"
 	connectionErrorMsg         string = "an error occurred when trying to connect to the storage provider"
+	closeErrorMsg              string = "an error occurred when trying to close the storage provider client"
 )
 
 type storage interface {
@@ -22,6 +24,15 @@ type storage interface {
 	uploadFile(ctx context.Context, bucket, key string, file *multipart.File) (string, error)
 	deleteFile(ctx context.Context, bucket, key string) error
 }
+
+// storageCloser is implemented by the providers holding a client that has to be released. The
+// AWS provider builds its services on a session and keeps no connection, so it does not
+// implement it.
+type storageCloser interface {
+	close() error
+}
+
+type storageObserver struct{}
 
 var instance storage
 
@@ -39,7 +50,21 @@ func Initialize() {
 		instance = newGcpStorage()
 	}
 
+	observer.AttachWithPriority(storageObserver{}, observer.PriorityDefault)
 	logging.Info(context.Background()).Msg(storageConnectedMsg)
+}
+
+// Close releases the storage client. Uploading and deleting are side effects, so it runs in
+// the closing phase of the graceful shutdown, once the work using them has been drained.
+func (o storageObserver) Close() {
+	closer, ok := instance.(storageCloser)
+	if !ok {
+		return
+	}
+
+	if err := closer.close(); err != nil {
+		logging.Error(context.Background()).Err(err).Msg(closeErrorMsg)
+	}
 }
 
 // DownloadFile downloads a file from the storage provider.

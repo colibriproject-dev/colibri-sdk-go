@@ -5,7 +5,6 @@ import (
 	"database/sql"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
-	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
 )
 
 // sqlDBObserver is a struct for SQL database observer.
@@ -14,17 +13,14 @@ type sqlDBObserver struct {
 	instance *sql.DB
 }
 
-// Close finalize SQL database connection
+// Close finalize SQL database connection. It runs in the closing phase of the graceful
+// shutdown, so the work that queries the database has already been drained.
 //
 // No parameters.
 // No return values.
 func (o sqlDBObserver) Close() {
 	ctx := context.Background()
 	logging.Info(ctx).Msgf(dbWaitingSafeClose, o.name)
-
-	if observer.WaitRunningTimeout() {
-		logging.Warn(ctx).Msgf(dbWaitingForceClose, o.name)
-	}
 
 	if err := o.instance.Close(); err != nil {
 		logging.Error(ctx).Err(err).Msgf(dbCloseError, o.name)

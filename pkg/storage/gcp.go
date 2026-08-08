@@ -31,6 +31,14 @@ func newGcpStorage() *gcpStorage {
 
 }
 
+// close releases the client connections, making gcpStorage a storageCloser.
+//
+// No parameters.
+// Returns an error.
+func (s *gcpStorage) close() error {
+	return s.client.Close()
+}
+
 // downloadFile downloads a file from the storage provider.
 //
 // ctx: the context for the operation.

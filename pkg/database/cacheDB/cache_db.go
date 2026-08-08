@@ -40,20 +40,16 @@ func Initialize() {
 	}
 
 	instance = redisClient
-	observer.Attach(cacheDBObserver{})
+	observer.AttachWithPriority(cacheDBObserver{}, observer.PriorityDefault)
 	logging.Info(context.Background()).Msg("Cache database connected")
 }
 
-// Close closes the cache connection safely.
+// Close closes the cache connection safely. It runs in the closing phase of the graceful
+// shutdown, so the work that reads and writes the cache has already been drained.
 //
 // No parameters.
 // No return values.
 func (o cacheDBObserver) Close() {
-	logging.Info(context.Background()).Msg("waiting to safely close the cache connection")
-	if observer.WaitRunningTimeout() {
-		logging.Warn(context.Background()).Msg("WaitGroup timed out, forcing close the cache connection")
-	}
-
 	logging.Info(context.Background()).Msg("closing cache connection")
 	if err := instance.Close(); err != nil {
 		logging.

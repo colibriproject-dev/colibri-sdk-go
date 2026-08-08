@@ -46,7 +46,7 @@ func (p *TestProducer[T]) Execute() (response *T, err error) {
 	chSuccess := make(chan *T)
 	chError := make(chan error)
 
-	NewConsumer(&testProducerConsumer{
+	if consumerErr := NewConsumerWithError(&testProducerConsumer{
 		fn: func(ctx context.Context, providerMessage *ProviderMessage) error {
 			var model T
 			if err := providerMessage.DecodeMessage(&model); err != nil {
@@ -58,7 +58,9 @@ func (p *TestProducer[T]) Execute() (response *T, err error) {
 			return nil
 		},
 		queueName: p.testQueue,
-	})
+	}); consumerErr != nil {
+		return nil, consumerErr
+	}
 
 	if err := p.producerFn(); err != nil {
 		return nil, err

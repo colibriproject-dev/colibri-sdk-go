@@ -20,9 +20,13 @@ func NewProducer(topicName string) *Producer {
 }
 
 func (p *Producer) Publish(ctx context.Context, action string, message any) error {
-	if instance == nil {
+	// read once through the accessor: the module may be swapped or shut down while a handler
+	// still draining publishes, and a direct read of the global would race with it
+	provider := moduleInstance()
+	if provider == nil {
 		logging.Fatal(context.Background()).Msg(messagingNotInitialized)
 	}
+
 	correlationID := ctx.Value(logging.CorrelationIDParam)
 	if correlationID == nil {
 		correlationID = uuid.New().String()
@@ -43,7 +47,7 @@ func (p *Producer) Publish(ctx context.Context, action string, message any) erro
 		CorrelationID: correlationID.(string),
 	}
 
-	if err := instance.producer(ctx, p, msg); err != nil {
+	if err := provider.producer(ctx, p, msg); err != nil {
 		logging.Error(ctx).Err(err).Msgf(couldNotSendMsg, msg.ID, p.topic)
 		monitoring.NoticeError(txn, err)
 		return err

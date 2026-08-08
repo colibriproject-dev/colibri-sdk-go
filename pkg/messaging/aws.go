@@ -96,7 +96,6 @@ func (m *awsMessaging) consumer(ctx context.Context, c *consumer) (chan *Provide
 	go func() {
 		for {
 			if c.isCanceled() {
-				c.Done()
 				return
 			}
 
@@ -138,7 +137,16 @@ func (m *awsMessaging) handleMessage(ctx context.Context, c *consumer, queueUrl 
 		receiptHandle: msg.ReceiptHandle,
 	})
 	pm.setReceiptMetadata(awsAttributes(msg), awsDeliveryAttempt(msg))
-	ch <- &pm
+
+	select {
+	case ch <- &pm:
+	case <-c.done:
+		// nobody is listening anymore; leaving the message in flight lets it reappear after
+		// the visibility timeout instead of blocking this goroutine forever. SQS has no
+		// explicit nack, so unlike RabbitMQ and Pub/Sub the redelivery is not immediate: it
+		// waits out the queue's visibility timeout (30s by default). This is deliberate —
+		// resetting the visibility here would make a shutdown redeliver everything at once.
+	}
 }
 
 // awsAttributes flattens the SQS system attributes and the user message attributes

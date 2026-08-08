@@ -15,7 +15,7 @@ var instance colibrimonitoringbase.Monitoring
 func Initialize() {
 	if UseOTELMonitoring() {
 		instance = colibriotel.StartOpenTelemetryMonitoring()
-		observer.Attach(instance.(observer.Observer))
+		observer.AttachWithPriority(instance.(observer.Observer), observer.PriorityLast)
 	} else {
 		instance = colibrimonitoringbase.NewOthers()
 	}
