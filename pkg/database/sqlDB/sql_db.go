@@ -18,7 +18,6 @@ const (
 	dbConnectionError     string = "an error occurred while trying to connect to the %s database"
 	dbMigrationError      string = "an error occurred when validate database migrations"
 	dbWaitingSafeClose    string = "waiting to safely close the %s database connection"
-	dbWaitingForceClose   string = "waiting timed out, forcing to close the %s database connection"
 	dbCloseError          string = "error on closing the %s database connection"
 	dbCloseSuccess        string = "%s database closed"
 	dbNotInitializedError string = "database not initialized"
