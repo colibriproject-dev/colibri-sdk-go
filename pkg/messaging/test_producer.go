@@ -43,10 +43,13 @@ func NewTestProducer[T any](producerFn func() error, testQueue string, timeoutIn
 
 // Execute returns a T pointer or error in test execution
 func (p *TestProducer[T]) Execute() (response *T, err error) {
-	chSuccess := make(chan *T)
-	chError := make(chan error)
+	// buffered so the handler never blocks on a send nobody is left to receive. Once Execute
+	// gives up on the timeout it stops reading, and an unbuffered send would park the handler
+	// forever, keeping its consumer from ever finishing and the shutdown from ever draining
+	chSuccess := make(chan *T, 1)
+	chError := make(chan error, 1)
 
-	NewConsumer(&testProducerConsumer{
+	consumer, consumerErr := NewConsumerWithError(&testProducerConsumer{
 		fn: func(ctx context.Context, providerMessage *ProviderMessage) error {
 			var model T
 			if err := providerMessage.DecodeMessage(&model); err != nil {
@@ -59,6 +62,13 @@ func (p *TestProducer[T]) Execute() (response *T, err error) {
 		},
 		queueName: p.testQueue,
 	})
+	if consumerErr != nil {
+		return nil, consumerErr
+	}
+
+	// the consumer serves this single execution: without closing it, every call would leave a
+	// listener behind and the shutdown would have one more task to drain on every Execute
+	defer consumer.Close()
 
 	if err := p.producerFn(); err != nil {
 		return nil, err

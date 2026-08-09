@@ -2,9 +2,12 @@ package messaging
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
+	"cloud.google.com/go/pubsub/v2"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
@@ -17,16 +20,16 @@ func TestInitializeUnsupportedCloud(t *testing.T) {
 	t.Run("Should panic when cloud provider has no messaging support", func(t *testing.T) {
 		logging.Initialize()
 
-		previousInstance := instance
+		previousInstance := moduleInstance()
 		previousCloud := config.CLOUD
 		previousMessaging := config.COLIBRI_MESSAGING
 		t.Cleanup(func() {
-			instance = previousInstance
+			setInstance(previousInstance)
 			config.CLOUD = previousCloud
 			config.COLIBRI_MESSAGING = previousMessaging
 		})
 
-		instance = nil
+		setInstance(nil)
 		config.CLOUD = config.CLOUD_NONE
 		config.COLIBRI_MESSAGING = config.MESSAGING_CLOUD_DEFAULT
 
@@ -113,7 +116,6 @@ func TestRabbitMQProcessMessages(t *testing.T) {
 		msgs := make(chan amqp.Delivery)
 		out := make(chan *ProviderMessage, 1)
 
-		c.Add(1)
 		close(c.done)
 		m.processMessages(context.Background(), c, msgs, out)
 
@@ -125,9 +127,117 @@ func TestRabbitMQProcessMessages(t *testing.T) {
 		msgs := make(chan amqp.Delivery)
 		out := make(chan *ProviderMessage, 1)
 
-		c.Add(1)
 		close(msgs)
 		m.processMessages(context.Background(), c, msgs, out)
+
+		assert.Empty(t, out)
+	})
+}
+
+func TestRabbitMQHandleMessageStopsOnDone(t *testing.T) {
+	t.Run("Should not block delivering to a listener that already stopped", func(t *testing.T) {
+		logging.Initialize()
+
+		m := &rabbitMQMessaging{}
+		c := &consumer{queue: "test-queue", done: make(chan any)}
+		// unbuffered and unread: the send can only complete through the done branch
+		out := make(chan *ProviderMessage)
+
+		close(c.done)
+
+		finished := make(chan struct{})
+		go func() {
+			defer close(finished)
+			m.handleMessage(context.Background(), c, amqp.Delivery{
+				MessageId: "msg-1",
+				Body:      []byte(`{"action":"test"}`),
+			}, out)
+		}()
+
+		select {
+		case <-finished:
+		case <-time.After(time.Second):
+			t.Fatal("handleMessage blocked sending to a stopped listener")
+		}
+
+		assert.Empty(t, out)
+	})
+}
+
+func TestAwsHandleMessageStopsOnDone(t *testing.T) {
+	t.Run("Should not block delivering to a listener that already stopped", func(t *testing.T) {
+		logging.Initialize()
+
+		m := &awsMessaging{}
+		c := &consumer{queue: "test-queue", done: make(chan any)}
+		// unbuffered and unread: the send can only complete through the done branch
+		out := make(chan *ProviderMessage)
+
+		close(c.done)
+
+		body, err := json.Marshal(sqsNotification{Message: `{"action":"test"}`})
+		assert.NoError(t, err)
+
+		finished := make(chan struct{})
+		go func() {
+			defer close(finished)
+			m.handleMessage(context.Background(), c, &sqs.GetQueueUrlOutput{QueueUrl: aws.String("http://queue")}, &sqs.Message{
+				MessageId:     aws.String("msg-1"),
+				Body:          aws.String(string(body)),
+				ReceiptHandle: aws.String("receipt-1"),
+			}, out)
+		}()
+
+		select {
+		case <-finished:
+		case <-time.After(time.Second):
+			t.Fatal("handleMessage blocked sending to a stopped listener")
+		}
+
+		assert.Empty(t, out)
+	})
+}
+
+func TestGcpHandleMessageStopsOnDone(t *testing.T) {
+	t.Run("Should nack instead of blocking on a listener that already stopped", func(t *testing.T) {
+		logging.Initialize()
+
+		m := &gcpMessaging{}
+		c := &consumer{queue: "test-queue", done: make(chan any)}
+		// unbuffered and unread: the send can only complete through the done branch
+		out := make(chan *ProviderMessage)
+
+		close(c.done)
+
+		finished := make(chan struct{})
+		go func() {
+			defer close(finished)
+			m.handleMessage(context.Background(), c, &pubsub.Message{
+				ID:   "msg-1",
+				Data: []byte(`{"action":"test"}`),
+			}, out)
+		}()
+
+		select {
+		case <-finished:
+		case <-time.After(time.Second):
+			t.Fatal("handleMessage blocked sending to a stopped listener")
+		}
+
+		assert.Empty(t, out)
+	})
+
+	t.Run("Should nack a message it cannot read", func(t *testing.T) {
+		logging.Initialize()
+
+		m := &gcpMessaging{}
+		c := &consumer{queue: "test-queue", done: make(chan any)}
+		out := make(chan *ProviderMessage, 1)
+
+		m.handleMessage(context.Background(), c, &pubsub.Message{
+			ID:   "msg-1",
+			Data: []byte("this is not a json body"),
+		}, out)
 
 		assert.Empty(t, out)
 	})

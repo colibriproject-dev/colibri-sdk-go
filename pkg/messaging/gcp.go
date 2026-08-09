@@ -39,6 +39,11 @@ func newGcpMessaging() *gcpMessaging {
 	return &gcpMessaging{client}
 }
 
+// close releases the Pub/Sub client during the graceful shutdown.
+func (m *gcpMessaging) close() error {
+	return m.client.Close()
+}
+
 func (m *gcpMessaging) producer(ctx context.Context, p *Producer, msg *ProviderMessage) error {
 	topic := m.client.Publisher(p.topic)
 	result := topic.Publish(ctx, &pubsub.Message{Data: []byte(msg.String())})
@@ -53,8 +58,6 @@ func (m *gcpMessaging) consumer(ctx context.Context, c *consumer) (chan *Provide
 	sub.ReceiveSettings.NumGoroutines = 1
 
 	go func() {
-		defer c.Done()
-
 		receiveCtx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
@@ -66,20 +69,35 @@ func (m *gcpMessaging) consumer(ctx context.Context, c *consumer) (chan *Provide
 		}()
 
 		if err := sub.Receive(receiveCtx, func(_ context.Context, msg *pubsub.Message) {
-			var pm ProviderMessage
-			if err := json.Unmarshal(msg.Data, &pm); err != nil {
-				logging.Error(ctx).Err(err).Msgf(couldNotReadMsgBody, msg.ID, c.queue)
-				msg.Nack()
-				return
-			}
-
-			pm.addOriginBrokerNotification(gcpOriginalMessage{msg: msg})
-			pm.setReceiptMetadata(msg.Attributes, msg.DeliveryAttempt)
-			ch <- &pm
+			m.handleMessage(ctx, c, msg, ch)
 		}); err != nil {
 			logging.Error(ctx).Err(err).Msgf(couldNotReceiveMsg, c.queue)
 		}
 	}()
 
 	return ch, nil
+}
+
+// handleMessage delivers a received message to the consumer channel with a real ack/nack
+// bound to the Pub/Sub message. A message the listener can no longer take is nacked, so the
+// subscription's retry policy redelivers it right away — unlike SQS, which only makes it
+// visible again once the visibility timeout expires.
+func (m *gcpMessaging) handleMessage(ctx context.Context, c *consumer, msg *pubsub.Message, ch chan *ProviderMessage) {
+	var pm ProviderMessage
+	if err := json.Unmarshal(msg.Data, &pm); err != nil {
+		logging.Error(ctx).Err(err).Msgf(couldNotReadMsgBody, msg.ID, c.queue)
+		msg.Nack()
+		return
+	}
+
+	pm.addOriginBrokerNotification(gcpOriginalMessage{msg: msg})
+	pm.setReceiptMetadata(msg.Attributes, msg.DeliveryAttempt)
+
+	select {
+	case ch <- &pm:
+	case <-c.done:
+		// nobody is listening anymore; let the retry policy redeliver instead of
+		// blocking this callback and holding Receive open
+		msg.Nack()
+	}
 }
