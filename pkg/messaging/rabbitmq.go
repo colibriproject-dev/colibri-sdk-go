@@ -57,6 +57,16 @@ func newRabbitMQMessaging() *rabbitMQMessaging {
 	}
 }
 
+// close releases the channel and the connection during the graceful shutdown. Without it
+// the deliveries stay in flight on the broker until the TCP connection eventually drops.
+func (m *rabbitMQMessaging) close() error {
+	if err := m.ch.Close(); err != nil {
+		logging.Error(context.Background()).Err(err).Msg("could not close the rabbitmq channel")
+	}
+
+	return m.conn.Close()
+}
+
 func (m *rabbitMQMessaging) producer(ctx context.Context, p *Producer, msg *ProviderMessage) error {
 	body := []byte(msg.String())
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -114,8 +124,6 @@ func (m *rabbitMQMessaging) startConsuming(queueName string) (<-chan amqp.Delive
 // processMessages handles incoming messages from RabbitMQ until the delivery
 // channel closes or the consumer is canceled
 func (m *rabbitMQMessaging) processMessages(ctx context.Context, c *consumer, msgs <-chan amqp.Delivery, providerMsgs chan<- *ProviderMessage) {
-	defer c.Done()
-
 	for {
 		select {
 		case <-c.done:
@@ -140,7 +148,18 @@ func (m *rabbitMQMessaging) handleMessage(ctx context.Context, c *consumer, d am
 
 	pm.addOriginBrokerNotification(rabbitMQOriginalMessage{d: d})
 	pm.setReceiptMetadata(rabbitMQAttributes(d), rabbitMQDeliveryAttempt(d))
-	providerMsgs <- &pm
+
+	select {
+	case providerMsgs <- &pm:
+	case <-c.done:
+		// nobody is listening anymore; requeue so the message is not lost when the
+		// connection closes. The reject makes it available again immediately, the same as
+		// the Pub/Sub nack and unlike SQS, where it only reappears after the visibility
+		// timeout
+		if err := d.Reject(true); err != nil {
+			logging.Error(ctx).Err(err).Msgf("could not requeue message %s", d.MessageId)
+		}
+	}
 }
 
 // rabbitMQAttributes stringifies the AMQP delivery headers into a uniform string map.
