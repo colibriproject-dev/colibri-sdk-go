@@ -93,14 +93,39 @@ func (m *awsMessaging) consumer(ctx context.Context, c *consumer) (chan *Provide
 	ch := make(chan *ProviderMessage, 1)
 	queueUrl := m.getQueueUrl(ctx, c.queue)
 
+	// the poll is part of what Close waits for. A poll left running behind a closed consumer
+	// keeps receiving from the queue, and a message it takes is one the next consumer on that
+	// queue never sees: handleMessage drops it, and SQS only makes it visible again once the
+	// visibility timeout expires
+	c.Add(1)
+
 	go func() {
+		defer c.Done()
+
+		pollCtx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		// end the receive in flight when the consumer is closed, so the poll stops at the
+		// stop signal instead of one long poll later; canceling an already canceled context
+		// is a no-op
+		go func() {
+			<-c.done
+			cancel()
+		}()
+
 		for {
 			if c.isCanceled() {
 				return
 			}
 
-			msgs, err := m.readMessages(ctx, queueUrl)
+			msgs, err := m.readMessages(pollCtx, queueUrl)
 			if err != nil {
+				// the cancellation of a receive in flight is the expected end of the poll,
+				// not a failure to report
+				if c.isCanceled() {
+					return
+				}
+
 				logging.Error(ctx).Err(err).Msgf(couldNotReceiveMsg, c.queue)
 				continue
 			}
