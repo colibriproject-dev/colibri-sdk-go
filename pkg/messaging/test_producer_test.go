@@ -53,4 +53,23 @@ func TestProducerTest(t *testing.T) {
 		assert.NotNil(t, resp)
 		assert.Equal(t, msg, resp)
 	})
+
+	// Execute has to leave no consumer behind for the call that follows it on the same queue.
+	// A poll still running for the consumer the previous call closed takes the message this
+	// one publishes and drops it, and SQS then only makes it visible again once the queue's
+	// visibility timeout expires, far past the timeout given here.
+	t.Run("should return success in consecutive tests on the same queue", func(t *testing.T) {
+		for i := 1; i <= 2; i++ {
+			expected := &testProducer{ID: i, Name: "CONSECUTIVE TEST PRODUCER"}
+
+			resp, err := NewTestProducer[testProducer](
+				func() error { return NewProducer(topicAndQueue).Publish(ctx, "TEST", expected) },
+				topicAndQueue,
+				10,
+			).Execute()
+
+			assert.NoError(t, err)
+			assert.Equal(t, expected, resp)
+		}
+	})
 }
