@@ -23,6 +23,7 @@ const (
 	couldNotConnectQueue         string = "could not connect to queue %s"
 	couldNotReceiveMsg           string = "error on receive message from queue %s"
 	couldNotProcessMsg           string = "could not process message %s"
+	couldNotReleaseMsg           string = "could not release message %s back to queue %s"
 	couldNotReadMsgBody          string = "could not read message body with id %s from queue %s"
 	messagingNotSupported        string = "messaging is not supported for cloud %s"
 	couldNotSendMsg              string = "could not send message with id %s to topic %s"
