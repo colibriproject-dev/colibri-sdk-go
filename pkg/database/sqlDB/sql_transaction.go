@@ -18,6 +18,10 @@ const (
 	transactionIsolationWarnMsg string = "transaction isolation just use first parameter, others will be ignored"
 	transactionCommitErrorMsg   string = "could not commit transaction: %w"
 	transactionStartErrorMsg    string = "could not start database transaction: %v"
+
+	transactionExecutionLogMsg string = "error executing transaction"
+	transactionCommitLogMsg    string = "could not commit transaction"
+	transactionStartLogMsg     string = "could not start database transaction"
 )
 
 // sqlTransaction implements a transaction.Transaction
@@ -66,14 +70,14 @@ func (t *sqlTransaction) ExecuteInInstance(ctx context.Context, instance *sql.DB
 	ctx = context.WithValue(ctx, SqlTxContext, tx)
 
 	if err = fn(ctx); err != nil {
-		logging.Error(ctx).Err(err)
+		logging.Error(ctx).Err(err).Msg(transactionExecutionLogMsg)
 		transactionChannel <- err
 		return err
 	}
 
 	if err = tx.Commit(); err != nil {
 		fErr := fmt.Errorf(transactionCommitErrorMsg, err)
-		logging.Error(ctx).Err(fErr)
+		logging.Error(ctx).Err(err).Msg(transactionCommitLogMsg)
 		transactionChannel <- fErr
 		return fErr
 	}
@@ -91,7 +95,7 @@ func (t *sqlTransaction) beginTransaction(ctx context.Context, instance *sql.DB)
 
 	if err != nil {
 		fErr := fmt.Errorf(transactionStartErrorMsg, err)
-		logging.Error(ctx).Err(fErr)
+		logging.Error(ctx).Err(err).Msg(transactionStartLogMsg)
 		return nil, nil, fErr
 	}
 

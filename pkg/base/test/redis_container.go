@@ -55,12 +55,12 @@ func (c *RedisContainer) start(ctx context.Context) {
 		Started:          true,
 	})
 	if err != nil {
-		logging.Fatal(ctx).Err(err)
+		logging.Fatal(ctx).Err(err).Msg("could not start the test redis container")
 	}
 
 	testDbPort, err := c.redisContainer.MappedPort(ctx, testRedisSvcPort)
 	if err != nil {
-		logging.Fatal(ctx).Err(err)
+		logging.Fatal(ctx).Err(err).Msg("could not get the mapped port of the test redis container")
 	}
 
 	c.setRedisEnv(testDbPort)
