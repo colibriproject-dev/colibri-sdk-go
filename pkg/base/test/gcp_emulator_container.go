@@ -71,17 +71,17 @@ func (c *gcpEmulatorContainer) start(ctx context.Context) {
 		Started:          true,
 	})
 	if err != nil {
-		logging.Fatal(ctx).Err(err)
+		logging.Fatal(ctx).Err(err).Msg("could not start the test gcp emulator container")
 	}
 
 	pubSubPort, err := c.lsContainer.MappedPort(ctx, gcpEmulatorPubSubSvcPort)
 	if err != nil {
-		logging.Fatal(ctx).Err(err)
+		logging.Fatal(ctx).Err(err).Msg("could not get the mapped Pub/Sub port of the test gcp emulator container")
 	}
 
 	storagePort, err := c.lsContainer.MappedPort(ctx, gcpEmulatorStorageSvcPort)
 	if err != nil {
-		logging.Fatal(ctx).Err(err)
+		logging.Fatal(ctx).Err(err).Msg("could not get the mapped Storage port of the test gcp emulator container")
 	}
 
 	logging.Info(ctx).Msgf("Test gcp emulator started. Pub/Sub at %s and Storage at %s", pubSubPort, storagePort)

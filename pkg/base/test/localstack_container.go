@@ -74,12 +74,12 @@ func (c *LocalstackContainer) start(ctx context.Context) {
 		Started:          true,
 	})
 	if err != nil {
-		logging.Fatal(ctx).Err(err)
+		logging.Fatal(ctx).Err(err).Msg("could not start the test localstack container")
 	}
 
 	localstackPort, err := c.lsContainer.MappedPort(ctx, localstackSvcPort)
 	if err != nil {
-		logging.Fatal(ctx).Err(err)
+		logging.Fatal(ctx).Err(err).Msg("could not get the mapped port of the test localstack container")
 	}
 
 	logging.Info(ctx).Msgf("Test localstack started at port: %s", localstackPort)

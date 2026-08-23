@@ -93,7 +93,7 @@ func InitializeSqlDBTest() {
 	pc := test.UsePostgresContainer(ctx)
 
 	if err := pc.Dataset(basePath, "schema.sql"); err != nil {
-		logging.Fatal(ctx).Err(err)
+		logging.Fatal(ctx).Err(err).Msg("could not load the test database schema")
 	}
 
 	datasets := []string{"clear-database.sql", "add-users.sql", "add-contacts.sql", "add-dogs.sql"}

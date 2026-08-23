@@ -76,17 +76,17 @@ func (c *RabbitmqContainer) start(ctx context.Context) {
 		Started:          true,
 	})
 	if err != nil {
-		logging.Fatal(ctx).Err(err)
+		logging.Fatal(ctx).Err(err).Msg("could not start the test rabbitmq container")
 	}
 
 	amqpPort, err := c.rabbitmqContainer.MappedPort(ctx, rabbitmqAMQPPort)
 	if err != nil {
-		logging.Fatal(ctx).Err(err)
+		logging.Fatal(ctx).Err(err).Msg("could not get the mapped AMQP port of the test rabbitmq container")
 	}
 
 	managementPort, err := c.rabbitmqContainer.MappedPort(ctx, rabbitmqManagementPort)
 	if err != nil {
-		logging.Fatal(ctx).Err(err)
+		logging.Fatal(ctx).Err(err).Msg("could not get the mapped management port of the test rabbitmq container")
 	}
 
 	c.setRabbitmqEnv(ctx, amqpPort, managementPort)

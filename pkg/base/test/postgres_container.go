@@ -11,6 +11,7 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/google/uuid"
 
+	_ "github.com/lib/pq"
 	"github.com/moby/moby/api/types/network"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -77,12 +78,12 @@ func (c *PostgresContainer) start(ctx context.Context) {
 		Started:          true,
 	})
 	if err != nil {
-		logging.Fatal(ctx).Err(err)
+		logging.Fatal(ctx).Err(err).Msg("could not start the test postgres container")
 	}
 
 	testDbPort, err := c.pgContainer.MappedPort(ctx, testPostgresSvcPort)
 	if err != nil {
-		logging.Fatal(ctx).Err(err)
+		logging.Fatal(ctx).Err(err).Msg("could not get the mapped port of the test postgres container")
 	}
 
 	c.setDatabaseEnv(ctx, testDbPort)
@@ -95,7 +96,7 @@ func (c *PostgresContainer) start(ctx context.Context) {
 		"test-app",
 		os.Getenv(config.ENV_SQL_DB_SSL_MODE))
 	if c.pgDB, err = sql.Open("postgres", databaseURL); err != nil {
-		logging.Fatal(ctx).Err(err)
+		logging.Fatal(ctx).Err(err).Msg("could not open the connection to the test postgres database")
 	}
 
 	logging.Info(ctx).Msgf("Test postgres started at port: %s", testDbPort)
