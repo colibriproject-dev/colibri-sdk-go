@@ -9,6 +9,8 @@ import (
 
 	"cloud.google.com/go/pubsub/v2"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
@@ -168,7 +170,10 @@ func TestAwsHandleMessageStopsOnDone(t *testing.T) {
 	t.Run("Should not block delivering to a listener that already stopped", func(t *testing.T) {
 		logging.Initialize()
 
-		m := &awsMessaging{}
+		// the done branch releases the message, so the provider needs a client to call
+		// through; it points at a closed port so the release fails fast instead of reaching
+		// out to anything
+		m := &awsMessaging{sqsService: unreachableSqsService()}
 		c := &consumer{queue: "test-queue", done: make(chan any)}
 		// unbuffered and unread: the send can only complete through the done branch
 		out := make(chan *ProviderMessage)
@@ -196,6 +201,17 @@ func TestAwsHandleMessageStopsOnDone(t *testing.T) {
 
 		assert.Empty(t, out)
 	})
+}
+
+// unreachableSqsService builds an SQS client whose calls fail immediately, for the paths that
+// only have to call the broker, not succeed at it.
+func unreachableSqsService() *sqs.SQS {
+	return sqs.New(session.Must(session.NewSession(&aws.Config{
+		Region:      aws.String("us-east-1"),
+		Endpoint:    aws.String("http://127.0.0.1:1"),
+		Credentials: credentials.NewStaticCredentials("test", "test", ""),
+		MaxRetries:  aws.Int(0),
+	})))
 }
 
 func TestGcpHandleMessageStopsOnDone(t *testing.T) {

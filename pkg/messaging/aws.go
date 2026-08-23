@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sns"
@@ -12,6 +13,11 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/cloud"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 )
+
+// releaseTimeout bounds the call that makes a message visible again. It is short on purpose:
+// the release runs on the way out of a consumer, and a broker that stops responding must not
+// hold that exit open.
+const releaseTimeout = 5 * time.Second
 
 type sqsNotification struct {
 	Type             string `json:"Type"`
@@ -93,25 +99,72 @@ func (m *awsMessaging) consumer(ctx context.Context, c *consumer) (chan *Provide
 	ch := make(chan *ProviderMessage, 1)
 	queueUrl := m.getQueueUrl(ctx, c.queue)
 
+	// the poll is part of what Close waits for. A poll left running behind a closed consumer
+	// keeps receiving from the queue, and every message it takes is one the next consumer on
+	// that queue never sees
+	c.Add(1)
+
 	go func() {
+		defer c.Done()
+
 		for {
 			if c.isCanceled() {
 				return
 			}
 
+			// the receive in flight is deliberately not canceled when the consumer closes.
+			// SQS keeps serving a long poll whose caller has gone away, so a message it
+			// hands back would leave the queue with no receipt handle left to release it by.
+			// Waiting for the response costs at most WaitTimeSeconds and keeps that handle
+			// in reach
 			msgs, err := m.readMessages(ctx, queueUrl)
 			if err != nil {
+				// the module context ends the poll on shutdown, which is the expected end of
+				// the loop and not a failure to report
+				if ctx.Err() != nil {
+					return
+				}
+
 				logging.Error(ctx).Err(err).Msgf(couldNotReceiveMsg, c.queue)
 				continue
 			}
 
-			if len(msgs.Messages) > 0 {
-				m.handleMessage(ctx, c, queueUrl, msgs.Messages[0], ch)
+			if len(msgs.Messages) == 0 {
+				continue
 			}
+
+			// closed while the receive was in flight: hand the message straight back so the
+			// next consumer on this queue gets it instead of waiting out the visibility
+			// timeout
+			if c.isCanceled() {
+				m.releaseMessage(ctx, c, queueUrl, msgs.Messages[0])
+				return
+			}
+
+			m.handleMessage(ctx, c, queueUrl, msgs.Messages[0], ch)
 		}
 	}()
 
 	return ch, nil
+}
+
+// releaseMessage makes a message visible again straight away when the consumer that received
+// it is no longer able to process it. Without it the message stays in flight until the
+// queue's visibility timeout expires (30s by default), which for a queue whose consumer is
+// replaced by another one reads as a message that never arrives. It runs on a context of its
+// own because the one it is given is the module context, already canceled when the release
+// follows a shutdown.
+func (m *awsMessaging) releaseMessage(ctx context.Context, c *consumer, queueUrl *sqs.GetQueueUrlOutput, msg *sqs.Message) {
+	releaseCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), releaseTimeout)
+	defer cancel()
+
+	if _, err := m.sqsService.ChangeMessageVisibilityWithContext(releaseCtx, &sqs.ChangeMessageVisibilityInput{
+		QueueUrl:          queueUrl.QueueUrl,
+		ReceiptHandle:     msg.ReceiptHandle,
+		VisibilityTimeout: aws.Int64(0),
+	}); err != nil {
+		logging.Error(ctx).Err(err).Msgf(couldNotReleaseMsg, *msg.MessageId, c.queue)
+	}
 }
 
 // handleMessage unwraps the SNS notification and delivers the message to the consumer
@@ -141,11 +194,10 @@ func (m *awsMessaging) handleMessage(ctx context.Context, c *consumer, queueUrl 
 	select {
 	case ch <- &pm:
 	case <-c.done:
-		// nobody is listening anymore; leaving the message in flight lets it reappear after
-		// the visibility timeout instead of blocking this goroutine forever. SQS has no
-		// explicit nack, so unlike RabbitMQ and Pub/Sub the redelivery is not immediate: it
-		// waits out the queue's visibility timeout (30s by default). This is deliberate —
-		// resetting the visibility here would make a shutdown redeliver everything at once.
+		// nobody is listening anymore, so hand the message back rather than block this
+		// goroutine forever. At most one message per consumer is in flight, so releasing it
+		// redelivers a single message and not the whole queue at once
+		m.releaseMessage(ctx, c, queueUrl, msg)
 	}
 }
 
