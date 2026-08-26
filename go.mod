@@ -11,7 +11,6 @@ require (
 	github.com/aws/aws-sdk-go v1.55.8
 	github.com/go-playground/form/v4 v4.3.0
 	github.com/go-playground/validator/v10 v10.15.5
-	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gofiber/contrib/v3/otel v1.2.3
 	github.com/gofiber/contrib/v3/swaggo v1.0.9
 	github.com/gofiber/fiber/v3 v3.5.0
