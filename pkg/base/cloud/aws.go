@@ -3,29 +3,41 @@ package cloud
 import (
 	"context"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/google/uuid"
 )
 
-func newAwsSession() *session.Session {
+func newAwsConfig() *aws.Config {
+	ctx := context.Background()
+
 	if config.IsCloudEnvironment() {
-		return session.Must(session.NewSession(&aws.Config{
-			S3ForcePathStyle: aws.Bool(true),
-		}))
+		return loadAwsConfig(ctx)
 	}
 
-	return session.Must(session.NewSession(&aws.Config{
-		Region:           aws.String(config.CLOUD_REGION),
-		Endpoint:         aws.String(config.CLOUD_HOST),
-		DisableSSL:       aws.Bool(config.CLOUD_DISABLE_SSL),
-		Credentials:      credentials.NewStaticCredentials(uuid.NewString(), config.CLOUD_SECRET, config.CLOUD_TOKEN),
-		S3ForcePathStyle: aws.Bool(true),
-	}))
+	// outside a cloud environment the endpoint points at an emulator (LocalStack), and the
+	// credentials are the placeholders it accepts. CLOUD_HOST already carries the scheme, so
+	// there is nothing left for the former DisableSSL flag to decide
+	return loadAwsConfig(ctx,
+		awsconfig.WithRegion(config.CLOUD_REGION),
+		awsconfig.WithBaseEndpoint(config.CLOUD_HOST),
+		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+			uuid.NewString(), config.CLOUD_SECRET, config.CLOUD_TOKEN,
+		)),
+	)
+}
+
+func loadAwsConfig(ctx context.Context, optFns ...func(*awsconfig.LoadOptions) error) *aws.Config {
+	cfg, err := awsconfig.LoadDefaultConfig(ctx, optFns...)
+	if err != nil {
+		logging.Fatal(ctx).Err(err).Msg("could not load the AWS configuration")
+	}
+
+	return &cfg
 }
 
 func getAwsARN() *arn.ARN {

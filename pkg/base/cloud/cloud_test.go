@@ -22,10 +22,10 @@ func TestInitialize(t *testing.T) {
 		Initialize()
 
 		assert.NotNil(t, instance)
-		assert.NotNil(t, instance.awsSession)
+		assert.NotNil(t, instance.awsConfig)
 		assert.NotNil(t, instance.awsARN)
 		assert.Nil(t, instance.firebase)
-		assert.NotNil(t, GetAwsSession())
+		assert.Equal(t, *instance.awsConfig, GetAwsConfig())
 	})
 
 	t.Run("Should initialize AWS with cloud enviroment", func(t *testing.T) {
@@ -35,10 +35,10 @@ func TestInitialize(t *testing.T) {
 		Initialize()
 
 		assert.NotNil(t, instance)
-		assert.NotNil(t, instance.awsSession)
+		assert.NotNil(t, instance.awsConfig)
 		assert.NotNil(t, instance.awsARN)
 		assert.Nil(t, instance.firebase)
-		assert.NotNil(t, GetAwsSession())
+		assert.Equal(t, *instance.awsConfig, GetAwsConfig())
 	})
 
 	t.Run("Should initialize FIREBASE with local enviroment", func(t *testing.T) {
@@ -48,7 +48,7 @@ func TestInitialize(t *testing.T) {
 		Initialize()
 
 		assert.NotNil(t, instance)
-		assert.Nil(t, instance.awsSession)
+		assert.Nil(t, instance.awsConfig)
 		assert.Nil(t, instance.awsARN)
 		assert.NotNil(t, instance.firebase)
 		assert.NotNil(t, GetFirebaseSession())
@@ -61,7 +61,7 @@ func TestInitialize(t *testing.T) {
 		Initialize()
 
 		assert.NotNil(t, instance)
-		assert.Nil(t, instance.awsSession)
+		assert.Nil(t, instance.awsConfig)
 		assert.Nil(t, instance.awsARN)
 		assert.NotNil(t, instance.firebase)
 		assert.NotNil(t, GetFirebaseSession())
@@ -74,7 +74,7 @@ func TestInitialize(t *testing.T) {
 		Initialize()
 
 		assert.NotNil(t, instance)
-		assert.Nil(t, instance.awsSession)
+		assert.Nil(t, instance.awsConfig)
 		assert.Nil(t, instance.awsARN)
 		assert.Nil(t, instance.firebase)
 	})
@@ -86,7 +86,7 @@ func TestInitialize(t *testing.T) {
 		Initialize()
 
 		assert.NotNil(t, instance)
-		assert.Nil(t, instance.awsSession)
+		assert.Nil(t, instance.awsConfig)
 		assert.Nil(t, instance.awsARN)
 		assert.Nil(t, instance.firebase)
 	})
