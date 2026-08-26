@@ -6,18 +6,18 @@ import (
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/cloud"
 )
 
 type awsStorage struct {
-	s3Service  *s3.Client
-	uploader   *manager.Uploader
-	downloader *manager.Downloader
+	s3Service *s3.Client
+	transfer  *transfermanager.Client
 }
 
-// newAwsStorage creates a new awsStorage instance and initializes the S3 service, uploader, and downloader.
+// newAwsStorage creates a new awsStorage instance and initializes the S3 service and the
+// transfer manager, which handles the multipart upload and download of large objects.
 //
 // No parameters.
 // Returns a pointer to the awsStorage instance.
@@ -29,9 +29,8 @@ func newAwsStorage() *awsStorage {
 	})
 
 	return &awsStorage{
-		s3Service:  client,
-		uploader:   manager.NewUploader(client),
-		downloader: manager.NewDownloader(client),
+		s3Service: client,
+		transfer:  transfermanager.New(client),
 	}
 }
 
@@ -47,9 +46,10 @@ func (s *awsStorage) downloadFile(ctx context.Context, bucket, key string) (*os.
 		return nil, err
 	}
 
-	if _, err := s.downloader.Download(ctx, file, &s3.GetObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
+	if _, err := s.transfer.DownloadObject(ctx, &transfermanager.DownloadObjectInput{
+		Bucket:   aws.String(bucket),
+		Key:      aws.String(key),
+		WriterAt: file,
 	}); err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (s *awsStorage) downloadFile(ctx context.Context, bucket, key string) (*os.
 // file: the file to be uploaded.
 // Returns the location of the uploaded file and an error, if any.
 func (s *awsStorage) uploadFile(ctx context.Context, bucket, key string, file *multipart.File) (string, error) {
-	result, err := s.uploader.Upload(ctx, &s3.PutObjectInput{
+	result, err := s.transfer.UploadObject(ctx, &transfermanager.UploadObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 		Body:   *file,
@@ -74,7 +74,7 @@ func (s *awsStorage) uploadFile(ctx context.Context, bucket, key string, file *m
 		return "", err
 	}
 
-	return result.Location, nil
+	return aws.ToString(result.Location), nil
 }
 
 // deleteFile deletes a file from the storage provider.

@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.43.8
 	github.com/aws/aws-sdk-go-v2/config v1.32.39
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.38
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.22.45
+	github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager v0.3.16
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.107.4
 	github.com/aws/aws-sdk-go-v2/service/sns v1.42.8
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.46.8
