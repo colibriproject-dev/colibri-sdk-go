@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	localstackDockerImage = "localstack/localstack:3.1"
+	localstackDockerImage = "localstack/localstack:4"
 	localstackSvcPort     = "4566"
 )
 
@@ -87,9 +87,8 @@ func (c *LocalstackContainer) start(ctx context.Context) {
 }
 
 func (c *LocalstackContainer) setEnv(port network.Port) {
-	os.Setenv(config.ENV_CLOUD_HOST, fmt.Sprintf("http://localhost:%s", port.Port()))
-	os.Setenv(config.ENV_CLOUD_REGION, "us-east-1")
-	os.Setenv(config.ENV_CLOUD_SECRET, "no_secret")
-	os.Setenv(config.ENV_CLOUD_TOKEN, "no_token")
-	os.Setenv(config.ENV_CLOUD_DISABLE_SSL, "true")
+	_ = os.Setenv(config.ENV_CLOUD_HOST, fmt.Sprintf("http://localhost:%s", port.Port()))
+	_ = os.Setenv(config.ENV_CLOUD_REGION, "us-east-1")
+	_ = os.Setenv(config.ENV_CLOUD_SECRET, "no_secret")
+	_ = os.Setenv(config.ENV_CLOUD_TOKEN, "no_token")
 }

@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"cloud.google.com/go/pubsub/v2"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	sqstypes "github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -45,7 +45,7 @@ func TestAwsHandleMessage(t *testing.T) {
 		c := &consumer{queue: "test-queue", done: make(chan any)}
 		ch := make(chan *ProviderMessage, 1)
 
-		m.handleMessage(context.Background(), c, &sqs.GetQueueUrlOutput{}, &sqs.Message{
+		m.handleMessage(context.Background(), c, &sqs.GetQueueUrlOutput{}, &sqstypes.Message{
 			MessageId: aws.String("msg-1"),
 			Body:      aws.String("this is not a json body"),
 		}, ch)
@@ -56,11 +56,11 @@ func TestAwsHandleMessage(t *testing.T) {
 
 func TestAwsReceiptMetadata(t *testing.T) {
 	t.Run("Should flatten system and message attributes and derive the delivery attempt", func(t *testing.T) {
-		msg := &sqs.Message{
-			Attributes: map[string]*string{
-				"ApproximateReceiveCount": aws.String("4"),
+		msg := &sqstypes.Message{
+			Attributes: map[string]string{
+				"ApproximateReceiveCount": "4",
 			},
-			MessageAttributes: map[string]*sqs.MessageAttributeValue{
+			MessageAttributes: map[string]sqstypes.MessageAttributeValue{
 				"tenant": {StringValue: aws.String("acme")},
 			},
 		}
@@ -76,7 +76,7 @@ func TestAwsReceiptMetadata(t *testing.T) {
 	})
 
 	t.Run("Should return nil metadata when the message carries none", func(t *testing.T) {
-		msg := &sqs.Message{}
+		msg := &sqstypes.Message{}
 
 		assert.Nil(t, awsAttributes(msg))
 		assert.Nil(t, awsDeliveryAttempt(msg))
@@ -186,7 +186,7 @@ func TestAwsHandleMessageStopsOnDone(t *testing.T) {
 		finished := make(chan struct{})
 		go func() {
 			defer close(finished)
-			m.handleMessage(context.Background(), c, &sqs.GetQueueUrlOutput{QueueUrl: aws.String("http://queue")}, &sqs.Message{
+			m.handleMessage(context.Background(), c, &sqs.GetQueueUrlOutput{QueueUrl: aws.String("http://queue")}, &sqstypes.Message{
 				MessageId:     aws.String("msg-1"),
 				Body:          aws.String(string(body)),
 				ReceiptHandle: aws.String("receipt-1"),
@@ -205,13 +205,14 @@ func TestAwsHandleMessageStopsOnDone(t *testing.T) {
 
 // unreachableSqsService builds an SQS client whose calls fail immediately, for the paths that
 // only have to call the broker, not succeed at it.
-func unreachableSqsService() *sqs.SQS {
-	return sqs.New(session.Must(session.NewSession(&aws.Config{
-		Region:      aws.String("us-east-1"),
-		Endpoint:    aws.String("http://127.0.0.1:1"),
-		Credentials: credentials.NewStaticCredentials("test", "test", ""),
-		MaxRetries:  aws.Int(0),
-	})))
+func unreachableSqsService() *sqs.Client {
+	return sqs.New(sqs.Options{
+		Region:       "us-east-1",
+		BaseEndpoint: aws.String("http://127.0.0.1:1"),
+		Credentials:  credentials.NewStaticCredentialsProvider("test", "test", ""),
+		// v2 counts total attempts where v1 counted retries, so 1 is the "no retry" value
+		RetryMaxAttempts: 1,
+	})
 }
 
 func TestGcpHandleMessageStopsOnDone(t *testing.T) {

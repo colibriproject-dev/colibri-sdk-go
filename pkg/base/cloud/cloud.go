@@ -4,16 +4,16 @@ import (
 	"context"
 
 	firebase "firebase.google.com/go/v4"
-	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 )
 
 // Cloud is a struct that contains the cloud settings.
 type Cloud struct {
-	awsSession *session.Session
-	awsARN     *arn.ARN
+	awsConfig *aws.Config
+	awsARN    *arn.ARN
 
 	firebase *firebase.App
 }
@@ -26,7 +26,7 @@ func Initialize() {
 
 	switch config.CLOUD {
 	case config.CLOUD_AWS:
-		instance.awsSession = newAwsSession()
+		instance.awsConfig = newAwsConfig()
 		instance.awsARN = getAwsARN()
 	case config.CLOUD_FIREBASE:
 		instance.firebase = newFirebaseSession()
@@ -37,9 +37,9 @@ func Initialize() {
 	logging.Info(context.Background()).Msg("Cloud provider connected")
 }
 
-// GetAwsSession returns the AWS session.
-func GetAwsSession() *session.Session {
-	return instance.awsSession
+// GetAwsConfig returns the AWS configuration used to build service clients.
+func GetAwsConfig() aws.Config {
+	return *instance.awsConfig
 }
 
 // GetAwsARN returns the AWS ARN.

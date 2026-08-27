@@ -9,9 +9,10 @@ import (
 	"time"
 
 	"cloud.google.com/go/pubsub/v2"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/sns"
-	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/sns"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	sqstypes "github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/cloud"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
@@ -227,14 +228,14 @@ func assertFailedMessageSettlement(t *testing.T, opts messagingProviderOpts, inv
 }
 
 func awsNackRequeueTest(t *testing.T) {
-	sqsClient := sqs.New(cloud.GetAwsSession())
+	sqsClient := sqs.NewFromConfig(cloud.GetAwsConfig())
 
-	queue, err := sqsClient.CreateQueue(&sqs.CreateQueueInput{QueueName: aws.String("COLIBRI_PROJECT_NACK_REQUEUE_TEST")})
+	queue, err := sqsClient.CreateQueue(context.Background(), &sqs.CreateQueueInput{QueueName: aws.String("COLIBRI_PROJECT_NACK_REQUEUE_TEST")})
 	if err != nil {
 		t.Fatalf("could not create queue: %v", err)
 	}
 
-	if _, err = sqsClient.SendMessage(&sqs.SendMessageInput{QueueUrl: queue.QueueUrl, MessageBody: aws.String("{}")}); err != nil {
+	if _, err = sqsClient.SendMessage(context.Background(), &sqs.SendMessageInput{QueueUrl: queue.QueueUrl, MessageBody: aws.String("{}")}); err != nil {
 		t.Fatalf("could not send message: %v", err)
 	}
 
@@ -251,20 +252,20 @@ func awsNackRequeueTest(t *testing.T) {
 	assert.NoError(t, om.Ack(context.Background()))
 }
 
-func awsReceiveOne(t *testing.T, sqsClient *sqs.SQS, queueUrl *string) *sqs.Message {
+func awsReceiveOne(t *testing.T, sqsClient *sqs.Client, queueUrl *string) *sqstypes.Message {
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
-		out, err := sqsClient.ReceiveMessage(&sqs.ReceiveMessageInput{
+		out, err := sqsClient.ReceiveMessage(context.Background(), &sqs.ReceiveMessageInput{
 			QueueUrl:            queueUrl,
-			MaxNumberOfMessages: aws.Int64(1),
-			WaitTimeSeconds:     aws.Int64(2),
-			VisibilityTimeout:   aws.Int64(60),
+			MaxNumberOfMessages: 1,
+			WaitTimeSeconds:     2,
+			VisibilityTimeout:   60,
 		})
 		if err != nil {
 			t.Fatalf("could not receive message: %v", err)
 		}
 		if len(out.Messages) > 0 {
-			return out.Messages[0]
+			return &out.Messages[0]
 		}
 	}
 
@@ -273,15 +274,15 @@ func awsReceiveOne(t *testing.T, sqsClient *sqs.SQS, queueUrl *string) *sqs.Mess
 }
 
 func awsPublishRaw(t *testing.T, topic string, body []byte) {
-	snsClient := sns.New(cloud.GetAwsSession())
+	snsClient := sns.NewFromConfig(cloud.GetAwsConfig())
 	topicArn := fmt.Sprintf("arn:%s:sns:%s:%s:%s",
 		cloud.GetAwsARN().Partition,
-		*cloud.GetAwsSession().Config.Region,
+		cloud.GetAwsConfig().Region,
 		cloud.GetAwsARN().AccountID,
 		topic,
 	)
 
-	if _, err := snsClient.Publish(&sns.PublishInput{
+	if _, err := snsClient.Publish(context.Background(), &sns.PublishInput{
 		Message:  aws.String(string(body)),
 		TopicArn: aws.String(topicArn),
 	}); err != nil {
@@ -290,8 +291,8 @@ func awsPublishRaw(t *testing.T, topic string, body []byte) {
 }
 
 func awsAssertDLQ(t *testing.T, min int) {
-	sqsClient := sqs.New(cloud.GetAwsSession())
-	queueUrl, err := sqsClient.GetQueueUrl(&sqs.GetQueueUrlInput{
+	sqsClient := sqs.NewFromConfig(cloud.GetAwsConfig())
+	queueUrl, err := sqsClient.GetQueueUrl(context.Background(), &sqs.GetQueueUrlInput{
 		QueueName: aws.String(testFailQueueName + "_DLQ"),
 	})
 	if err != nil {
@@ -301,10 +302,10 @@ func awsAssertDLQ(t *testing.T, min int) {
 	received := 0
 	deadline := time.Now().Add(20 * time.Second)
 	for time.Now().Before(deadline) {
-		out, err := sqsClient.ReceiveMessage(&sqs.ReceiveMessageInput{
+		out, err := sqsClient.ReceiveMessage(context.Background(), &sqs.ReceiveMessageInput{
 			QueueUrl:            queueUrl.QueueUrl,
-			MaxNumberOfMessages: aws.Int64(10),
-			WaitTimeSeconds:     aws.Int64(1),
+			MaxNumberOfMessages: 10,
+			WaitTimeSeconds:     1,
 		})
 		if err == nil {
 			received += len(out.Messages)

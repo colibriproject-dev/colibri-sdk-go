@@ -27,7 +27,7 @@ const (
 	ENV_CLOUD_REGION          string = "CLOUD_REGION"
 	ENV_CLOUD_SECRET          string = "CLOUD_SECRET"
 	ENV_CLOUD_TOKEN           string = "CLOUD_TOKEN"
-	ENV_CLOUD_DISABLE_SSL     string = "CLOUD_DISABLE_SSL"
+	ENV_CLOUD_DISABLE_SSL     string = "CLOUD_DISABLE_SSL" // Deprecated: no effect on aws-sdk-go-v2; the scheme comes from CLOUD_HOST
 	ENV_CLOUD_AWS_ROLE_ARN    string = "CLOUD_AWS_ROLE_ARN"
 	ENV_CACHE_URI             string = "CACHE_URI"
 	ENV_CACHE_PASSWORD        string = "CACHE_PASSWORD"
@@ -93,7 +93,7 @@ var (
 	CLOUD_REGION       = ""
 	CLOUD_SECRET       = ""
 	CLOUD_TOKEN        = ""
-	CLOUD_DISABLE_SSL  = true
+	CLOUD_DISABLE_SSL  = true // Deprecated: read and validated, but no longer applied. See ENV_CLOUD_DISABLE_SSL.
 	CLOUD_AWS_ROLE_ARN = ""
 
 	SQL_DB_NAME           = ""
