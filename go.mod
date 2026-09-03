@@ -28,7 +28,7 @@ require (
 	github.com/mercari/go-circuitbreaker v0.0.2
 	github.com/moby/moby/api v1.55.0
 	github.com/prometheus/client_golang v1.23.2
-	github.com/rabbitmq/amqp091-go v1.11.0
+	github.com/rabbitmq/amqp091-go v1.13.0
 	github.com/redis/go-redis/extra/redisotel/v9 v9.22.0
 	github.com/redis/go-redis/v9 v9.22.0
 	github.com/stretchr/testify v1.12.1
