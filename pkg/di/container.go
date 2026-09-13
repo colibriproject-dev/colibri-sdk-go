@@ -111,8 +111,7 @@ func (c *Container) searchInjectableDependencies(paramType reflect.Type, returnT
 func (c *Container) searchTypes(paramType reflect.Type) []DependencyBean {
 	dependenciesFound := []DependencyBean{}
 	for fnName, dependency := range c.dependencies {
-		for i := 0; i < dependency.constructorType.NumOut(); i++ {
-			returnType := dependency.constructorType.Out(i)
+		for returnType := range dependency.constructorType.Outs() {
 			if returnType == paramType {
 				fmt.Println("parameter: ", paramType, " compatible => ", fnName, " type ", returnType)
 				dependenciesFound = append(dependenciesFound, dependency)
@@ -125,8 +124,7 @@ func (c *Container) searchTypes(paramType reflect.Type) []DependencyBean {
 func (c *Container) searchImplementations(paramType reflect.Type) []DependencyBean {
 	dependenciesFound := []DependencyBean{}
 	for fnName, dependency := range c.dependencies {
-		for i := 0; i < dependency.constructorType.NumOut(); i++ {
-			returnType := dependency.constructorType.Out(i)
+		for returnType := range dependency.constructorType.Outs() {
 			implements := implementsInterface(returnType, paramType)
 			if implements {
 				fmt.Println("parameter: ", paramType, " implementation => ", fnName, " type ", returnType)

@@ -112,7 +112,7 @@ func TestSubjectNotifyRunsTheShutdownPipeline(t *testing.T) {
 			DoneRunning()
 		}()
 
-		for i := 0; i < observers; i++ {
+		for i := range observers {
 			Attach(phasedObserverTest{name: fmt.Sprintf("module%d", i), seq: seq, stopped: &stopped})
 		}
 
@@ -155,7 +155,7 @@ func TestSubjectNotifyRunsTheShutdownPipeline(t *testing.T) {
 		t.Cleanup(DoneRunning)
 
 		var closed atomic.Int32
-		for i := 0; i < observers; i++ {
+		for range observers {
 			Attach(closingCounterObserverTest{closed: &closed})
 		}
 

@@ -181,7 +181,7 @@ func rabbitMQDeliveryAttempt(d amqp.Delivery) *int {
 	if !ok {
 		return nil
 	}
-	entries, ok := death.([]interface{})
+	entries, ok := death.([]any)
 	if !ok || len(entries) == 0 {
 		return nil
 	}

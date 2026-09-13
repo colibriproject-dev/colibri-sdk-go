@@ -47,8 +47,8 @@ func getFunctionName(i reflect.Value) string {
 
 func getParamTypes(fnType reflect.Type) []reflect.Type {
 	var paramTypes []reflect.Type
-	for i := 0; i < fnType.NumIn(); i++ {
-		paramTypes = append(paramTypes, fnType.In(i))
+	for in := range fnType.Ins() {
+		paramTypes = append(paramTypes, in)
 	}
 	return paramTypes
 }
@@ -87,7 +87,7 @@ func getTagsInType(objectType reflect.Type, tagName string) map[string]string {
 		message := fmt.Sprintf("struct %v with more than one constructor and no values to disqualify", objectType)
 		panic(message)
 	}
-	for i := 0; i < numField; i++ {
+	for i := range numField {
 		field := objectType.Field(i)
 		// get tag metadata
 		tagValue := field.Tag.Get(tagName)

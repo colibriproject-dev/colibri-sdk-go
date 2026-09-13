@@ -32,8 +32,8 @@ import (
 // an OTLP endpoint, leaving just host:port as expected by WithEndpoint options.
 func normalizeEndpoint(endpoint string) string {
 	for _, scheme := range []string{"https://", "http://"} {
-		if strings.HasPrefix(endpoint, scheme) {
-			endpoint = strings.TrimPrefix(endpoint, scheme)
+		if after, ok := strings.CutPrefix(endpoint, scheme); ok {
+			endpoint = after
 			break
 		}
 	}

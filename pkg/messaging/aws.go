@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"strconv"
 	"time"
 
@@ -103,11 +104,7 @@ func (m *awsMessaging) consumer(ctx context.Context, c *consumer) (chan *Provide
 	// the poll is part of what Close waits for. A poll left running behind a closed consumer
 	// keeps receiving from the queue, and every message it takes is one the next consumer on
 	// that queue never sees
-	c.Add(1)
-
-	go func() {
-		defer c.Done()
-
+	c.Go(func() {
 		for {
 			if c.isCanceled() {
 				return
@@ -144,7 +141,7 @@ func (m *awsMessaging) consumer(ctx context.Context, c *consumer) (chan *Provide
 
 			m.handleMessage(ctx, c, queueUrl, &msgs.Messages[0], ch)
 		}
-	}()
+	})
 
 	return ch, nil
 }
@@ -206,9 +203,7 @@ func (m *awsMessaging) handleMessage(ctx context.Context, c *consumer, queueUrl 
 // into a single string map so consumers can read broker metadata uniformly.
 func awsAttributes(msg *sqstypes.Message) map[string]string {
 	attrs := make(map[string]string, len(msg.Attributes)+len(msg.MessageAttributes))
-	for k, v := range msg.Attributes {
-		attrs[k] = v
-	}
+	maps.Copy(attrs, msg.Attributes)
 	for k, v := range msg.MessageAttributes {
 		if v.StringValue != nil {
 			attrs[k] = *v.StringValue

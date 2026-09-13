@@ -12,7 +12,7 @@ import (
 func TestGetWaitGroup(t *testing.T) {
 	resetRunning(t)
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		GetWaitGroup()
 	}
 	wg := GetWaitGroup()
@@ -26,7 +26,7 @@ func TestGetWaitGroupShouldReturnSameInstance(t *testing.T) {
 	resetRunning(t)
 
 	wg1 := GetWaitGroup()
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		GetWaitGroup()
 	}
 	wg2 := GetWaitGroup()
@@ -41,12 +41,10 @@ func TestWaitGroup(t *testing.T) {
 
 	var work sync.WaitGroup
 	for i := 0; i <= 50; i++ {
-		work.Add(1)
-		go func() {
-			defer work.Done()
+		work.Go(func() {
 			process(1)
 			process(1)
-		}()
+		})
 	}
 
 	if WaitRunningTimeout() {
@@ -163,13 +161,11 @@ func TestWaitRunningTimeout(t *testing.T) {
 
 	var work sync.WaitGroup
 	for i := 0; i <= 50; i++ {
-		work.Add(1)
-		go func() {
-			defer work.Done()
+		work.Go(func() {
 			process(1)
 			process(2)
 			process(3)
-		}()
+		})
 	}
 	// the work outlives the wait on purpose, so it has to be joined before the test returns
 	t.Cleanup(work.Wait)
@@ -197,7 +193,7 @@ func TestGetWaitGroupConcurrent(t *testing.T) {
 	done.Add(goroutines)
 
 	instances := make([]*sync.WaitGroup, goroutines)
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		go func(idx int) {
 			defer done.Done()
 			start.Wait()

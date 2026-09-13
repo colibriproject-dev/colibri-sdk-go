@@ -279,7 +279,7 @@ func TestConsumerProcessesSequentially(t *testing.T) {
 		f.ch <- NewConsumerMessage("test", nil, nil, nil)
 		f.ch <- NewConsumerMessage("test", nil, nil, nil)
 
-		for i := 0; i < 2; i++ {
+		for i := range 2 {
 			select {
 			case <-processed:
 			case <-time.After(time.Second):
@@ -705,7 +705,7 @@ func TestConsumerLeavesTheRegistryWhenItStops(t *testing.T) {
 	t.Run("Should not accumulate consumers that already stopped", func(t *testing.T) {
 		setupMessagingTest(t)
 
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			h, err := NewConsumerWithError(&testProducerConsumer{
 				queueName: fmt.Sprintf("recycled-queue-%d", i),
 				fn:        func(_ context.Context, _ *ProviderMessage) error { return nil },
@@ -758,7 +758,7 @@ func TestTestProducerReleasesItsConsumer(t *testing.T) {
 	t.Run("Should not accumulate consumers across executions", func(t *testing.T) {
 		openModule(moduleInstance())
 
-		for i := 0; i < 3; i++ {
+		for i := range 3 {
 			producer := NewTestProducer[string](func() error { return nil },
 				fmt.Sprintf("test-producer-repeat-queue-%d", i), 1)
 

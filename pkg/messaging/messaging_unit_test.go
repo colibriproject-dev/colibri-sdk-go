@@ -87,7 +87,7 @@ func TestRabbitMQReceiptMetadata(t *testing.T) {
 	t.Run("Should stringify headers and derive the delivery attempt from x-death", func(t *testing.T) {
 		d := amqp.Delivery{
 			Headers: amqp.Table{
-				"x-death": []interface{}{
+				"x-death": []any{
 					amqp.Table{"count": int64(6), "reason": "rejected"},
 				},
 			},
