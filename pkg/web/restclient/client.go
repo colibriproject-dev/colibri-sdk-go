@@ -85,7 +85,8 @@ func getTransport(config *RestClientConfig) http.RoundTripper {
 		}
 	}
 
-	if monitoring.UseOTELMonitoring() {
+	// otelhttp emits both client spans and client metrics, so either signal justifies it.
+	if monitoring.UseTracing() || monitoring.UseMetrics() {
 		return otelhttp.NewTransport(transport)
 	}
 

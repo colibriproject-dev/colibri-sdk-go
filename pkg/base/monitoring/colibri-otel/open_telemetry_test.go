@@ -2,9 +2,11 @@ package colibri_otel
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	colibrimonitoringbase "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,6 +19,15 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
 )
+
+// TestMain initializes the logger once for the whole package. Instrument creation logs a
+// warning when the provider refuses a name, and logging.Warn dereferences a nil handler
+// before Initialize has run.
+func TestMain(m *testing.M) {
+	logging.Initialize()
+
+	os.Exit(m.Run())
+}
 
 // newTestMonitoring creates a MonitoringOpenTelemetry backed by in-memory exporters
 // so that tests do not require a real OTLP collector.
@@ -52,9 +63,9 @@ func newTestMonitoring(t *testing.T) (*MonitoringOpenTelemetry, *tracetest.SpanR
 		meterProvider:  mp,
 		tracer:         tracer,
 		meter:          meter,
-		counters:       make(map[string]metric.Int64Counter),
-		histograms:     make(map[string]metric.Float64Histogram),
-		gauges:         make(map[string]metric.Float64Gauge),
+		counters:       make(map[string]*otelCounter),
+		histograms:     make(map[string]*otelHistogram),
+		gauges:         make(map[string]*otelGauge),
 	}
 	return m, spanRecorder, reader
 }

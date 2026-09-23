@@ -86,40 +86,106 @@ func main() {
 
 ## Observabilidade
 
-O SDK exporta traces e métricas OpenTelemetry via OTLP HTTP. Configure as variáveis de ambiente abaixo para habilitá-lo:
+O SDK exporta traces e métricas OpenTelemetry. Traces e métricas são sinais independentes:
+**as métricas vêm habilitadas por padrão** e podem ser coletadas em `/metrics` sem nenhuma
+configuração, enquanto os traces precisam de um coletor OTLP.
 
 | Variável | Obrigatória | Descrição |
 |---|---|---|
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | Sim | Endpoint do coletor OTLP — aceita `host:porta` ou URL completa (ex: `http://localhost:4318`) |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Não | Endpoint do coletor OTLP — aceita `host:porta` ou URL completa (ex: `http://localhost:4318`). Habilita traces e o exportador OTLP de métricas |
 | `OTEL_EXPORTER_OTLP_HEADERS` | Não | Headers no formato `chave=valor` separados por vírgula (ex: `api-key=secret,x-env=prod`) |
 | `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Não | Substitui o endpoint apenas para o sinal de métricas. Padrão: `OTEL_EXPORTER_OTLP_ENDPOINT` |
 | `OTEL_SERVICE_NAME` | Não | Nome do serviço reportado ao backend. Padrão: valor de `APP_NAME` |
+| `OTEL_TRACES_ENABLED` | Não | Desliga os traces. Padrão `true` — os traces ainda exigem o endpoint do coletor |
+| `OTEL_METRICS_ENABLED` | Não | Desliga as métricas, nos dois readers. Padrão `true` |
+| `OTEL_METRICS_PROMETHEUS_ENABLED` | Não | Expõe as métricas em `/metrics` pelo registry do Prometheus. Padrão `true` |
 
-Quando `OTEL_EXPORTER_OTLP_ENDPOINT` está configurado, o SDK automaticamente:
-- Exporta **traces** e **métricas** para o coletor OTLP configurado
+### Combinações de sinais
+
+| Configuração | Traces | `/metrics` | Métricas OTLP |
+|---|---|---|---|
+| Nada configurado (padrão) | desligado | **ligado** | desligado |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` configurado | ligado | ligado | ligado |
+| Endpoint configurado, `OTEL_METRICS_PROMETHEUS_ENABLED=false` | ligado | desligado | ligado |
+| Endpoint configurado, `OTEL_TRACES_ENABLED=false` | desligado | ligado | ligado |
+| `OTEL_METRICS_ENABLED=false` e sem endpoint | desligado | desligado | desligado |
+
+Com pelo menos um sinal habilitado, o SDK automaticamente:
 - Emite métricas de servidor e cliente HTTP (`http.server.request.duration`, `http.client.request.duration`) via `otelfiber` / `otelhttp`
 - Emite métricas de banco de dados (`db.client.operation.duration`) via `otelsql`
 - Emite métricas de runtime do Go (heap, GC, goroutines) via `opentelemetry-contrib/instrumentation/runtime`
 - Enriquece cada resource com `service.name`, `service.version` e `service.instance.id`
 
+Um sinal desligado recebe um provider noop, então o código instrumentado continua válido e
+apenas não reporta nada.
+
 > **Atenção:** `OTEL_EXPORTER_OTLP_ENDPOINT` deve ser o endpoint base sem o caminho específico do sinal. O SDK adiciona automaticamente `/v1/traces` e `/v1/metrics`.
 
 ### Métricas customizadas
 
+Os atributos são passados como um valor `Attrs`. Construa uma vez e reutilize: ele guarda a
+representação do provider em cache, e é isso que mantém a gravação sem alocações.
+
 ```go
-import "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
+import (
+    "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
+    monitoringbase "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
+)
+
+// Construa os atributos uma vez, fora do caminho quente.
+var usersRoute = monitoringbase.NewAttrs("route", "/api/users")
 
 // Counter — incremento monotônico
 requests := monitoring.Counter("app.requests", "Total de requisições HTTP", "1")
-requests.Add(ctx, 1, map[string]string{"route": "/api/users"})
+requests.AddAttrs(ctx, 1, usersRoute)
 
 // Histogram — distribuição de valores
 duration := monitoring.Histogram("app.request.duration", "Duração das requisições", "ms")
-duration.Record(ctx, elapsed.Milliseconds(), map[string]string{"status": "200"})
+duration.RecordAttrs(ctx, float64(elapsed.Milliseconds()), usersRoute)
 
-// Gauge — valor corrente
+// Gauge — valor corrente, enviado pelo chamador
 activeConns := monitoring.Gauge("app.connections.active", "Conexões ativas", "1")
-activeConns.Record(ctx, float64(count), nil)
+activeConns.RecordAttrs(ctx, float64(count), monitoringbase.Attrs{})
+```
+
+### Gauges observáveis
+
+Para valores amostrados em vez de enviados — tamanho de pool, profundidade de fila,
+entradas em cache — registre um callback chamado a cada coleta:
+
+```go
+registration := monitoring.ObservableGauge(
+    "app.db.connections.open", "Conexões abertas com o banco", "1",
+    func(ctx context.Context) []monitoringbase.Observation {
+        stats := db.Stats()
+        return []monitoringbase.Observation{
+            {Value: float64(stats.InUse), Attributes: monitoringbase.NewAttrs("state", "in_use")},
+            {Value: float64(stats.Idle), Attributes: monitoringbase.NewAttrs("state", "idle")},
+        }
+    },
+)
+defer registration.Unregister()
+```
+
+Registre cada nome uma única vez: cada chamada registra o próprio callback, e o ciclo de
+vida fica com o chamador, pelo `Registration` retornado.
+
+### Migrando dos atributos em map
+
+`Add` e `Record` recebendo `map[string]string` continuam funcionando e estão marcados como
+deprecated. Eles convertem o map em atributos a cada chamada; as variantes com `Attrs`
+fazem isso uma vez só.
+
+```go
+// Antes
+requests.Add(ctx, 1, map[string]string{"route": "/api/users"})
+
+// Depois — construa uma vez e reutilize
+var usersRoute = monitoringbase.NewAttrs("route", "/api/users")
+requests.AddAttrs(ctx, 1, usersRoute)
+
+// Ou, para migrar mecanicamente a partir de um map existente
+requests.AddAttrs(ctx, 1, monitoringbase.AttrsFromMap(attributes))
 ```
 
 ## Contribuições

@@ -470,3 +470,46 @@ func loadTestEnvs(t *testing.T) {
 	assert.NoError(t, os.Setenv(ENV_APP_TYPE, APP_TYPE_SERVICE))
 	assert.NoError(t, os.Setenv(ENV_CLOUD, CLOUD_GCP))
 }
+
+func TestOtelSignalToggles(t *testing.T) {
+	loadTestEnvs(t)
+
+	// Load() only overwrites these when the variable is set, so a test that flips one to
+	// false leaks the value into every later Load(). Restore the package state explicitly.
+	traces, metrics, prom := OTEL_TRACES_ENABLED, OTEL_METRICS_ENABLED, OTEL_METRICS_PROMETHEUS_ENABLED
+	t.Cleanup(func() {
+		OTEL_TRACES_ENABLED, OTEL_METRICS_ENABLED, OTEL_METRICS_PROMETHEUS_ENABLED = traces, metrics, prom
+	})
+
+	toggles := []struct {
+		name string
+		env  string
+		ref  *bool
+	}{
+		{"traces", ENV_OTEL_TRACES_ENABLED, &OTEL_TRACES_ENABLED},
+		{"metrics", ENV_OTEL_METRICS_ENABLED, &OTEL_METRICS_ENABLED},
+		{"prometheus metrics", ENV_OTEL_METRICS_PROMETHEUS_ENABLED, &OTEL_METRICS_PROMETHEUS_ENABLED},
+	}
+
+	for _, toggle := range toggles {
+		t.Run(fmt.Sprintf("Should enable %s by default when environment is empty", toggle.name), func(t *testing.T) {
+			*toggle.ref = true
+
+			assert.NoError(t, Load())
+			assert.True(t, *toggle.ref)
+		})
+
+		t.Run(fmt.Sprintf("Should disable %s when environment is false", toggle.name), func(t *testing.T) {
+			t.Setenv(toggle.env, "false")
+
+			assert.NoError(t, Load())
+			assert.False(t, *toggle.ref)
+		})
+
+		t.Run(fmt.Sprintf("Should return error when %s value is invalid", toggle.name), func(t *testing.T) {
+			t.Setenv(toggle.env, invalidValue)
+
+			assert.Error(t, Load())
+		})
+	}
+}

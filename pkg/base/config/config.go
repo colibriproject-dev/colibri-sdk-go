@@ -21,6 +21,10 @@ const (
 	ENV_OTEL_EXPORTER_OTLP_HEADERS          string = "OTEL_EXPORTER_OTLP_HEADERS"
 	ENV_OTEL_EXPORTER_OTLP_METRICS_ENDPOINT string = "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT"
 
+	ENV_OTEL_TRACES_ENABLED             string = "OTEL_TRACES_ENABLED"
+	ENV_OTEL_METRICS_ENABLED            string = "OTEL_METRICS_ENABLED"
+	ENV_OTEL_METRICS_PROMETHEUS_ENABLED string = "OTEL_METRICS_PROMETHEUS_ENABLED"
+
 	ENV_PORT                  string = "PORT"
 	ENV_SQL_DB_MIGRATION      string = "SQL_DB_MIGRATION"
 	ENV_CLOUD_HOST            string = "CLOUD_HOST"
@@ -86,6 +90,17 @@ var (
 	OTEL_EXPORTER_OTLP_HEADERS          = ""
 	OTEL_EXPORTER_OTLP_METRICS_ENDPOINT = ""
 
+	// OTEL_TRACES_ENABLED is a kill switch for the trace signal. Tracing still requires
+	// OTEL_EXPORTER_OTLP_ENDPOINT, so leaving it on costs nothing when no collector is set.
+	OTEL_TRACES_ENABLED = true
+	// OTEL_METRICS_ENABLED is a kill switch for the metric signal, covering both the OTLP
+	// and the Prometheus readers.
+	OTEL_METRICS_ENABLED = true
+	// OTEL_METRICS_PROMETHEUS_ENABLED exposes the metrics on the /metrics route through the
+	// Prometheus default registry. Enabled by default, so metrics are scrapable without a
+	// collector.
+	OTEL_METRICS_PROMETHEUS_ENABLED = true
+
 	PORT = 8080
 
 	CLOUD              = ""
@@ -142,6 +157,18 @@ func Load() error {
 	OTEL_EXPORTER_OTLP_ENDPOINT = os.Getenv(ENV_OTEL_EXPORTER_OTLP_ENDPOINT)
 	OTEL_EXPORTER_OTLP_HEADERS = os.Getenv(ENV_OTEL_EXPORTER_OTLP_HEADERS)
 	OTEL_EXPORTER_OTLP_METRICS_ENDPOINT = os.Getenv(ENV_OTEL_EXPORTER_OTLP_METRICS_ENDPOINT)
+
+	if err := convertBoolEnv(&OTEL_TRACES_ENABLED, ENV_OTEL_TRACES_ENABLED); err != nil {
+		return err
+	}
+
+	if err := convertBoolEnv(&OTEL_METRICS_ENABLED, ENV_OTEL_METRICS_ENABLED); err != nil {
+		return err
+	}
+
+	if err := convertBoolEnv(&OTEL_METRICS_PROMETHEUS_ENABLED, ENV_OTEL_METRICS_PROMETHEUS_ENABLED); err != nil {
+		return err
+	}
 
 	if err := convertIntEnv(&PORT, ENV_PORT); err != nil {
 		return err

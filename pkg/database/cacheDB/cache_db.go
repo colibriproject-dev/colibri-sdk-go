@@ -26,7 +26,7 @@ func Initialize() {
 
 	redisClient := redis.NewClient(opts)
 
-	if monitoring.UseOTELMonitoring() {
+	if monitoring.UseTracing() {
 		if err := redisotel.InstrumentTracing(redisClient); err != nil {
 			logging.Fatal(context.Background()).Err(err).Msg("An error occurred while trying to instrument tracing")
 		}
