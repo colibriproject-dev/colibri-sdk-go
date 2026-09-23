@@ -80,21 +80,36 @@ func (m *others) Close() {
 
 type noopCounter struct{}
 
-func (c *noopCounter) Add(_ context.Context, _ int64, _ map[string]string) {}
+// Deprecated: use AddAttrs.
+func (c *noopCounter) Add(_ context.Context, _ int64, _ map[string]string) {
+	// Empty by design: dropping the measurement is the whole behavior of a noop counter.
+}
 
-func (c *noopCounter) AddAttrs(_ context.Context, _ int64, _ Attrs) {}
+func (c *noopCounter) AddAttrs(_ context.Context, _ int64, _ Attrs) {
+	// Empty by design: dropping the measurement is the whole behavior of a noop counter.
+}
 
 type noopHistogram struct{}
 
-func (h *noopHistogram) Record(_ context.Context, _ float64, _ map[string]string) {}
+// Deprecated: use RecordAttrs.
+func (h *noopHistogram) Record(_ context.Context, _ float64, _ map[string]string) {
+	// Empty by design: dropping the measurement is the whole behavior of a noop histogram.
+}
 
-func (h *noopHistogram) RecordAttrs(_ context.Context, _ float64, _ Attrs) {}
+func (h *noopHistogram) RecordAttrs(_ context.Context, _ float64, _ Attrs) {
+	// Empty by design: dropping the measurement is the whole behavior of a noop histogram.
+}
 
 type noopGauge struct{}
 
-func (g *noopGauge) Record(_ context.Context, _ float64, _ map[string]string) {}
+// Deprecated: use RecordAttrs.
+func (g *noopGauge) Record(_ context.Context, _ float64, _ map[string]string) {
+	// Empty by design: dropping the measurement is the whole behavior of a noop gauge.
+}
 
-func (g *noopGauge) RecordAttrs(_ context.Context, _ float64, _ Attrs) {}
+func (g *noopGauge) RecordAttrs(_ context.Context, _ float64, _ Attrs) {
+	// Empty by design: dropping the measurement is the whole behavior of a noop gauge.
+}
 
 type noopRegistration struct{}
 
