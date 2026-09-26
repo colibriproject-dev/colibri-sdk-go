@@ -15,6 +15,10 @@ type cacheDBObserver struct{}
 
 var instance *redis.Client
 
+// stopMetrics ends the pool metric callbacks when the connection is closed. It is nil when
+// metrics are disabled.
+var stopMetrics chan struct{}
+
 // Initialize starts the connection with the cache database.
 func Initialize() {
 	if instance != nil {
@@ -32,6 +36,8 @@ func Initialize() {
 		}
 	}
 
+	stopMetrics = instrumentMetrics(redisClient)
+
 	if _, err := redisClient.Ping(context.Background()).Result(); err != nil {
 		logging.
 			Fatal(context.Background()).
@@ -44,6 +50,29 @@ func Initialize() {
 	logging.Info(context.Background()).Msg("Cache database connected")
 }
 
+// instrumentMetrics reports the connection pool metrics (db.client.connections.*) when the
+// metric signal is enabled, returning the channel that stops them. A failure costs the
+// metrics only, so it is logged instead of aborting the boot.
+func instrumentMetrics(client *redis.Client) chan struct{} {
+	if !monitoring.UseMetrics() {
+		return nil
+	}
+
+	stop := make(chan struct{})
+	// the SDK has no dashboards on the legacy UpDownCounter types, so the cumulative pool
+	// stats are exported as the counters the database semantic conventions specify
+	err := redisotel.InstrumentMetrics(client,
+		redisotel.WithSemConvCompliantMetrics(true),
+		redisotel.WithCloseChan(stop),
+	)
+	if err != nil {
+		logging.Warn(context.Background()).Err(err).Msg("An error occurred while trying to instrument metrics")
+		return nil
+	}
+
+	return stop
+}
+
 // Close closes the cache connection safely. It runs in the closing phase of the graceful
 // shutdown, so the work that reads and writes the cache has already been drained.
 //
@@ -51,6 +80,10 @@ func Initialize() {
 // No return values.
 func (o cacheDBObserver) Close() {
 	logging.Info(context.Background()).Msg("closing cache connection")
+	if stopMetrics != nil {
+		close(stopMetrics)
+		stopMetrics = nil
+	}
 	if err := instance.Close(); err != nil {
 		logging.
 			Error(context.Background()).

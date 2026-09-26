@@ -4,6 +4,7 @@ import (
 	"context"
 	"mime/multipart"
 	"os"
+	"time"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
@@ -39,6 +40,8 @@ func Initialize() {
 		instance = newGcpStorage()
 	}
 
+	initMetrics()
+
 	logging.Info(context.Background()).Msg(storageConnectedMsg)
 }
 
@@ -54,7 +57,11 @@ func DownloadFile(ctx context.Context, bucket, key string) (*os.File, error) {
 		defer monitoring.EndTransactionSegment(segment)
 	}
 
-	return instance.downloadFile(ctx, bucket, key)
+	start := time.Now()
+	file, err := instance.downloadFile(ctx, bucket, key)
+	record(ctx, downloadAttrs, start, downloadSize(file), err)
+
+	return file, err
 }
 
 // UploadFile uploads a file to the storage provider.
@@ -69,7 +76,12 @@ func UploadFile(ctx context.Context, bucket, key string, file *multipart.File) (
 		defer monitoring.EndTransactionSegment(segment)
 	}
 
-	return instance.uploadFile(ctx, bucket, key, file)
+	size := uploadSize(file)
+	start := time.Now()
+	url, err := instance.uploadFile(ctx, bucket, key, file)
+	record(ctx, uploadAttrs, start, size, err)
+
+	return url, err
 }
 
 // DeleteFile deletes a file from the storage provider.
@@ -84,5 +96,9 @@ func DeleteFile(ctx context.Context, bucket, key string) error {
 		defer monitoring.EndTransactionSegment(segment)
 	}
 
-	return instance.deleteFile(ctx, bucket, key)
+	start := time.Now()
+	err := instance.deleteFile(ctx, bucket, key)
+	record(ctx, deleteAttrs, start, noTransfer, err)
+
+	return err
 }

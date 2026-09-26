@@ -12,11 +12,12 @@ import (
 )
 
 type Producer struct {
-	topic string
+	topic       string
+	metricAttrs producerAttrs
 }
 
 func NewProducer(topicName string) *Producer {
-	return &Producer{topicName}
+	return &Producer{topic: topicName, metricAttrs: newProducerAttrs(topicName)}
 }
 
 func (p *Producer) Publish(ctx context.Context, action string, message any) error {
@@ -47,7 +48,9 @@ func (p *Producer) Publish(ctx context.Context, action string, message any) erro
 		CorrelationID: correlationID.(string),
 	}
 
-	if err := provider.producer(ctx, p, msg); err != nil {
+	err := provider.producer(ctx, p, msg)
+	p.recordPublished(ctx, err)
+	if err != nil {
 		logging.Error(ctx).Err(err).Msgf(couldNotSendMsg, msg.ID, p.topic)
 		monitoring.NoticeError(txn, err)
 		return err

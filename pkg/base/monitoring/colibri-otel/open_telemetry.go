@@ -33,6 +33,9 @@ import (
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
 )
 
+// instrumentationName is the scope of the tracer and meter the SDK records through.
+const instrumentationName = "github.com/colibriproject-dev/colibri-sdk-go"
+
 // normalizeEndpoint strips the scheme (http:// or https://) and any trailing path from
 // an OTLP endpoint, leaving just host:port as expected by WithEndpoint options.
 func normalizeEndpoint(endpoint string) string {
@@ -203,8 +206,6 @@ func StartOpenTelemetryMonitoring(signals Signals) colibrimonitoringbase.Monitor
 		propagation.Baggage{},
 	))
 
-	const instrumentationName = "github.com/colibriproject-dev/colibri-sdk-go"
-
 	return &MonitoringOpenTelemetry{
 		tracerProvider: tracerProvider,
 		meterProvider:  meterProvider,
@@ -215,6 +216,21 @@ func StartOpenTelemetryMonitoring(signals Signals) colibrimonitoringbase.Monitor
 		counters:   make(map[string]*otelCounter),
 		histograms: make(map[string]*otelHistogram),
 		gauges:     make(map[string]*otelGauge),
+	}
+}
+
+// NewWithMeterProvider builds a monitoring instance recording metrics into the given
+// provider, with tracing disabled. It does not touch the global providers. It exists so
+// tests can read what the SDK records through a ManualReader — see the monitoringtest
+// package.
+func NewWithMeterProvider(meterProvider *sdkmetric.MeterProvider) *MonitoringOpenTelemetry {
+	return &MonitoringOpenTelemetry{
+		meterProvider: meterProvider,
+		tracer:        nooptrace.NewTracerProvider().Tracer(instrumentationName),
+		meter:         meterProvider.Meter(instrumentationName),
+		counters:      make(map[string]*otelCounter),
+		histograms:    make(map[string]*otelHistogram),
+		gauges:        make(map[string]*otelGauge),
 	}
 }
 

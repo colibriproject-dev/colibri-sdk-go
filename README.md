@@ -90,25 +90,25 @@ The SDK exports OpenTelemetry traces and metrics. Traces and metrics are indepen
 signals: **metrics are enabled by default** and scrapable on `/metrics` with no
 configuration, while traces need an OTLP collector.
 
-| Variable | Required | Description |
-|---|---|---|
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | No | OTLP collector endpoint — accepts `host:port` or full URL (e.g. `http://localhost:4318`). Enables traces and the OTLP metric exporter |
-| `OTEL_EXPORTER_OTLP_HEADERS` | No | Comma-separated `key=value` headers (e.g. `api-key=secret,x-env=prod`) |
-| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | No | Override endpoint for the metrics signal only. Defaults to `OTEL_EXPORTER_OTLP_ENDPOINT` |
-| `OTEL_SERVICE_NAME` | No | Service name reported to the backend. Defaults to `APP_NAME` |
-| `OTEL_TRACES_ENABLED` | No | Kill switch for traces. Default `true` — traces still require a collector endpoint |
-| `OTEL_METRICS_ENABLED` | No | Kill switch for metrics, covering both readers. Default `true` |
-| `OTEL_METRICS_PROMETHEUS_ENABLED` | No | Exposes metrics on `/metrics` through the Prometheus registry. Default `true` |
+| Variable                              | Required | Description                                                                                                                           |
+|---------------------------------------|----------|---------------------------------------------------------------------------------------------------------------------------------------|
+| `OTEL_EXPORTER_OTLP_ENDPOINT`         | No       | OTLP collector endpoint — accepts `host:port` or full URL (e.g. `http://localhost:4318`). Enables traces and the OTLP metric exporter |
+| `OTEL_EXPORTER_OTLP_HEADERS`          | No       | Comma-separated `key=value` headers (e.g. `api-key=secret,x-env=prod`)                                                                |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | No       | Override endpoint for the metrics signal only. Defaults to `OTEL_EXPORTER_OTLP_ENDPOINT`                                              |
+| `OTEL_SERVICE_NAME`                   | No       | Service name reported to the backend. Defaults to `APP_NAME`                                                                          |
+| `OTEL_TRACES_ENABLED`                 | No       | Kill switch for traces. Default `true` — traces still require a collector endpoint                                                    |
+| `OTEL_METRICS_ENABLED`                | No       | Kill switch for metrics, covering both readers. Default `true`                                                                        |
+| `OTEL_METRICS_PROMETHEUS_ENABLED`     | No       | Exposes metrics on `/metrics` through the Prometheus registry. Default `true`                                                         |
 
 ### Signal combinations
 
-| Configuration | Traces | `/metrics` | OTLP metrics |
-|---|---|---|---|
-| Nothing set (default) | off | **on** | off |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` set | on | on | on |
-| Endpoint set, `OTEL_METRICS_PROMETHEUS_ENABLED=false` | on | off | on |
-| Endpoint set, `OTEL_TRACES_ENABLED=false` | off | on | on |
-| `OTEL_METRICS_ENABLED=false` and no endpoint | off | off | off |
+| Configuration                                         | Traces | `/metrics` | OTLP metrics |
+|-------------------------------------------------------|--------|------------|--------------|
+| Nothing set (default)                                 | off    | **on**     | off          |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` set                     | on     | on         | on           |
+| Endpoint set, `OTEL_METRICS_PROMETHEUS_ENABLED=false` | on     | off        | on           |
+| Endpoint set, `OTEL_TRACES_ENABLED=false`             | off    | on         | on           |
+| `OTEL_METRICS_ENABLED=false` and no endpoint          | off    | off        | off          |
 
 With at least one signal enabled the SDK automatically:
 - Emits HTTP server and client metrics (`http.server.request.duration`, `http.client.request.duration`) via `otelfiber` / `otelhttp`
@@ -120,6 +120,42 @@ A disabled signal gets a noop provider, so instrumented code keeps working and s
 reports nothing.
 
 > **Note:** `OTEL_EXPORTER_OTLP_ENDPOINT` should be the base endpoint without signal-specific paths. The SDK appends `/v1/traces` and `/v1/metrics` automatically.
+
+### SDK component metrics
+
+With metrics enabled, the SDK modules report their own metrics. Every attribute comes from
+a bounded set: identifiers such as `correlationId`, `messageId`, `userId`, `tenantId`,
+storage keys and request paths are recorded on spans only.
+
+| Metric                        | Type             | Unit          | Attributes                          | Module                   |
+|-------------------------------|------------------|---------------|-------------------------------------|--------------------------|
+| `messaging.published`         | counter          | `{message}`   | `topic`, `result`                   | messaging                |
+| `messaging.consumed`          | counter          | `{message}`   | `queue`, `action`, `result`         | messaging                |
+| `messaging.process.duration`  | histogram        | `s`           | `queue`, `action`, `result`         | messaging                |
+| `messaging.rejected`          | counter          | `{message}`   | `queue`, `action`, `reason`         | messaging                |
+| `messaging.in_flight`         | observable gauge | `{message}`   | `queue`                             | messaging                |
+| `db.client.connections.*`     | pool metrics     | —             | `db.system`, `pool.name`, …         | cacheDB, via `redisotel` |
+| `db.sql.connections.*`        | pool metrics     | —             | `db.instance`, `db.system.name`     | sqlDB, via `otelsql`     |
+| `storage.operation`           | counter          | `{operation}` | `operation`, `result`               | storage                  |
+| `storage.operation.duration`  | histogram        | `s`           | `operation`, `result`               | storage                  |
+| `storage.transferred`         | histogram        | `By`          | `operation`                         | storage                  |
+| `http.server.panic.recovered` | counter          | `{panic}`     | `http.request.method`, `http.route` | restserver               |
+
+- `result` is `success`, `error` or `panic` (`panic` for consumed messages only); `reason` is `error` or `panic`.
+- `action` is set by the application on `Publish`, so it must come from a fixed set of event names — never an identifier.
+- `messaging.rejected` counts messages nacked without requeue. The SDK leaves them to the
+  broker dead-letter handling (SQS redrive policy, Pub/Sub dead-letter topic, RabbitMQ
+  DLX), so whether one actually reached a DLQ is reported by the broker, not by the SDK.
+
+To assert on metrics in a test, `monitoringtest.Install(t)` swaps in an in-memory reader
+for the duration of the test:
+
+```go
+recorder := monitoringtest.Install(t)
+// ... exercise the code ...
+published := recorder.Metric(t, "messaging.published")
+monitoringtest.AssertShape(t, published, "{message}", "topic", "result")
+```
 
 ### Custom metrics
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
@@ -51,6 +52,10 @@ type consumer struct {
 	fn       func(ctx context.Context, message *ProviderMessage) error
 	done     chan any
 	stopOnce sync.Once
+
+	// inFlight counts the messages being processed, read by the in-flight gauge callback.
+	inFlight    atomic.Int64
+	metricAttrs *consumerAttrs
 }
 
 // Consumer is the handle to a running queue consumer. It exists so a consumer created for a
@@ -103,9 +108,10 @@ func newConsumer(qc QueueConsumer) (*consumer, error) {
 	}
 
 	c := &consumer{
-		queue: qc.QueueName(),
-		fn:    qc.Consume,
-		done:  make(chan any),
+		queue:       qc.QueueName(),
+		fn:          qc.Consume,
+		done:        make(chan any),
+		metricAttrs: newConsumerAttrs(qc.QueueName()),
 	}
 
 	if err := registerConsumer(c); err != nil {
@@ -180,6 +186,16 @@ func processMessage(c *consumer, msg *ProviderMessage) {
 	monitoring.AddTransactionAttribute(txn, "span.kind", "CONSUMER")
 	defer monitoring.EndTransactionSegment(txn)
 
+	// registered before the recover defer so it runs after it, once the panic has settled
+	// the result
+	result := resultSuccess
+	start := time.Now()
+	c.inFlight.Add(1)
+	defer func() {
+		c.inFlight.Add(-1)
+		c.recordConsumed(ctx, msg.Action, result, time.Since(start))
+	}()
+
 	// registered after the transaction defer so it runs before it: the panic must be
 	// recorded while the transaction is still open. Consume is user code running on a bare
 	// goroutine, so a panic here would otherwise take the whole process down.
@@ -188,7 +204,8 @@ func processMessage(c *consumer, msg *ProviderMessage) {
 			err := fmt.Errorf("panic processing message %s: %v", msg.ID, r)
 			logging.Error(ctx).Msgf("%v\n%s", err, debug.Stack())
 			monitoring.NoticeError(txn, err)
-			nackMessage(ctx, msg, err)
+			result = resultPanic
+			c.rejectMessage(ctx, msg, err, resultPanic)
 		}
 	}()
 
@@ -196,7 +213,8 @@ func processMessage(c *consumer, msg *ProviderMessage) {
 
 	if err := c.fn(ctx, msg); err != nil {
 		logging.Error(ctx).Err(err).Msgf(couldNotProcessMsg, msg.ID)
-		nackMessage(ctx, msg, err)
+		result = resultError
+		c.rejectMessage(ctx, msg, err, resultError)
 		monitoring.NoticeError(txn, err)
 		return
 	}
@@ -209,6 +227,14 @@ func processMessage(c *consumer, msg *ProviderMessage) {
 	}
 
 	logging.Debug(ctx).Msgf("message %s processed", msg.ID)
+}
+
+// rejectMessage nacks the message without requeue, leaving it to the broker dead-letter
+// handling. It is counted as rejected whether or not the nack reaches the broker: the
+// message failed either way, and a nack that is lost ends in a redelivery.
+func (c *consumer) rejectMessage(ctx context.Context, msg *ProviderMessage, cause error, reason string) {
+	c.recordRejected(ctx, msg.Action, reason)
+	nackMessage(ctx, msg, cause)
 }
 
 func nackMessage(ctx context.Context, msg *ProviderMessage, cause error) {

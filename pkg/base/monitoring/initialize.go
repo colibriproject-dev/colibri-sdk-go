@@ -113,18 +113,44 @@ func GetSQLDBDriverName() string {
 	return instance.GetSQLDBDriverName()
 }
 
+// ReplaceInstance swaps the active Monitoring implementation and returns a function that
+// restores the previous one. It exists for tests that need to observe what the SDK
+// records — see the monitoringtest package — and must not be used in production code.
+func ReplaceInstance(m colibrimonitoringbase.Monitoring) (restore func()) {
+	previous := instance
+	instance = m
+
+	return func() { instance = previous }
+}
+
+// The metric accessors below return inert instruments while Monitoring is not initialized.
+// SDK packages create their instruments once, at setup, and a missing Initialize must cost
+// the metrics, not crash the application.
+
 // Counter returns a named counter instrument for recording monotonically increasing values.
 func Counter(name, description, unit string) colibrimonitoringbase.Counter {
+	if instance == nil {
+		return colibrimonitoringbase.NoopCounter()
+	}
+
 	return instance.Counter(name, description, unit)
 }
 
 // Histogram returns a named histogram instrument for recording value distributions.
 func Histogram(name, description, unit string) colibrimonitoringbase.HistogramRecorder {
+	if instance == nil {
+		return colibrimonitoringbase.NoopHistogram()
+	}
+
 	return instance.Histogram(name, description, unit)
 }
 
 // Gauge returns a named gauge instrument for recording current values.
 func Gauge(name, description, unit string) colibrimonitoringbase.GaugeRecorder {
+	if instance == nil {
+		return colibrimonitoringbase.NoopGauge()
+	}
+
 	return instance.Gauge(name, description, unit)
 }
 
@@ -135,5 +161,9 @@ func ObservableGauge(
 	name, description, unit string,
 	callback func(context.Context) []colibrimonitoringbase.Observation,
 ) colibrimonitoringbase.Registration {
+	if instance == nil {
+		return colibrimonitoringbase.NoopRegistration()
+	}
+
 	return instance.ObservableGauge(name, description, unit, callback)
 }
