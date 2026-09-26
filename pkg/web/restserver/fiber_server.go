@@ -35,8 +35,10 @@ func (f *fiberWebServer) shutdown() error {
 }
 
 func (f *fiberWebServer) injectMiddlewares() {
-	if monitoring.UseOTELMonitoring() {
+	if monitoring.UseTracing() {
 		f.srv.Use(newOpenTelemetryFiberMiddleware())
+	}
+	if monitoring.UseMetrics() {
 		f.srv.Use(httpMetricsFiberMiddleware())
 	}
 	f.srv.Use(correlationIdMiddleware())

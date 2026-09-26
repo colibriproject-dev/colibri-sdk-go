@@ -2,6 +2,7 @@ package monitoring
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
@@ -12,9 +13,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestProductionMonitoring_OT(t *testing.T) {
+// TestMain initializes the observer and the logger once for the whole package. Initialize
+// attaches to the observer and logs, and every path under test reaches one or the other,
+// so leaving the setup to a single test made the package pass only in declaration order.
+func TestMain(m *testing.M) {
 	observer.Initialize()
 	logging.Initialize()
+
+	os.Exit(m.Run())
+}
+
+func TestProductionMonitoring_OT(t *testing.T) {
+	// Another test may have initialized already; this one needs the OTEL instance.
+	instance = nil
+
 	config.OTEL_EXPORTER_OTLP_ENDPOINT = "http://localhost:4318/v1/traces"
 	config.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT = ""
 	config.APP_NAME = "test"

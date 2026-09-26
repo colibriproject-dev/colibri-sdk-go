@@ -218,7 +218,7 @@ func correlationIdMiddleware() fiber.Handler {
 			correlationID = uuid.New().String()
 		}
 		ctx.SetContext(logging.InjectCorrelationIDInContext(ctx.Context(), correlationID))
-		if monitoring.UseOTELMonitoring() {
+		if monitoring.UseTracing() {
 			txn := monitoring.GetTransactionInContext(ctx.Context())
 			monitoring.AddTransactionAttribute(txn, logging.CorrelationIDParam, correlationID)
 		}

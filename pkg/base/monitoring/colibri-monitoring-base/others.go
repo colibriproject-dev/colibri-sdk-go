@@ -65,24 +65,68 @@ func (m *others) Gauge(name, _, _ string) GaugeRecorder {
 	return &noopGauge{}
 }
 
+func (m *others) ObservableGauge(name, _, _ string, _ func(context.Context) []Observation) Registration {
+	logging.Debug(context.Background()).Msgf("Creating noop observable gauge %s", name)
+	return &noopRegistration{}
+}
+
 func (m *others) Close() {
 	logging.Debug(context.Background()).Msg("Closing noop monitoring")
 }
 
+// The instruments below are deliberately silent. They sit on the caller's recording path
+// and used to format a log message per measurement, which costs allocations on every call
+// even with the log level disabled. Creation is still logged, above.
+
 type noopCounter struct{}
 
-func (c *noopCounter) Add(_ context.Context, value int64, attributes map[string]string) {
-	logging.Debug(context.Background()).Msgf("Add counter: value[%d];attributes[%v]", value, attributes)
+// Deprecated: use AddAttrs.
+func (c *noopCounter) Add(_ context.Context, _ int64, _ map[string]string) {
+	// Empty by design: dropping the measurement is the whole behavior of a noop counter.
+}
+
+func (c *noopCounter) AddAttrs(_ context.Context, _ int64, _ Attrs) {
+	// Empty by design: dropping the measurement is the whole behavior of a noop counter.
 }
 
 type noopHistogram struct{}
 
-func (h *noopHistogram) Record(_ context.Context, value float64, attributes map[string]string) {
-	logging.Debug(context.Background()).Msgf("Record histogram: value[%f];attributes[%v]", value, attributes)
+// Deprecated: use RecordAttrs.
+func (h *noopHistogram) Record(_ context.Context, _ float64, _ map[string]string) {
+	// Empty by design: dropping the measurement is the whole behavior of a noop histogram.
+}
+
+func (h *noopHistogram) RecordAttrs(_ context.Context, _ float64, _ Attrs) {
+	// Empty by design: dropping the measurement is the whole behavior of a noop histogram.
 }
 
 type noopGauge struct{}
 
-func (g *noopGauge) Record(_ context.Context, value float64, attributes map[string]string) {
-	logging.Debug(context.Background()).Msgf("Record gauge: value[%f];attributes[%v]", value, attributes)
+// Deprecated: use RecordAttrs.
+func (g *noopGauge) Record(_ context.Context, _ float64, _ map[string]string) {
+	// Empty by design: dropping the measurement is the whole behavior of a noop gauge.
 }
+
+func (g *noopGauge) RecordAttrs(_ context.Context, _ float64, _ Attrs) {
+	// Empty by design: dropping the measurement is the whole behavior of a noop gauge.
+}
+
+type noopRegistration struct{}
+
+func (r *noopRegistration) Unregister() error { return nil }
+
+// The constructors below let a real Monitoring implementation degrade to an inert
+// instrument when the provider refuses to create one, instead of returning nil and
+// turning a bad metric name into a panic on the caller's recording path.
+
+// NoopCounter returns a Counter that discards every measurement.
+func NoopCounter() Counter { return &noopCounter{} }
+
+// NoopHistogram returns a HistogramRecorder that discards every measurement.
+func NoopHistogram() HistogramRecorder { return &noopHistogram{} }
+
+// NoopGauge returns a GaugeRecorder that discards every measurement.
+func NoopGauge() GaugeRecorder { return &noopGauge{} }
+
+// NoopRegistration returns a Registration whose callback is never invoked.
+func NoopRegistration() Registration { return &noopRegistration{} }

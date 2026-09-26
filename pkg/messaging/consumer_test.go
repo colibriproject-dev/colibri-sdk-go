@@ -101,14 +101,15 @@ func (r *recordingOriginalMessage) Nack(_ context.Context, _ bool, _ error) erro
 func setupMessagingTest(t *testing.T) *fakeMessaging {
 	t.Helper()
 
+	// observers are never detached, so a shared subject would accumulate consumers of every
+	// previous test and notify them all. It also has to come first: monitoring.Initialize
+	// attaches itself for graceful shutdown and fails without a subject.
+	observer.Initialize()
+
 	initMessagingTestDeps.Do(func() {
 		logging.Initialize()
 		monitoring.Initialize()
 	})
-
-	// observers are never detached, so a shared subject would accumulate consumers of every
-	// previous test and notify them all
-	observer.Initialize()
 
 	previousInstance := moduleInstance()
 	f := &fakeMessaging{ch: make(chan *ProviderMessage, 1)}

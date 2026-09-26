@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -22,6 +23,16 @@ const (
 	UserId   = "6e859dae-c879-11eb-b8bc-0242ac130004"
 	TenantId = "6e859dae-c879-11eb-b8bc-0242ac130005"
 )
+
+// TestMain loads the config and initializes logging, the observer and monitoring once for
+// the whole package. The middlewares call into monitoring, which panics on a nil instance,
+// so leaving the setup to the tests that happen to call InitializeBaseTest made the
+// package pass only in declaration order.
+func TestMain(m *testing.M) {
+	test.InitializeBaseTest()
+
+	os.Exit(m.Run())
+}
 
 type customMiddlewareTest struct {
 }
