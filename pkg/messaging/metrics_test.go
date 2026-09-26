@@ -47,7 +47,7 @@ func TestMessagingMetrics(t *testing.T) {
 		require.Error(t, producer.Publish(context.Background(), "created", "payload"))
 
 		published := recorder.Metric(t, metricPublished)
-		monitoringtest.AssertShape(t, published, "{message}", attrTopic, attrResult)
+		monitoringtest.AssertShape(t, published, unitMessage, attrTopic, attrResult)
 		assert.Equal(t, int64(1), monitoringtest.CounterValue(t, published, attrTopic, "metrics-topic", attrResult, resultSuccess))
 		assert.Equal(t, int64(1), monitoringtest.CounterValue(t, published, attrTopic, "metrics-topic", attrResult, resultError))
 	})
@@ -76,7 +76,7 @@ func TestMessagingMetrics(t *testing.T) {
 		closeWithin(t, c, 5*time.Second)
 
 		consumed := recorder.Metric(t, metricConsumed)
-		monitoringtest.AssertShape(t, consumed, "{message}", attrQueue, attrAction, attrResult)
+		monitoringtest.AssertShape(t, consumed, unitMessage, attrQueue, attrAction, attrResult)
 		for action, result := range map[string]string{"ok": resultSuccess, "fail": resultError, "boom": resultPanic} {
 			assert.Equal(t, int64(1), monitoringtest.CounterValue(t, consumed,
 				attrQueue, "metrics-queue", attrAction, action, attrResult, result), action)
@@ -108,7 +108,7 @@ func TestMessagingMetrics(t *testing.T) {
 		closeWithin(t, c, 5*time.Second)
 
 		rejected := recorder.Metric(t, metricRejected)
-		monitoringtest.AssertShape(t, rejected, "{message}", attrQueue, attrAction, attrReason)
+		monitoringtest.AssertShape(t, rejected, unitMessage, attrQueue, attrAction, attrReason)
 		assert.Equal(t, int64(1), monitoringtest.CounterValue(t, rejected,
 			attrQueue, "rejected-queue", attrAction, "fail", attrReason, resultError))
 		assert.Equal(t, int64(1), monitoringtest.CounterValue(t, rejected,
@@ -145,7 +145,7 @@ func TestMessagingMetrics(t *testing.T) {
 		})
 
 		idle := recorder.Metric(t, metricInFlight)
-		monitoringtest.AssertShape(t, idle, "{message}", attrQueue)
+		monitoringtest.AssertShape(t, idle, unitMessage, attrQueue)
 		assert.Zero(t, monitoringtest.GaugeValue(t, idle, attrQueue, "in-flight-metrics-queue"))
 
 		f.ch <- NewConsumerMessage("slow", nil, nil, nil)

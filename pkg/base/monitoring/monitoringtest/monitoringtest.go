@@ -113,7 +113,7 @@ func CounterValue(t testing.TB, m metricdata.Metrics, kv ...string) int64 {
 		}
 	}
 
-	require.Failf(t, "data point not found", "metric %s has no data point with %v", m.Name, kv)
+	failMissingDataPoint(t, m, kv)
 	return 0
 }
 
@@ -132,7 +132,7 @@ func HistogramCount(t testing.TB, m metricdata.Metrics, kv ...string) (count uin
 		}
 	}
 
-	require.Failf(t, "data point not found", "metric %s has no data point with %v", m.Name, kv)
+	failMissingDataPoint(t, m, kv)
 	return 0, 0
 }
 
@@ -151,8 +151,15 @@ func GaugeValue(t testing.TB, m metricdata.Metrics, kv ...string) float64 {
 		}
 	}
 
-	require.Failf(t, "data point not found", "metric %s has no data point with %v", m.Name, kv)
+	failMissingDataPoint(t, m, kv)
 	return 0
+}
+
+// failMissingDataPoint fails the test when no data point carries the requested attributes.
+func failMissingDataPoint(t testing.TB, m metricdata.Metrics, kv []string) {
+	t.Helper()
+
+	require.Failf(t, "data point not found", "metric %s has no data point with %v", m.Name, kv)
 }
 
 func attrSet(kv []string) attribute.Set {

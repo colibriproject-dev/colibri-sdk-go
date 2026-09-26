@@ -29,6 +29,8 @@ const (
 	attrResult = "result"
 	attrReason = "reason"
 
+	unitMessage = "{message}"
+
 	resultSuccess = "success"
 	resultError   = "error"
 	resultPanic   = "panic"
@@ -61,15 +63,15 @@ var noopMetrics = &messagingMetrics{
 func initMetrics() {
 	m := &messagingMetrics{
 		published: monitoring.Counter(metricPublished,
-			"Number of messages published", "{message}"),
+			"Number of messages published", unitMessage),
 		consumed: monitoring.Counter(metricConsumed,
-			"Number of messages consumed", "{message}"),
+			"Number of messages consumed", unitMessage),
 		processDuration: monitoring.Histogram(metricProcessDuration,
 			"Duration of the processing of a consumed message", "s"),
 		rejected: monitoring.Counter(metricRejected,
-			"Number of consumed messages rejected without requeue, left to the broker dead-letter handling", "{message}"),
+			"Number of consumed messages rejected without requeue, left to the broker dead-letter handling", unitMessage),
 		inFlight: monitoring.ObservableGauge(metricInFlight,
-			"Number of messages being processed", "{message}", observeInFlight),
+			"Number of messages being processed", unitMessage, observeInFlight),
 	}
 
 	if previous := moduleMetrics.Swap(m); previous != nil {

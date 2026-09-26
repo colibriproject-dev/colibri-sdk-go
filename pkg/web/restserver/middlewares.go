@@ -26,6 +26,9 @@ const (
 	authorizationHeader = "Authorization"
 	userIDHeader        = "X-User-Id"
 	tenantIDHeader      = "X-Tenant-Id"
+
+	attrHTTPRoute         = "http.route"
+	attrHTTPRequestMethod = "http.request.method"
 )
 
 type MiddlewareError struct {
@@ -98,7 +101,7 @@ func newOpenTelemetryFiberMiddleware() fiber.Handler {
 			if route == "" {
 				route = ctx.Route().Path
 			}
-			trace.SpanFromContext(ctx.Context()).SetAttributes(attribute.String("http.route", route))
+			trace.SpanFromContext(ctx.Context()).SetAttributes(attribute.String(attrHTTPRoute, route))
 			return fmt.Sprintf("%s %s", ctx.Method(), route)
 		}),
 	)
@@ -134,7 +137,7 @@ func httpMetricsFiberMiddleware() fiber.Handler {
 		reqAttrs := []attribute.KeyValue{
 			attribute.String("url.scheme", c.Protocol()),
 			attribute.String("server.address", c.Hostname()),
-			attribute.String("http.request.method", c.Method()),
+			attribute.String(attrHTTPRequestMethod, c.Method()),
 		}
 		reqBodySize := int64(len(c.Request().Body()))
 
@@ -150,7 +153,7 @@ func httpMetricsFiberMiddleware() fiber.Handler {
 
 			respAttrs := append(reqAttrs,
 				attribute.Int("http.response.status_code", c.Response().StatusCode()),
-				attribute.String("http.route", route),
+				attribute.String(attrHTTPRoute, route),
 			)
 
 			activeRequests.Add(ctx, -1, metric.WithAttributes(reqAttrs...))
@@ -233,8 +236,8 @@ func panicAttrs(c fiber.Ctx) colibrimonitoringbase.Attrs {
 	}
 
 	return colibrimonitoringbase.NewAttrs(
-		"http.request.method", utils.CopyString(c.Method()),
-		"http.route", route,
+		attrHTTPRequestMethod, utils.CopyString(c.Method()),
+		attrHTTPRoute, route,
 	)
 }
 

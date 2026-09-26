@@ -30,9 +30,9 @@ func TestPanicRecoverMetrics(t *testing.T) {
 		}
 
 		panics := recorder.Metric(t, metricPanicRecovered)
-		monitoringtest.AssertShape(t, panics, "{panic}", "http.request.method", "http.route")
+		monitoringtest.AssertShape(t, panics, "{panic}", attrHTTPRequestMethod, attrHTTPRoute)
 		assert.Equal(t, int64(2), monitoringtest.CounterValue(t, panics,
-			"http.request.method", http.MethodGet, "http.route", "/users/:id"))
+			attrHTTPRequestMethod, http.MethodGet, attrHTTPRoute, "/users/:id"))
 	})
 
 	t.Run("Should fall back to the matched route when the template was not set", func(t *testing.T) {
@@ -47,9 +47,9 @@ func TestPanicRecoverMetrics(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 
 		panics := recorder.Metric(t, metricPanicRecovered)
-		monitoringtest.AssertShape(t, panics, "{panic}", "http.request.method", "http.route")
+		monitoringtest.AssertShape(t, panics, "{panic}", attrHTTPRequestMethod, attrHTTPRoute)
 		assert.Equal(t, int64(1), monitoringtest.CounterValue(t, panics,
-			"http.request.method", http.MethodPost, "http.route", "/"),
+			attrHTTPRequestMethod, http.MethodPost, attrHTTPRoute, "/"),
 			"the path must never be used as the route: it is unbounded")
 	})
 
