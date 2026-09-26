@@ -135,9 +135,9 @@ func httpMetricsFiberMiddleware() fiber.Handler {
 		ctx := c.Context()
 
 		reqAttrs := []attribute.KeyValue{
-			attribute.String("url.scheme", c.Protocol()),
-			attribute.String("server.address", c.Hostname()),
-			attribute.String(attrHTTPRequestMethod, c.Method()),
+			attribute.String("url.scheme", utils.CopyString(c.Protocol())),
+			attribute.String("server.address", utils.CopyString(c.Hostname())),
+			attribute.String(attrHTTPRequestMethod, utils.CopyString(c.Method())),
 		}
 		reqBodySize := int64(len(c.Request().Body()))
 
@@ -246,6 +246,8 @@ func correlationIdMiddleware() fiber.Handler {
 		correlationID := ctx.Get("X-Correlation-ID")
 		if correlationID == "" {
 			correlationID = uuid.New().String()
+		} else {
+			correlationID = utils.CopyString(correlationID)
 		}
 		ctx.SetContext(logging.InjectCorrelationIDInContext(ctx.Context(), correlationID))
 		if monitoring.UseTracing() {
