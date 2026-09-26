@@ -61,7 +61,7 @@ func AttrsFromMap(m map[string]string) Attrs {
 // attribute sets the same representation regardless of construction order, which matters
 // because map iteration order is random.
 func newAttrs(pairs []Attr) Attrs {
-	sort.Slice(pairs, func(i, j int) bool { return pairs[i].Key < pairs[j].Key })
+	sort.SliceStable(pairs, func(i, j int) bool { return pairs[i].Key < pairs[j].Key })
 
 	deduped := pairs[:0]
 	for i, pair := range pairs {
