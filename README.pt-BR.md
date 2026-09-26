@@ -121,6 +121,42 @@ apenas não reporta nada.
 
 > **Atenção:** `OTEL_EXPORTER_OTLP_ENDPOINT` deve ser o endpoint base sem o caminho específico do sinal. O SDK adiciona automaticamente `/v1/traces` e `/v1/metrics`.
 
+### Métricas dos componentes do SDK
+
+Com as métricas habilitadas, os módulos do SDK reportam as próprias métricas. Todo atributo
+vem de um conjunto limitado: identificadores como `correlationId`, `messageId`, `userId`,
+`tenantId`, chaves do storage e paths de requisição são registrados apenas nos spans.
+
+| Métrica                       | Tipo             | Unidade       | Atributos                           | Módulo                   |
+|-------------------------------|------------------|---------------|-------------------------------------|--------------------------|
+| `messaging.published`         | counter          | `{message}`   | `topic`, `result`                   | messaging                |
+| `messaging.consumed`          | counter          | `{message}`   | `queue`, `action`, `result`         | messaging                |
+| `messaging.process.duration`  | histogram        | `s`           | `queue`, `action`, `result`         | messaging                |
+| `messaging.rejected`          | counter          | `{message}`   | `queue`, `action`, `reason`         | messaging                |
+| `messaging.in_flight`         | observable gauge | `{message}`   | `queue`                             | messaging                |
+| `db.client.connections.*`     | métricas do pool | —             | `db.system`, `pool.name`, …         | cacheDB, via `redisotel` |
+| `db.sql.connections.*`        | métricas do pool | —             | `db.instance`, `db.system.name`     | sqlDB, via `otelsql`     |
+| `storage.operation`           | counter          | `{operation}` | `operation`, `result`               | storage                  |
+| `storage.operation.duration`  | histogram        | `s`           | `operation`, `result`               | storage                  |
+| `storage.transferred`         | histogram        | `By`          | `operation`                         | storage                  |
+| `http.server.panic.recovered` | counter          | `{panic}`     | `http.request.method`, `http.route` | restserver               |
+
+- `result` é `success`, `error` ou `panic` (`panic` apenas para mensagens consumidas); `reason` é `error` ou `panic`.
+- `action` é definido pela aplicação no `Publish`, então deve vir de um conjunto fixo de nomes de evento — nunca um identificador.
+- `messaging.rejected` conta as mensagens com nack sem requeue. O SDK as deixa para o
+  tratamento de dead-letter do broker (redrive policy do SQS, dead-letter topic do Pub/Sub,
+  DLX do RabbitMQ), então se uma delas chegou de fato a uma DLQ é o broker que reporta, não o SDK.
+
+Para verificar métricas em um teste, `monitoringtest.Install(t)` instala um reader em
+memória durante o teste:
+
+```go
+recorder := monitoringtest.Install(t)
+// ... exercita o código ...
+published := recorder.Metric(t, "messaging.published")
+monitoringtest.AssertShape(t, published, "{message}", "topic", "result")
+```
+
 ### Métricas customizadas
 
 Os atributos são passados como um valor `Attrs`. Construa uma vez e reutilize: ele guarda a

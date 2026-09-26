@@ -9,6 +9,7 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
+	colibrimonitoringbase "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
 	otelfiber "github.com/gofiber/contrib/v3/otel"
 	"github.com/gofiber/fiber/v3"
@@ -25,6 +26,9 @@ const (
 	authorizationHeader = "Authorization"
 	userIDHeader        = "X-User-Id"
 	tenantIDHeader      = "X-Tenant-Id"
+
+	attrHTTPRoute         = "http.route"
+	attrHTTPRequestMethod = "http.request.method"
 )
 
 type MiddlewareError struct {
@@ -97,7 +101,7 @@ func newOpenTelemetryFiberMiddleware() fiber.Handler {
 			if route == "" {
 				route = ctx.Route().Path
 			}
-			trace.SpanFromContext(ctx.Context()).SetAttributes(attribute.String("http.route", route))
+			trace.SpanFromContext(ctx.Context()).SetAttributes(attribute.String(attrHTTPRoute, route))
 			return fmt.Sprintf("%s %s", ctx.Method(), route)
 		}),
 	)
@@ -133,7 +137,7 @@ func httpMetricsFiberMiddleware() fiber.Handler {
 		reqAttrs := []attribute.KeyValue{
 			attribute.String("url.scheme", c.Protocol()),
 			attribute.String("server.address", c.Hostname()),
-			attribute.String("http.request.method", c.Method()),
+			attribute.String(attrHTTPRequestMethod, c.Method()),
 		}
 		reqBodySize := int64(len(c.Request().Body()))
 
@@ -149,7 +153,7 @@ func httpMetricsFiberMiddleware() fiber.Handler {
 
 			respAttrs := append(reqAttrs,
 				attribute.Int("http.response.status_code", c.Response().StatusCode()),
-				attribute.String("http.route", route),
+				attribute.String(attrHTTPRoute, route),
 			)
 
 			activeRequests.Add(ctx, -1, metric.WithAttributes(reqAttrs...))
@@ -192,7 +196,14 @@ func splitCORSValues(value string) []string {
 	return values
 }
 
+// metricPanicRecovered counts the panics the server recovered from. It moves to the SDK
+// metric catalog once it exists (#233).
+const metricPanicRecovered = "http.server.panic.recovered"
+
 func panicRecoverMiddleware() fiber.Handler {
+	panics := monitoring.Counter(metricPanicRecovered,
+		"Number of panics recovered while serving HTTP requests", "{panic}")
+
 	return func(c fiber.Ctx) (err error) {
 		defer func() {
 			if r := recover(); r != nil {
@@ -202,6 +213,8 @@ func panicRecoverMiddleware() fiber.Handler {
 					AddParam("method", c.Method()).
 					Msg("panic recovered")
 
+				panics.AddAttrs(c.Context(), 1, panicAttrs(c))
+
 				c.Status(fiber.StatusInternalServerError)
 				err = c.JSON(Error{Error: "internal server error occurred"})
 			}
@@ -209,6 +222,23 @@ func panicRecoverMiddleware() fiber.Handler {
 
 		return c.Next()
 	}
+}
+
+// panicAttrs identifies the route that panicked by its template, never its path, which is
+// unbounded. The template is set by the route handler, so a panic raised before it — in a
+// middleware — falls back to the matched route. The set is built on every panic: they are
+// rare enough that caching it would buy nothing.
+func panicAttrs(c fiber.Ctx) colibrimonitoringbase.Attrs {
+	// copied because both values may be backed by fasthttp buffers reused by the next request
+	route := utils.CopyString(c.GetRespHeader(parameterizedURLHeaderKey))
+	if route == "" {
+		route = utils.CopyString(c.Route().Path)
+	}
+
+	return colibrimonitoringbase.NewAttrs(
+		attrHTTPRequestMethod, utils.CopyString(c.Method()),
+		attrHTTPRoute, route,
+	)
 }
 
 func correlationIdMiddleware() fiber.Handler {
