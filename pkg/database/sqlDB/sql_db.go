@@ -9,6 +9,8 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
+	"go.nhat.io/otelsql"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 const (
@@ -57,8 +59,31 @@ func NewSQLDatabaseInstance(name, databaseURL string) *sql.DB {
 		logging.Fatal(context.Background()).Err(err).Msgf(dbConnectionError, name)
 	}
 
+	recordPoolStats(sqlDB, name)
+
 	observer.Attach(sqlDBObserver{name, sqlDB})
 	logging.Info(context.Background()).Msgf(dbConnectionSuccess, name)
 
 	return sqlDB
+}
+
+// recordPoolStats reports the connection pool saturation (db.sql.connections.*: open, idle,
+// active, waits) when the metric signal is enabled, tagged with the instance name so
+// several databases stay apart. A failure costs the metrics only, so it is logged instead
+// of aborting the boot.
+//
+// otelsql offers no way to stop the reporting, so a closed database keeps being observed
+// with an empty pool until the process exits.
+func recordPoolStats(db *sql.DB, name string) {
+	if !monitoring.UseMetrics() {
+		return
+	}
+
+	err := otelsql.RecordStats(db,
+		otelsql.WithInstanceName(name),
+		otelsql.WithSystem(semconv.DBSystemNamePostgreSQL),
+	)
+	if err != nil {
+		logging.Warn(context.Background()).Err(err).Msgf("an error occurred while trying to record the %s database pool stats", name)
+	}
 }

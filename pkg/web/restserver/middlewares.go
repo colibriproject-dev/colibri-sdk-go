@@ -9,6 +9,7 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
+	colibrimonitoringbase "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
 	otelfiber "github.com/gofiber/contrib/v3/otel"
 	"github.com/gofiber/fiber/v3"
@@ -192,7 +193,14 @@ func splitCORSValues(value string) []string {
 	return values
 }
 
+// metricPanicRecovered counts the panics the server recovered from. It moves to the SDK
+// metric catalog once it exists (#233).
+const metricPanicRecovered = "http.server.panic.recovered"
+
 func panicRecoverMiddleware() fiber.Handler {
+	panics := monitoring.Counter(metricPanicRecovered,
+		"Number of panics recovered while serving HTTP requests", "{panic}")
+
 	return func(c fiber.Ctx) (err error) {
 		defer func() {
 			if r := recover(); r != nil {
@@ -202,6 +210,8 @@ func panicRecoverMiddleware() fiber.Handler {
 					AddParam("method", c.Method()).
 					Msg("panic recovered")
 
+				panics.AddAttrs(c.Context(), 1, panicAttrs(c))
+
 				c.Status(fiber.StatusInternalServerError)
 				err = c.JSON(Error{Error: "internal server error occurred"})
 			}
@@ -209,6 +219,23 @@ func panicRecoverMiddleware() fiber.Handler {
 
 		return c.Next()
 	}
+}
+
+// panicAttrs identifies the route that panicked by its template, never its path, which is
+// unbounded. The template is set by the route handler, so a panic raised before it — in a
+// middleware — falls back to the matched route. The set is built on every panic: they are
+// rare enough that caching it would buy nothing.
+func panicAttrs(c fiber.Ctx) colibrimonitoringbase.Attrs {
+	// copied because both values may be backed by fasthttp buffers reused by the next request
+	route := utils.CopyString(c.GetRespHeader(parameterizedURLHeaderKey))
+	if route == "" {
+		route = utils.CopyString(c.Route().Path)
+	}
+
+	return colibrimonitoringbase.NewAttrs(
+		"http.request.method", utils.CopyString(c.Method()),
+		"http.route", route,
+	)
 }
 
 func correlationIdMiddleware() fiber.Handler {

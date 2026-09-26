@@ -81,6 +81,8 @@ func (o *messagingObserver) Close() {
 
 	ctx := context.Background()
 
+	releaseMetrics()
+
 	// end the long polls and receives still open
 	if cancel := moduleCancelFunc(); cancel != nil {
 		cancel()
@@ -147,6 +149,7 @@ func openModule(provider messaging) {
 	// the state is reset before the instance is published: a consumer created in between
 	// would otherwise reach a provider through a nil moduleCtx and never be canceled
 	resetModuleState()
+	initMetrics()
 	setInstance(provider)
 
 	// the consumers stop in the first phase and the broker connection is released in the
