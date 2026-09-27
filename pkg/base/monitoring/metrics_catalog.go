@@ -103,20 +103,50 @@ const (
 	MetricGoConfigGogc        = "go.config.gogc"
 )
 
+// Attribute keys, units and modules shared by several catalog entries.
+const (
+	attrHTTPRequestMethod      = "http.request.method"
+	attrHTTPResponseStatusCode = "http.response.status_code"
+	attrHTTPRoute              = "http.route"
+	attrServerAddress          = "server.address"
+	attrURLScheme              = "url.scheme"
+	attrDBSystem               = "db.system"
+	attrDBSystemName           = "db.system.name"
+	attrPoolName               = "pool.name"
+	attrErrorType              = "error_type"
+	attrStatus                 = "status"
+	attrQueue                  = "queue"
+	attrAction                 = "action"
+	attrResult                 = "result"
+	attrOperation              = "operation"
+
+	unitSeconds       = "s"
+	unitMilliseconds  = "ms"
+	unitNanoseconds   = "ns"
+	unitBytes         = "By"
+	unitDimensionless = "1"
+	unitMessage       = "{message}"
+
+	moduleRestServer = "restserver"
+	moduleRestClient = "restclient"
+	moduleMessaging  = "messaging"
+	moduleStorage    = "storage"
+)
+
 var (
-	httpServerRequestAttrs  = []string{"http.request.method", "server.address", "url.scheme"}
-	httpServerResponseAttrs = []string{"http.request.method", "http.response.status_code", "http.route", "server.address", "url.scheme"}
+	httpServerRequestAttrs  = []string{attrHTTPRequestMethod, attrServerAddress, attrURLScheme}
+	httpServerResponseAttrs = []string{attrHTTPRequestMethod, attrHTTPResponseStatusCode, attrHTTPRoute, attrServerAddress, attrURLScheme}
 	httpClientAttrs         = []string{
-		"http.request.method", "http.response.status_code", "network.protocol.name",
-		"network.protocol.version", "server.address", "server.port", "url.scheme",
+		attrHTTPRequestMethod, attrHTTPResponseStatusCode, "network.protocol.name",
+		"network.protocol.version", attrServerAddress, "server.port", attrURLScheme,
 	}
 
 	// db.sql.error carries the error message, see the cardinality notes in
 	// docs/observability/metrics.md.
-	sqlClientAttrs = []string{"db.name", "db.operation", "db.sql.error", "db.sql.status", "db.system.name"}
-	sqlPoolAttrs   = []string{"db.instance", "db.system.name"}
+	sqlClientAttrs = []string{"db.name", "db.operation", "db.sql.error", "db.sql.status", attrDBSystemName}
+	sqlPoolAttrs   = []string{"db.instance", attrDBSystemName}
 
-	redisPoolAttrs = []string{"db.system", "pool.name"}
+	redisPoolAttrs = []string{attrDBSystem, attrPoolName}
 )
 
 // catalog is every metric the SDK emits, with or without opting in. It is kept in the order
@@ -124,64 +154,64 @@ var (
 var catalog = []MetricDefinition{
 	// ── restserver ────────────────────────────────────────────────────────────
 	sdkMetric(MetricHTTPServerRequestDuration, "Duration of HTTP server requests",
-		KindHistogram, "s", "restserver", httpServerResponseAttrs...),
+		KindHistogram, unitSeconds, moduleRestServer, httpServerResponseAttrs...),
 	sdkMetric(MetricHTTPServerActiveRequests, "Number of active HTTP server requests",
-		KindUpDownCounter, "{request}", "restserver", httpServerRequestAttrs...),
+		KindUpDownCounter, "{request}", moduleRestServer, httpServerRequestAttrs...),
 	sdkMetric(MetricHTTPServerRequestBodySize, "Size of HTTP server request bodies",
-		KindHistogram, "By", "restserver", httpServerResponseAttrs...),
+		KindHistogram, unitBytes, moduleRestServer, httpServerResponseAttrs...),
 	sdkMetric(MetricHTTPServerResponseBodySize, "Size of HTTP server response bodies",
-		KindHistogram, "By", "restserver", httpServerResponseAttrs...),
+		KindHistogram, unitBytes, moduleRestServer, httpServerResponseAttrs...),
 	sdkMetric(MetricHTTPServerPanicRecovered, "Number of panics recovered while serving HTTP requests",
-		KindCounter, "{panic}", "restserver", "http.request.method", "http.route"),
+		KindCounter, "{panic}", moduleRestServer, attrHTTPRequestMethod, attrHTTPRoute),
 
 	// ── messaging ─────────────────────────────────────────────────────────────
 	sdkMetric(MetricMessagingPublished, "Number of messages published",
-		KindCounter, "{message}", "messaging", "topic", "result"),
+		KindCounter, unitMessage, moduleMessaging, "topic", attrResult),
 	sdkMetric(MetricMessagingConsumed, "Number of messages consumed",
-		KindCounter, "{message}", "messaging", "queue", "action", "result"),
+		KindCounter, unitMessage, moduleMessaging, attrQueue, attrAction, attrResult),
 	sdkMetric(MetricMessagingProcessDuration, "Duration of the processing of a consumed message",
-		KindHistogram, "s", "messaging", "queue", "action", "result"),
+		KindHistogram, unitSeconds, moduleMessaging, attrQueue, attrAction, attrResult),
 	sdkMetric(MetricMessagingRejected,
 		"Number of consumed messages rejected without requeue, left to the broker dead-letter handling",
-		KindCounter, "{message}", "messaging", "queue", "action", "reason"),
+		KindCounter, unitMessage, moduleMessaging, attrQueue, attrAction, "reason"),
 	sdkMetric(MetricMessagingInFlight, "Number of messages being processed",
-		KindObservableGauge, "{message}", "messaging", "queue"),
+		KindObservableGauge, unitMessage, moduleMessaging, attrQueue),
 
 	// ── storage ───────────────────────────────────────────────────────────────
 	sdkMetric(MetricStorageOperation, "Number of storage operations",
-		KindCounter, "{operation}", "storage", "operation", "result"),
+		KindCounter, "{operation}", moduleStorage, attrOperation, attrResult),
 	sdkMetric(MetricStorageOperationDuration, "Duration of storage operations",
-		KindHistogram, "s", "storage", "operation", "result"),
+		KindHistogram, unitSeconds, moduleStorage, attrOperation, attrResult),
 	sdkMetric(MetricStorageTransferred, "Size of the files uploaded to and downloaded from the storage",
-		KindHistogram, "By", "storage", "operation"),
+		KindHistogram, unitBytes, moduleStorage, attrOperation),
 
 	// ── restclient, via otelhttp ──────────────────────────────────────────────
 	{Name: MetricHTTPClientRequestDuration, Description: "Duration of HTTP client requests.",
-		Kind: KindHistogram, Unit: "s", Attributes: httpClientAttrs, Origin: OriginOtelHTTP, Module: "restclient"},
+		Kind: KindHistogram, Unit: unitSeconds, Attributes: httpClientAttrs, Origin: OriginOtelHTTP, Module: moduleRestClient},
 	{Name: MetricHTTPClientRequestBodySize, Description: "Size of HTTP client request bodies.",
-		Kind: KindHistogram, Unit: "By", Attributes: httpClientAttrs, Origin: OriginOtelHTTP, Module: "restclient"},
+		Kind: KindHistogram, Unit: unitBytes, Attributes: httpClientAttrs, Origin: OriginOtelHTTP, Module: moduleRestClient},
 
 	// ── sqlDB, via otelsql ────────────────────────────────────────────────────
 	sqlMetric(MetricDBSQLClientLatency, "The distribution of latencies of various calls in milliseconds",
-		KindHistogram, "ms", sqlClientAttrs),
+		KindHistogram, unitMilliseconds, sqlClientAttrs),
 	sqlMetric(MetricDBSQLClientCalls, "The number of various calls of methods",
-		KindCounter, "1", sqlClientAttrs),
+		KindCounter, unitDimensionless, sqlClientAttrs),
 	sqlMetric(MetricDBSQLConnectionsOpen, "Count of open connections in the pool",
-		KindObservableGauge, "1", sqlPoolAttrs),
+		KindObservableGauge, unitDimensionless, sqlPoolAttrs),
 	sqlMetric(MetricDBSQLConnectionsIdle, "Count of idle connections in the pool",
-		KindObservableGauge, "1", sqlPoolAttrs),
+		KindObservableGauge, unitDimensionless, sqlPoolAttrs),
 	sqlMetric(MetricDBSQLConnectionsActive, "Count of active connections in the pool",
-		KindObservableGauge, "1", sqlPoolAttrs),
+		KindObservableGauge, unitDimensionless, sqlPoolAttrs),
 	sqlMetric(MetricDBSQLConnectionsWaitCount, "The total number of connections waited for",
-		KindObservableCounter, "1", sqlPoolAttrs),
+		KindObservableCounter, unitDimensionless, sqlPoolAttrs),
 	sqlMetric(MetricDBSQLConnectionsWaitDuration, "The total time blocked waiting for a new connection",
-		KindObservableCounter, "ms", sqlPoolAttrs),
+		KindObservableCounter, unitMilliseconds, sqlPoolAttrs),
 	sqlMetric(MetricDBSQLConnectionsIdleClosed, "The total number of connections closed due to SetMaxIdleConns",
-		KindObservableCounter, "1", sqlPoolAttrs),
+		KindObservableCounter, unitDimensionless, sqlPoolAttrs),
 	sqlMetric(MetricDBSQLConnectionsIdleTimeClosed, "The total number of connections closed due to SetConnMaxIdleTime",
-		KindObservableCounter, "1", sqlPoolAttrs),
+		KindObservableCounter, unitDimensionless, sqlPoolAttrs),
 	sqlMetric(MetricDBSQLConnectionsLifetimeClosed, "The total number of connections closed due to SetConnMaxLifetime",
-		KindObservableCounter, "1", sqlPoolAttrs),
+		KindObservableCounter, unitDimensionless, sqlPoolAttrs),
 
 	// ── cacheDB, via redisotel ────────────────────────────────────────────────
 	redisMetric(MetricDBClientConnectionsIdleMax, "The maximum number of idle open connections allowed",
@@ -192,11 +222,11 @@ var catalog = []MetricDefinition{
 		KindObservableUpDownCounter, "", redisPoolAttrs...),
 	redisMetric(MetricDBClientConnectionsUsage,
 		"The number of connections that are currently in state described by the state attribute",
-		KindObservableUpDownCounter, "", "db.system", "pool.name", "state"),
+		KindObservableUpDownCounter, "", attrDBSystem, attrPoolName, "state"),
 	redisMetric(MetricDBClientConnectionsWaits, "The number of times a connection was waited for",
 		KindObservableCounter, "", redisPoolAttrs...),
 	redisMetric(MetricDBClientConnectionsWaitsDuration, "The total time spent for waiting a connection in nanoseconds",
-		KindObservableUpDownCounter, "ns", redisPoolAttrs...),
+		KindObservableUpDownCounter, unitNanoseconds, redisPoolAttrs...),
 	redisMetric(MetricDBClientConnectionsTimeouts,
 		"The number of connection timeouts that have occurred trying to obtain a connection from the pool",
 		KindObservableCounter, "", redisPoolAttrs...),
@@ -205,22 +235,22 @@ var catalog = []MetricDefinition{
 	redisMetric(MetricDBClientConnectionsMisses, "The number of times free connection was not found in the pool",
 		KindObservableCounter, "", redisPoolAttrs...),
 	redisMetric(MetricDBClientConnectionsCreateTime, "The time it took to create a new connection.",
-		KindHistogram, "ms", "db.system", "error_type", "pool.name", "status"),
+		KindHistogram, unitMilliseconds, attrDBSystem, attrErrorType, attrPoolName, attrStatus),
 	redisMetric(MetricDBClientConnectionsUseTime,
 		"The time between borrowing a connection and returning it to the pool.",
-		KindHistogram, "ms", "db.system", "error_type", "pool.name", "status", "type"),
+		KindHistogram, unitMilliseconds, attrDBSystem, attrErrorType, attrPoolName, attrStatus, "type"),
 
 	// ── Go runtime ────────────────────────────────────────────────────────────
 	runtimeMetric(MetricGoMemoryUsed, "Memory used by the Go runtime.",
-		KindObservableUpDownCounter, "By", "go.memory.type"),
+		KindObservableUpDownCounter, unitBytes, "go.memory.type"),
 	runtimeMetric(MetricGoMemoryLimit, "Go runtime memory limit configured by the user, if a limit exists.",
-		KindObservableUpDownCounter, "By"),
+		KindObservableUpDownCounter, unitBytes),
 	runtimeMetric(MetricGoMemoryAllocated, "Memory allocated to the heap by the application.",
-		KindObservableCounter, "By"),
+		KindObservableCounter, unitBytes),
 	runtimeMetric(MetricGoMemoryAllocations, "Count of allocations to the heap by the application.",
 		KindObservableCounter, "{allocation}"),
 	runtimeMetric(MetricGoMemoryGCGoal, "Heap size target for the end of the GC cycle.",
-		KindObservableUpDownCounter, "By"),
+		KindObservableUpDownCounter, unitBytes),
 	runtimeMetric(MetricGoGoroutineCount, "Count of live goroutines.",
 		KindObservableUpDownCounter, "{goroutine}"),
 	runtimeMetric(MetricGoProcessorLimit,
@@ -231,24 +261,24 @@ var catalog = []MetricDefinition{
 
 	// Legacy runtime names, emitted only with OTEL_GO_X_DEPRECATED_RUNTIME_METRICS=true.
 	deprecatedRuntimeMetric("runtime.uptime", "Milliseconds since application was initialized",
-		KindObservableCounter, "ms"),
+		KindObservableCounter, unitMilliseconds),
 	deprecatedRuntimeMetric("process.runtime.go.goroutines", "Number of goroutines that currently exist",
 		KindObservableUpDownCounter, ""),
 	deprecatedRuntimeMetric("process.runtime.go.cgo.calls", "Number of cgo calls made by the current process",
 		KindObservableUpDownCounter, ""),
 	deprecatedRuntimeMetric("process.runtime.go.mem.heap_alloc", "Bytes of allocated heap objects",
-		KindObservableUpDownCounter, "By"),
+		KindObservableUpDownCounter, unitBytes),
 	deprecatedRuntimeMetric("process.runtime.go.mem.heap_idle", "Bytes in idle (unused) spans",
-		KindObservableUpDownCounter, "By"),
+		KindObservableUpDownCounter, unitBytes),
 	deprecatedRuntimeMetric("process.runtime.go.mem.heap_inuse", "Bytes in in-use spans",
-		KindObservableUpDownCounter, "By"),
+		KindObservableUpDownCounter, unitBytes),
 	deprecatedRuntimeMetric("process.runtime.go.mem.heap_objects", "Number of allocated heap objects",
 		KindObservableUpDownCounter, ""),
 	deprecatedRuntimeMetric("process.runtime.go.mem.heap_released",
 		"Bytes of idle spans whose physical memory has been returned to the OS",
-		KindObservableUpDownCounter, "By"),
+		KindObservableUpDownCounter, unitBytes),
 	deprecatedRuntimeMetric("process.runtime.go.mem.heap_sys", "Bytes of heap memory obtained from the OS",
-		KindObservableUpDownCounter, "By"),
+		KindObservableUpDownCounter, unitBytes),
 	deprecatedRuntimeMetric("process.runtime.go.mem.lookups", "Number of pointer lookups performed by the runtime",
 		KindObservableCounter, ""),
 	deprecatedRuntimeMetric("process.runtime.go.mem.live_objects",
@@ -258,9 +288,9 @@ var catalog = []MetricDefinition{
 		KindObservableCounter, ""),
 	deprecatedRuntimeMetric("process.runtime.go.gc.pause_total_ns",
 		"Cumulative nanoseconds in GC stop-the-world pauses since the program started",
-		KindObservableCounter, "ns"),
+		KindObservableCounter, unitNanoseconds),
 	deprecatedRuntimeMetric("process.runtime.go.gc.pause_ns", "Amount of nanoseconds in GC stop-the-world pauses",
-		KindHistogram, "ns"),
+		KindHistogram, unitNanoseconds),
 }
 
 func sdkMetric(name, description string, kind MetricKind, unit, module string, attributes ...string) MetricDefinition {

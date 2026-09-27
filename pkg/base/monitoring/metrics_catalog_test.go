@@ -29,70 +29,77 @@ var (
 	validOrigins   = []MetricOrigin{OriginSDK, OriginOtelHTTP, OriginOtelSQL, OriginRedisOtel, OriginRuntime}
 )
 
-func TestMetricCatalog(t *testing.T) {
-	t.Run("Should not list a metric twice", func(t *testing.T) {
-		seen := map[string]bool{}
-		for _, m := range Catalog() {
-			assert.Falsef(t, seen[m.Name], "%s is listed twice", m.Name)
-			seen[m.Name] = true
+// Each rule of the catalog is a test of its own, checked against every entry.
+
+func TestCatalogListsEachMetricOnce(t *testing.T) {
+	seen := map[string]bool{}
+	for _, m := range Catalog() {
+		assert.Falsef(t, seen[m.Name], "%s is listed twice", m.Name)
+		seen[m.Name] = true
+	}
+}
+
+func TestCatalogDescribesEveryMetricCompletely(t *testing.T) {
+	for _, m := range Catalog() {
+		assert.NotEmptyf(t, m.Name, "metric %+v has no name", m)
+		assert.NotEmptyf(t, m.Description, "%s has no description", m.Name)
+		assert.NotEmptyf(t, m.Module, "%s has no module", m.Name)
+		assert.Containsf(t, validKinds, m.Kind, "%s has an unknown kind", m.Name)
+		assert.Containsf(t, validOrigins, m.Origin, "%s has an unknown origin", m.Name)
+	}
+}
+
+func TestCatalogRecordsEveryMetricInAUCUMUnit(t *testing.T) {
+	for _, m := range Catalog() {
+		assertUCUMUnit(t, m)
+	}
+}
+
+// assertUCUMUnit asserts the unit is UCUM. Only third-party instrumentation leaves it out.
+func assertUCUMUnit(t *testing.T, m MetricDefinition) {
+	t.Helper()
+
+	if m.Unit == "" {
+		assert.NotEqualf(t, OriginSDK, m.Origin, "%s has no unit", m.Name)
+		return
+	}
+
+	assert.Truef(t, slices.Contains(ucumUnits, m.Unit) || ucumAnnotation.MatchString(m.Unit),
+		"%s has unit %q, which is not UCUM", m.Name, m.Unit)
+}
+
+func TestCatalogNeverCarriesAnUnboundedIdentifier(t *testing.T) {
+	for _, m := range Catalog() {
+		for _, attribute := range m.Attributes {
+			assert.NotContainsf(t, forbiddenAttributes, attribute, "%s carries %s", m.Name, attribute)
 		}
-	})
+	}
+}
 
-	t.Run("Should describe every metric completely", func(t *testing.T) {
-		for _, m := range Catalog() {
-			assert.NotEmptyf(t, m.Name, "metric %+v has no name", m)
-			assert.NotEmptyf(t, m.Description, "%s has no description", m.Name)
-			assert.NotEmptyf(t, m.Module, "%s has no module", m.Name)
-			assert.Containsf(t, validKinds, m.Kind, "%s has an unknown kind", m.Name)
-			assert.Containsf(t, validOrigins, m.Origin, "%s has an unknown origin", m.Name)
+func TestCatalogKeepsSDKMetricsWithinTheAttributeCeiling(t *testing.T) {
+	for _, m := range Catalog() {
+		if m.Origin == OriginSDK {
+			assert.LessOrEqualf(t, len(m.Attributes), maxSDKAttributes, "%s has too many attributes", m.Name)
 		}
-	})
+	}
+}
 
-	t.Run("Should record every SDK metric in a UCUM unit", func(t *testing.T) {
-		for _, m := range Catalog() {
-			if m.Unit == "" {
-				// only third-party instrumentation leaves the unit out
-				assert.NotEqualf(t, OriginSDK, m.Origin, "%s has no unit", m.Name)
-				continue
-			}
-			assert.Truef(t, slices.Contains(ucumUnits, m.Unit) || ucumAnnotation.MatchString(m.Unit),
-				"%s has unit %q, which is not UCUM", m.Name, m.Unit)
+func TestCatalogDeprecatesOnlyLegacyRuntimeMetrics(t *testing.T) {
+	for _, m := range Catalog() {
+		if m.Deprecated {
+			assert.Equalf(t, OriginRuntime, m.Origin, "%s is deprecated", m.Name)
 		}
-	})
+	}
+}
 
-	t.Run("Should never carry an unbounded identifier as attribute", func(t *testing.T) {
-		for _, m := range Catalog() {
-			for _, attribute := range m.Attributes {
-				assert.NotContainsf(t, forbiddenAttributes, attribute, "%s carries %s", m.Name, attribute)
-			}
-		}
-	})
+func TestCatalogReturnsACopy(t *testing.T) {
+	definitions := Catalog()
+	definitions[0].Name = "changed"
+	definitions[0].Attributes[0] = "changed"
 
-	t.Run("Should keep the SDK metrics within the attribute ceiling", func(t *testing.T) {
-		for _, m := range Catalog() {
-			if m.Origin == OriginSDK {
-				assert.LessOrEqualf(t, len(m.Attributes), maxSDKAttributes, "%s has too many attributes", m.Name)
-			}
-		}
-	})
-
-	t.Run("Should deprecate only the legacy runtime metrics", func(t *testing.T) {
-		for _, m := range Catalog() {
-			if m.Deprecated {
-				assert.Equalf(t, OriginRuntime, m.Origin, "%s is deprecated", m.Name)
-			}
-		}
-	})
-
-	t.Run("Should return a copy of the catalog", func(t *testing.T) {
-		definitions := Catalog()
-		definitions[0].Name = "changed"
-		definitions[0].Attributes[0] = "changed"
-
-		original := Catalog()[0]
-		assert.NotEqual(t, "changed", original.Name)
-		assert.NotContains(t, original.Attributes, "changed")
-	})
+	original := Catalog()[0]
+	assert.NotEqual(t, "changed", original.Name)
+	assert.NotContains(t, original.Attributes, "changed")
 }
 
 func TestLookupMetric(t *testing.T) {
