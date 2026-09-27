@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/monitoringtest"
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -81,6 +83,31 @@ func TestHttpMetricsFiberMiddleware(t *testing.T) {
 		resp, err := app.Test(newTestRequest(t, http.MethodGet, "/metrics-no-header"))
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+
+	t.Run("Should emit the cataloged HTTP server metrics", func(t *testing.T) {
+		recorder := monitoringtest.Install(t)
+		app := fiber.New()
+		app.Use(httpMetricsFiberMiddleware())
+		app.Post("/users/:id", func(c fiber.Ctx) error {
+			c.Set(parameterizedURLHeaderKey, "/users/:id")
+			return c.SendString("ok")
+		})
+
+		resp, err := app.Test(newTestRequestWithBody(t, http.MethodPost, "/users/42", "payload"))
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		metrics := recorder.Collect(t)
+		for _, name := range []string{
+			monitoring.MetricHTTPServerRequestDuration,
+			monitoring.MetricHTTPServerActiveRequests,
+			monitoring.MetricHTTPServerRequestBodySize,
+			monitoring.MetricHTTPServerResponseBodySize,
+		} {
+			require.Containsf(t, metrics, name, "%s was not recorded", name)
+			monitoringtest.AssertCataloged(t, metrics[name])
+		}
 	})
 }
 

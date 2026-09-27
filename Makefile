@@ -9,6 +9,9 @@ test: mock
 	mkdir -p coverage
 	go test -timeout 10m -cover ./... -args -test.gocoverdir="${PWD}/coverage/"
 
+metrics-doc:
+	go run ./internal/tools/metricsdoc
+
 cover:
 	go tool covdata textfmt -i=./coverage -o coverage.txt
 	go tool cover -html coverage.txt

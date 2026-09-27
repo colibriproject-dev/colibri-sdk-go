@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/monitoringtest"
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
@@ -29,8 +30,8 @@ func TestPanicRecoverMetrics(t *testing.T) {
 			assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 		}
 
-		panics := recorder.Metric(t, metricPanicRecovered)
-		monitoringtest.AssertShape(t, panics, "{panic}", attrHTTPRequestMethod, attrHTTPRoute)
+		panics := recorder.Metric(t, monitoring.MetricHTTPServerPanicRecovered)
+		monitoringtest.AssertCataloged(t, panics)
 		assert.Equal(t, int64(2), monitoringtest.CounterValue(t, panics,
 			attrHTTPRequestMethod, http.MethodGet, attrHTTPRoute, "/users/:id"))
 	})
@@ -46,8 +47,8 @@ func TestPanicRecoverMetrics(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 
-		panics := recorder.Metric(t, metricPanicRecovered)
-		monitoringtest.AssertShape(t, panics, "{panic}", attrHTTPRequestMethod, attrHTTPRoute)
+		panics := recorder.Metric(t, monitoring.MetricHTTPServerPanicRecovered)
+		monitoringtest.AssertCataloged(t, panics)
 		assert.Equal(t, int64(1), monitoringtest.CounterValue(t, panics,
 			attrHTTPRequestMethod, http.MethodPost, attrHTTPRoute, "/"),
 			"the path must never be used as the route: it is unbounded")
@@ -64,6 +65,6 @@ func TestPanicRecoverMetrics(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		assert.NotContains(t, recorder.Collect(t), metricPanicRecovered)
+		assert.NotContains(t, recorder.Collect(t), monitoring.MetricHTTPServerPanicRecovered)
 	})
 }

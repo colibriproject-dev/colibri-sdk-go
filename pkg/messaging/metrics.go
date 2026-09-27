@@ -11,18 +11,12 @@ import (
 	colibrimonitoringbase "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
 )
 
-// Metric names and attributes emitted by the messaging module. They move to the SDK metric
-// catalog once it exists (#233).
+// Attributes of the metrics emitted by the messaging module, whose names and shapes are
+// cataloged in the monitoring package.
 //
 // correlationId and messageId are deliberately absent: they are unbounded and belong on the
 // spans only. action is set by the application and must come from a fixed set.
 const (
-	metricPublished       = "messaging.published"
-	metricConsumed        = "messaging.consumed"
-	metricProcessDuration = "messaging.process.duration"
-	metricRejected        = "messaging.rejected"
-	metricInFlight        = "messaging.in_flight"
-
 	attrTopic  = "topic"
 	attrQueue  = "queue"
 	attrAction = "action"
@@ -62,15 +56,15 @@ var noopMetrics = &messagingMetrics{
 // previous Initialize so it is not observed twice.
 func initMetrics() {
 	m := &messagingMetrics{
-		published: monitoring.Counter(metricPublished,
+		published: monitoring.Counter(monitoring.MetricMessagingPublished,
 			"Number of messages published", unitMessage),
-		consumed: monitoring.Counter(metricConsumed,
+		consumed: monitoring.Counter(monitoring.MetricMessagingConsumed,
 			"Number of messages consumed", unitMessage),
-		processDuration: monitoring.Histogram(metricProcessDuration,
+		processDuration: monitoring.Histogram(monitoring.MetricMessagingProcessDuration,
 			"Duration of the processing of a consumed message", "s"),
-		rejected: monitoring.Counter(metricRejected,
+		rejected: monitoring.Counter(monitoring.MetricMessagingRejected,
 			"Number of consumed messages rejected without requeue, left to the broker dead-letter handling", unitMessage),
-		inFlight: monitoring.ObservableGauge(metricInFlight,
+		inFlight: monitoring.ObservableGauge(monitoring.MetricMessagingInFlight,
 			"Number of messages being processed", unitMessage, observeInFlight),
 	}
 
@@ -88,7 +82,7 @@ func releaseMetrics() {
 
 func unregisterInFlight(m *messagingMetrics) {
 	if err := m.inFlight.Unregister(); err != nil {
-		logging.Warn(context.Background()).Msgf("Unregistering %s: %v", metricInFlight, err)
+		logging.Warn(context.Background()).Msgf("Unregistering %s: %v", monitoring.MetricMessagingInFlight, err)
 	}
 }
 

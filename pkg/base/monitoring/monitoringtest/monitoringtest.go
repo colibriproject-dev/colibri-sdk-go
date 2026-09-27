@@ -90,12 +90,63 @@ func AssertShape(t testing.TB, m metricdata.Metrics, unit string, keys ...string
 	expected := slices.Clone(keys)
 	slices.Sort(expected)
 	for _, set := range sets {
-		actual := make([]string, 0, set.Len())
-		for _, kv := range set.ToSlice() {
-			actual = append(actual, string(kv.Key))
-		}
-		assert.Equalf(t, expected, actual, "attribute keys of %s", m.Name)
+		assert.Equalf(t, expected, attributeKeys(set), "attribute keys of %s", m.Name)
 	}
+}
+
+// AssertCataloged asserts the metric matches its entry in the SDK metric catalog: the
+// description, the unit, the instrument kind and the attribute keys. A metric of the SDK
+// must carry exactly the cataloged keys; a third-party metric may leave some out.
+func AssertCataloged(t testing.TB, m metricdata.Metrics) {
+	t.Helper()
+
+	definition, ok := monitoring.LookupMetric(m.Name)
+	require.Truef(t, ok, "metric %s is not in the catalog", m.Name)
+
+	assert.Equalf(t, definition.Description, m.Description, "description of %s", m.Name)
+	assert.Equalf(t, definition.Unit, m.Unit, "unit of %s", m.Name)
+	assert.Containsf(t, kindsOf(m), definition.Kind, "%s is %T, not a %s", m.Name, m.Data, definition.Kind)
+
+	sets := attributeSets(m)
+	require.NotEmptyf(t, sets, "metric %s has no data points", m.Name)
+
+	allowed := slices.Clone(definition.Attributes)
+	slices.Sort(allowed)
+	for _, set := range sets {
+		keys := attributeKeys(set)
+		if definition.Origin == monitoring.OriginSDK {
+			assert.Equalf(t, allowed, keys, "attribute keys of %s", m.Name)
+			continue
+		}
+		for _, key := range keys {
+			assert.Containsf(t, allowed, key, "%s carries the uncataloged attribute %s", m.Name, key)
+		}
+	}
+}
+
+// kindsOf returns the instrument kinds that record the metric data type. Synchronous and
+// observable instruments produce the same data, so both are accepted.
+func kindsOf(m metricdata.Metrics) []monitoring.MetricKind {
+	switch data := m.Data.(type) {
+	case metricdata.Sum[int64]:
+		return sumKinds(data.IsMonotonic)
+	case metricdata.Sum[float64]:
+		return sumKinds(data.IsMonotonic)
+	case metricdata.Gauge[int64], metricdata.Gauge[float64]:
+		return []monitoring.MetricKind{monitoring.KindGauge, monitoring.KindObservableGauge}
+	case metricdata.Histogram[int64], metricdata.Histogram[float64]:
+		return []monitoring.MetricKind{monitoring.KindHistogram}
+	default:
+		return nil
+	}
+}
+
+func sumKinds(monotonic bool) []monitoring.MetricKind {
+	if monotonic {
+		return []monitoring.MetricKind{monitoring.KindCounter, monitoring.KindObservableCounter}
+	}
+
+	return []monitoring.MetricKind{monitoring.KindUpDownCounter, monitoring.KindObservableUpDownCounter}
 }
 
 // CounterValue returns the value of the integer sum data point carrying exactly the given
@@ -160,6 +211,16 @@ func failMissingDataPoint(t testing.TB, m metricdata.Metrics, kv []string) {
 	t.Helper()
 
 	require.Failf(t, "data point not found", "metric %s has no data point with %v", m.Name, kv)
+}
+
+// attributeKeys returns the keys of the set, sorted.
+func attributeKeys(set attribute.Set) []string {
+	keys := make([]string, 0, set.Len())
+	for _, kv := range set.ToSlice() {
+		keys = append(keys, string(kv.Key))
+	}
+
+	return keys
 }
 
 func attrSet(kv []string) attribute.Set {

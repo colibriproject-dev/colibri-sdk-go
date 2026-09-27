@@ -111,9 +111,10 @@ configuração, enquanto os traces precisam de um coletor OTLP.
 | `OTEL_METRICS_ENABLED=false` e sem endpoint | desligado | desligado | desligado |
 
 Com pelo menos um sinal habilitado, o SDK automaticamente:
-- Emite métricas de servidor e cliente HTTP (`http.server.request.duration`, `http.client.request.duration`) via `otelfiber` / `otelhttp`
-- Emite métricas de banco de dados (`db.client.operation.duration`) via `otelsql`
-- Emite métricas de runtime do Go (heap, GC, goroutines) via `opentelemetry-contrib/instrumentation/runtime`
+- Emite métricas de servidor HTTP (`http.server.request.duration`, …) pelo próprio middleware, e de cliente HTTP (`http.client.request.duration`) via `otelhttp`
+- Emite métricas das chamadas SQL e do pool de conexões (`db.sql.*`) via `otelsql`, e do pool do Redis (`db.client.connections.*`) via `redisotel`
+- Emite métricas de mensageria, storage e panics recuperados pelos módulos do SDK
+- Emite métricas de runtime do Go (memória, GC, goroutines) via `opentelemetry-contrib/instrumentation/runtime`
 - Enriquece cada resource com `service.name`, `service.version` e `service.instance.id`
 
 Um sinal desligado recebe um provider noop, então o código instrumentado continua válido e
@@ -121,108 +122,12 @@ apenas não reporta nada.
 
 > **Atenção:** `OTEL_EXPORTER_OTLP_ENDPOINT` deve ser o endpoint base sem o caminho específico do sinal. O SDK adiciona automaticamente `/v1/traces` e `/v1/metrics`.
 
-### Métricas dos componentes do SDK
+### Métricas
 
-Com as métricas habilitadas, os módulos do SDK reportam as próprias métricas. Todo atributo
-vem de um conjunto limitado: identificadores como `correlationId`, `messageId`, `userId`,
-`tenantId`, chaves do storage e paths de requisição são registrados apenas nos spans.
-
-| Métrica                       | Tipo             | Unidade       | Atributos                           | Módulo                   |
-|-------------------------------|------------------|---------------|-------------------------------------|--------------------------|
-| `messaging.published`         | counter          | `{message}`   | `topic`, `result`                   | messaging                |
-| `messaging.consumed`          | counter          | `{message}`   | `queue`, `action`, `result`         | messaging                |
-| `messaging.process.duration`  | histogram        | `s`           | `queue`, `action`, `result`         | messaging                |
-| `messaging.rejected`          | counter          | `{message}`   | `queue`, `action`, `reason`         | messaging                |
-| `messaging.in_flight`         | observable gauge | `{message}`   | `queue`                             | messaging                |
-| `db.client.connections.*`     | métricas do pool | —             | `db.system`, `pool.name`, …         | cacheDB, via `redisotel` |
-| `db.sql.connections.*`        | métricas do pool | —             | `db.instance`, `db.system.name`     | sqlDB, via `otelsql`     |
-| `storage.operation`           | counter          | `{operation}` | `operation`, `result`               | storage                  |
-| `storage.operation.duration`  | histogram        | `s`           | `operation`, `result`               | storage                  |
-| `storage.transferred`         | histogram        | `By`          | `operation`                         | storage                  |
-| `http.server.panic.recovered` | counter          | `{panic}`     | `http.request.method`, `http.route` | restserver               |
-
-- `result` é `success`, `error` ou `panic` (`panic` apenas para mensagens consumidas); `reason` é `error` ou `panic`.
-- `action` é definido pela aplicação no `Publish`, então deve vir de um conjunto fixo de nomes de evento — nunca um identificador.
-- `messaging.rejected` conta as mensagens com nack sem requeue. O SDK as deixa para o
-  tratamento de dead-letter do broker (redrive policy do SQS, dead-letter topic do Pub/Sub,
-  DLX do RabbitMQ), então se uma delas chegou de fato a uma DLQ é o broker que reporta, não o SDK.
-
-Para verificar métricas em um teste, `monitoringtest.Install(t)` instala um reader em
-memória durante o teste:
-
-```go
-recorder := monitoringtest.Install(t)
-// ... exercita o código ...
-published := recorder.Metric(t, "messaging.published")
-monitoringtest.AssertShape(t, published, "{message}", "topic", "result")
-```
-
-### Métricas customizadas
-
-Os atributos são passados como um valor `Attrs`. Construa uma vez e reutilize: ele guarda a
-representação do provider em cache, e é isso que mantém a gravação sem alocações.
-
-```go
-import (
-    "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
-    monitoringbase "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
-)
-
-// Construa os atributos uma vez, fora do caminho quente.
-var usersRoute = monitoringbase.NewAttrs("route", "/api/users")
-
-// Counter — incremento monotônico
-requests := monitoring.Counter("app.requests", "Total de requisições HTTP", "1")
-requests.AddAttrs(ctx, 1, usersRoute)
-
-// Histogram — distribuição de valores
-duration := monitoring.Histogram("app.request.duration", "Duração das requisições", "ms")
-duration.RecordAttrs(ctx, float64(elapsed.Milliseconds()), usersRoute)
-
-// Gauge — valor corrente, enviado pelo chamador
-activeConns := monitoring.Gauge("app.connections.active", "Conexões ativas", "1")
-activeConns.RecordAttrs(ctx, float64(count), monitoringbase.Attrs{})
-```
-
-### Gauges observáveis
-
-Para valores amostrados em vez de enviados — tamanho de pool, profundidade de fila,
-entradas em cache — registre um callback chamado a cada coleta:
-
-```go
-registration := monitoring.ObservableGauge(
-    "app.db.connections.open", "Conexões abertas com o banco", "1",
-    func(ctx context.Context) []monitoringbase.Observation {
-        stats := db.Stats()
-        return []monitoringbase.Observation{
-            {Value: float64(stats.InUse), Attributes: monitoringbase.NewAttrs("state", "in_use")},
-            {Value: float64(stats.Idle), Attributes: monitoringbase.NewAttrs("state", "idle")},
-        }
-    },
-)
-defer registration.Unregister()
-```
-
-Registre cada nome uma única vez: cada chamada registra o próprio callback, e o ciclo de
-vida fica com o chamador, pelo `Registration` retornado.
-
-### Migrando dos atributos em map
-
-`Add` e `Record` recebendo `map[string]string` continuam funcionando e estão marcados como
-deprecated. Eles convertem o map em atributos a cada chamada; as variantes com `Attrs`
-fazem isso uma vez só.
-
-```go
-// Antes
-requests.Add(ctx, 1, map[string]string{"route": "/api/users"})
-
-// Depois — construa uma vez e reutilize
-var usersRoute = monitoringbase.NewAttrs("route", "/api/users")
-requests.AddAttrs(ctx, 1, usersRoute)
-
-// Ou, para migrar mecanicamente a partir de um map existente
-requests.AddAttrs(ctx, 1, monitoringbase.AttrsFromMap(attributes))
-```
+As métricas emitidas pelo SDK, as convenções de nome, unidade e cardinalidade, e como
+registrar métricas de negócio — construindo `Attrs` uma vez, gauges observáveis, testes com
+`monitoringtest` — estão documentadas, em inglês, em
+[docs/observability/metrics.md](docs/observability/metrics.md).
 
 ## Contribuições
 

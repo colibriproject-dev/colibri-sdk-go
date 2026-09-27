@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/monitoringtest"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/test"
 	"github.com/redis/go-redis/v9"
@@ -36,11 +37,12 @@ func TestInstrumentMetrics(t *testing.T) {
 		require.NoError(t, client.Ping(context.Background()).Err())
 
 		metrics := recorder.Collect(t)
-		usage, ok := metrics["db.client.connections.usage"]
-		require.True(t, ok, "pool usage was not reported")
-		monitoringtest.AssertShape(t, usage, "", "db.system", "pool.name", "state")
-		assert.Contains(t, metrics, "db.client.connections.max")
-		assert.Contains(t, metrics, "db.client.connections.use_time")
+		require.Contains(t, metrics, monitoring.MetricDBClientConnectionsUsage, "pool usage was not reported")
+		assert.Contains(t, metrics, monitoring.MetricDBClientConnectionsMax)
+		assert.Contains(t, metrics, monitoring.MetricDBClientConnectionsUseTime)
+		for _, m := range metrics {
+			monitoringtest.AssertCataloged(t, m)
+		}
 	})
 
 	t.Run("Should stop reporting the pool once the stop channel is closed", func(t *testing.T) {
@@ -49,12 +51,12 @@ func TestInstrumentMetrics(t *testing.T) {
 
 		stop := instrumentMetrics(client)
 		require.NotNil(t, stop)
-		require.Contains(t, recorder.Collect(t), "db.client.connections.usage")
+		require.Contains(t, recorder.Collect(t), monitoring.MetricDBClientConnectionsUsage)
 
 		close(stop)
 
 		assert.Eventually(t, func() bool {
-			_, ok := recorder.Collect(t)["db.client.connections.usage"]
+			_, ok := recorder.Collect(t)[monitoring.MetricDBClientConnectionsUsage]
 			return !ok
 		}, time.Second, 10*time.Millisecond)
 	})
@@ -69,6 +71,6 @@ func TestInstrumentMetrics(t *testing.T) {
 
 		assert.Nil(t, instrumentMetrics(client))
 		require.NoError(t, client.Ping(context.Background()).Err())
-		assert.NotContains(t, recorder.Collect(t), "db.client.connections.usage")
+		assert.NotContains(t, recorder.Collect(t), monitoring.MetricDBClientConnectionsUsage)
 	})
 }

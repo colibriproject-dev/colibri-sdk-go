@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/monitoringtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -100,20 +101,20 @@ func TestStorageMetrics(t *testing.T) {
 
 		assert.Equal(t, "hello", string(fake.uploaded), "measuring the size must not consume the upload")
 
-		operations := recorder.Metric(t, metricOperation)
-		monitoringtest.AssertShape(t, operations, "{operation}", attrOperation, attrResult)
+		operations := recorder.Metric(t, monitoring.MetricStorageOperation)
+		monitoringtest.AssertCataloged(t, operations)
 		for _, operation := range []string{operationUpload, operationDownload, operationDelete} {
 			assert.Equal(t, int64(1), monitoringtest.CounterValue(t, operations,
 				attrOperation, operation, attrResult, resultSuccess), operation)
 		}
 
-		duration := recorder.Metric(t, metricOperationDuration)
-		monitoringtest.AssertShape(t, duration, "s", attrOperation, attrResult)
+		duration := recorder.Metric(t, monitoring.MetricStorageOperationDuration)
+		monitoringtest.AssertCataloged(t, duration)
 		count, _ := monitoringtest.HistogramCount(t, duration, attrOperation, operationDelete, attrResult, resultSuccess)
 		assert.Equal(t, uint64(1), count)
 
-		transferred := recorder.Metric(t, metricTransferred)
-		monitoringtest.AssertShape(t, transferred, "By", attrOperation)
+		transferred := recorder.Metric(t, monitoring.MetricStorageTransferred)
+		monitoringtest.AssertCataloged(t, transferred)
 		_, uploaded := monitoringtest.HistogramCount(t, transferred, attrOperation, operationUpload)
 		assert.InDelta(t, 5.0, uploaded, 1e-9)
 		_, downloadedBytes := monitoringtest.HistogramCount(t, transferred, attrOperation, operationDownload)
@@ -129,12 +130,12 @@ func TestStorageMetrics(t *testing.T) {
 		assert.ErrorIs(t, err, errFakeStorage)
 		assert.ErrorIs(t, DeleteFile(ctx, BUCKET, ID), errFakeStorage)
 
-		operations := recorder.Metric(t, metricOperation)
+		operations := recorder.Metric(t, monitoring.MetricStorageOperation)
 		for _, operation := range []string{operationUpload, operationDownload, operationDelete} {
 			assert.Equal(t, int64(1), monitoringtest.CounterValue(t, operations,
 				attrOperation, operation, attrResult, resultError), operation)
 		}
-		assert.NotContains(t, recorder.Collect(t), metricTransferred)
+		assert.NotContains(t, recorder.Collect(t), monitoring.MetricStorageTransferred)
 	})
 }
 
