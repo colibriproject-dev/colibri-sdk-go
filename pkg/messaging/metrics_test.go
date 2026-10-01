@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/monitoringtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,8 +47,8 @@ func TestMessagingMetrics(t *testing.T) {
 		f.closed.Store(true)
 		require.Error(t, producer.Publish(context.Background(), "created", "payload"))
 
-		published := recorder.Metric(t, metricPublished)
-		monitoringtest.AssertShape(t, published, unitMessage, attrTopic, attrResult)
+		published := recorder.Metric(t, monitoring.MetricMessagingPublished)
+		monitoringtest.AssertCataloged(t, published)
 		assert.Equal(t, int64(1), monitoringtest.CounterValue(t, published, attrTopic, "metrics-topic", attrResult, resultSuccess))
 		assert.Equal(t, int64(1), monitoringtest.CounterValue(t, published, attrTopic, "metrics-topic", attrResult, resultError))
 	})
@@ -75,15 +76,15 @@ func TestMessagingMetrics(t *testing.T) {
 		waitProcessed(t, processed, 3)
 		closeWithin(t, c, 5*time.Second)
 
-		consumed := recorder.Metric(t, metricConsumed)
-		monitoringtest.AssertShape(t, consumed, unitMessage, attrQueue, attrAction, attrResult)
+		consumed := recorder.Metric(t, monitoring.MetricMessagingConsumed)
+		monitoringtest.AssertCataloged(t, consumed)
 		for action, result := range map[string]string{"ok": resultSuccess, "fail": resultError, "boom": resultPanic} {
 			assert.Equal(t, int64(1), monitoringtest.CounterValue(t, consumed,
 				attrQueue, "metrics-queue", attrAction, action, attrResult, result), action)
 		}
 
-		duration := recorder.Metric(t, metricProcessDuration)
-		monitoringtest.AssertShape(t, duration, "s", attrQueue, attrAction, attrResult)
+		duration := recorder.Metric(t, monitoring.MetricMessagingProcessDuration)
+		monitoringtest.AssertCataloged(t, duration)
 		count, _ := monitoringtest.HistogramCount(t, duration,
 			attrQueue, "metrics-queue", attrAction, "ok", attrResult, resultSuccess)
 		assert.Equal(t, uint64(1), count)
@@ -107,8 +108,8 @@ func TestMessagingMetrics(t *testing.T) {
 		waitProcessed(t, processed, 2)
 		closeWithin(t, c, 5*time.Second)
 
-		rejected := recorder.Metric(t, metricRejected)
-		monitoringtest.AssertShape(t, rejected, unitMessage, attrQueue, attrAction, attrReason)
+		rejected := recorder.Metric(t, monitoring.MetricMessagingRejected)
+		monitoringtest.AssertCataloged(t, rejected)
 		assert.Equal(t, int64(1), monitoringtest.CounterValue(t, rejected,
 			attrQueue, "rejected-queue", attrAction, "fail", attrReason, resultError))
 		assert.Equal(t, int64(1), monitoringtest.CounterValue(t, rejected,
@@ -128,7 +129,7 @@ func TestMessagingMetrics(t *testing.T) {
 		waitProcessed(t, processed, 1)
 		closeWithin(t, c, 5*time.Second)
 
-		assert.NotContains(t, recorder.Collect(t), metricRejected)
+		assert.NotContains(t, recorder.Collect(t), monitoring.MetricMessagingRejected)
 	})
 
 	t.Run("Should report the messages in flight per queue", func(t *testing.T) {
@@ -144,20 +145,20 @@ func TestMessagingMetrics(t *testing.T) {
 			return nil
 		})
 
-		idle := recorder.Metric(t, metricInFlight)
-		monitoringtest.AssertShape(t, idle, unitMessage, attrQueue)
+		idle := recorder.Metric(t, monitoring.MetricMessagingInFlight)
+		monitoringtest.AssertCataloged(t, idle)
 		assert.Zero(t, monitoringtest.GaugeValue(t, idle, attrQueue, "in-flight-metrics-queue"))
 
 		f.ch <- NewConsumerMessage("slow", nil, nil, nil)
 		<-started
-		busy := recorder.Metric(t, metricInFlight)
+		busy := recorder.Metric(t, monitoring.MetricMessagingInFlight)
 		assert.InDelta(t, 1.0, monitoringtest.GaugeValue(t, busy, attrQueue, "in-flight-metrics-queue"), 1e-9)
 
 		close(release)
 		waitProcessed(t, processed, 1)
 		// the gauge drops once processMessage returns, just after the handler signaled
 		assert.Eventually(t, func() bool {
-			m := recorder.Metric(t, metricInFlight)
+			m := recorder.Metric(t, monitoring.MetricMessagingInFlight)
 			return monitoringtest.GaugeValue(t, m, attrQueue, "in-flight-metrics-queue") == 0
 		}, time.Second, 10*time.Millisecond)
 
@@ -167,11 +168,11 @@ func TestMessagingMetrics(t *testing.T) {
 	t.Run("Should stop reporting in-flight messages once the module is closed", func(t *testing.T) {
 		_, recorder := setupMetricsTest(t)
 		c := startFakeConsumer(t, "released-queue", func(context.Context, *ProviderMessage) error { return nil })
-		require.Contains(t, recorder.Collect(t), metricInFlight)
+		require.Contains(t, recorder.Collect(t), monitoring.MetricMessagingInFlight)
 
 		releaseMetrics()
 
-		assert.NotContains(t, recorder.Collect(t), metricInFlight)
+		assert.NotContains(t, recorder.Collect(t), monitoring.MetricMessagingInFlight)
 		closeWithin(t, c, 5*time.Second)
 	})
 }

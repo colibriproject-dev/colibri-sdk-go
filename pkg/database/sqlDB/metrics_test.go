@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
+	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/monitoringtest"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/test"
 	"github.com/stretchr/testify/assert"
@@ -13,9 +14,9 @@ import (
 
 // The pool gauges otelsql reports, all tagged with the instance and the database system.
 var poolGauges = []string{
-	"db.sql.connections.open",
-	"db.sql.connections.idle",
-	"db.sql.connections.active",
+	monitoring.MetricDBSQLConnectionsOpen,
+	monitoring.MetricDBSQLConnectionsIdle,
+	monitoring.MetricDBSQLConnectionsActive,
 }
 
 func openMetricsTestDB(t *testing.T) *sql.DB {
@@ -40,12 +41,30 @@ func TestRecordPoolStats(t *testing.T) {
 
 		metrics := recorder.Collect(t)
 		for _, name := range poolGauges {
-			m, ok := metrics[name]
-			require.Truef(t, ok, "%s was not reported", name)
-			monitoringtest.AssertShape(t, m, "1", "db.instance", "db.system.name")
+			require.Containsf(t, metrics, name, "%s was not reported", name)
 		}
-		assert.Contains(t, metrics, "db.sql.connections.wait_count")
-		assert.Contains(t, metrics, "db.sql.connections.wait_duration")
+		assert.Contains(t, metrics, monitoring.MetricDBSQLConnectionsWaitCount)
+		assert.Contains(t, metrics, monitoring.MetricDBSQLConnectionsWaitDuration)
+		for _, m := range metrics {
+			monitoringtest.AssertCataloged(t, m)
+		}
+	})
+
+	t.Run("Should report the calls made through the instrumented driver as cataloged", func(t *testing.T) {
+		recorder := monitoringtest.Install(t)
+		db, err := sql.Open(monitoring.GetSQLDBDriverName(), config.SQL_DB_CONNECTION_URI)
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = db.Close() })
+
+		_, err = db.Exec("SELECT 1")
+		require.NoError(t, err)
+
+		metrics := recorder.Collect(t)
+		require.Contains(t, metrics, monitoring.MetricDBSQLClientCalls)
+		require.Contains(t, metrics, monitoring.MetricDBSQLClientLatency)
+		for _, m := range metrics {
+			monitoringtest.AssertCataloged(t, m)
+		}
 	})
 
 	t.Run("Should not report the pool when metrics are disabled", func(t *testing.T) {
@@ -58,6 +77,6 @@ func TestRecordPoolStats(t *testing.T) {
 
 		recordPoolStats(db, "disabled-db")
 
-		assert.NotContains(t, recorder.Collect(t), "db.sql.connections.open")
+		assert.NotContains(t, recorder.Collect(t), monitoring.MetricDBSQLConnectionsOpen)
 	})
 }

@@ -113,19 +113,19 @@ func httpMetricsFiberMiddleware() fiber.Handler {
 	// HTTP semconv stable v1 (semconv >= 1.23): `http.server.request.duration` in seconds.
 	// New Relic APM derives the Transactions view from this metric name + `http.route`
 	// attribute; the older `http.server.duration` (milliseconds) is shown as "unknown".
-	httpDuration, _ := meter.Float64Histogram("http.server.request.duration",
+	httpDuration, _ := meter.Float64Histogram(monitoring.MetricHTTPServerRequestDuration,
 		metric.WithUnit("s"),
 		metric.WithDescription("Duration of HTTP server requests"),
 	)
-	activeRequests, _ := meter.Int64UpDownCounter("http.server.active_requests",
+	activeRequests, _ := meter.Int64UpDownCounter(monitoring.MetricHTTPServerActiveRequests,
 		metric.WithUnit("{request}"),
 		metric.WithDescription("Number of active HTTP server requests"),
 	)
-	requestSize, _ := meter.Int64Histogram("http.server.request.body.size",
+	requestSize, _ := meter.Int64Histogram(monitoring.MetricHTTPServerRequestBodySize,
 		metric.WithUnit("By"),
 		metric.WithDescription("Size of HTTP server request bodies"),
 	)
-	responseSize, _ := meter.Int64Histogram("http.server.response.body.size",
+	responseSize, _ := meter.Int64Histogram(monitoring.MetricHTTPServerResponseBodySize,
 		metric.WithUnit("By"),
 		metric.WithDescription("Size of HTTP server response bodies"),
 	)
@@ -196,12 +196,8 @@ func splitCORSValues(value string) []string {
 	return values
 }
 
-// metricPanicRecovered counts the panics the server recovered from. It moves to the SDK
-// metric catalog once it exists (#233).
-const metricPanicRecovered = "http.server.panic.recovered"
-
 func panicRecoverMiddleware() fiber.Handler {
-	panics := monitoring.Counter(metricPanicRecovered,
+	panics := monitoring.Counter(monitoring.MetricHTTPServerPanicRecovered,
 		"Number of panics recovered while serving HTTP requests", "{panic}")
 
 	return func(c fiber.Ctx) (err error) {

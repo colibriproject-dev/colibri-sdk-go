@@ -12,15 +12,11 @@ import (
 	colibrimonitoringbase "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
 )
 
-// Metric names and attributes emitted by the storage module. They move to the SDK metric
-// catalog once it exists (#233).
+// Attributes of the metrics emitted by the storage module, whose names and shapes are
+// cataloged in the monitoring package.
 //
 // bucket and key are deliberately absent: key is unbounded and both belong on the spans only.
 const (
-	metricOperation         = "storage.operation"
-	metricOperationDuration = "storage.operation.duration"
-	metricTransferred       = "storage.transferred"
-
 	attrOperation = "operation"
 	attrResult    = "result"
 
@@ -50,11 +46,11 @@ var noopMetrics = &storageMetrics{
 
 func initMetrics() {
 	moduleMetrics.Store(&storageMetrics{
-		operation: monitoring.Counter(metricOperation,
+		operation: monitoring.Counter(monitoring.MetricStorageOperation,
 			"Number of storage operations", "{operation}"),
-		duration: monitoring.Histogram(metricOperationDuration,
+		duration: monitoring.Histogram(monitoring.MetricStorageOperationDuration,
 			"Duration of storage operations", "s"),
-		transferred: monitoring.Histogram(metricTransferred,
+		transferred: monitoring.Histogram(monitoring.MetricStorageTransferred,
 			"Size of the files uploaded to and downloaded from the storage", "By"),
 	})
 }
