@@ -116,6 +116,7 @@ func httpMetricsFiberMiddleware() fiber.Handler {
 	httpDuration, _ := meter.Float64Histogram(monitoring.MetricHTTPServerRequestDuration,
 		metric.WithUnit("s"),
 		metric.WithDescription("Duration of HTTP server requests"),
+		metric.WithExplicitBucketBoundaries(colibrimonitoringbase.DurationBucketsSeconds...),
 	)
 	activeRequests, _ := meter.Int64UpDownCounter(monitoring.MetricHTTPServerActiveRequests,
 		metric.WithUnit("{request}"),

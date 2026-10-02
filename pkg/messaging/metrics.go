@@ -36,6 +36,7 @@ type messagingMetrics struct {
 	consumed        colibrimonitoringbase.Counter
 	processDuration colibrimonitoringbase.HistogramRecorder
 	rejected        colibrimonitoringbase.Counter
+	consumeLag      colibrimonitoringbase.HistogramRecorder
 	inFlight        colibrimonitoringbase.Registration
 }
 
@@ -49,6 +50,7 @@ var noopMetrics = &messagingMetrics{
 	consumed:        colibrimonitoringbase.NoopCounter(),
 	processDuration: colibrimonitoringbase.NoopHistogram(),
 	rejected:        colibrimonitoringbase.NoopCounter(),
+	consumeLag:      colibrimonitoringbase.NoopHistogram(),
 	inFlight:        colibrimonitoringbase.NoopRegistration(),
 }
 
@@ -64,6 +66,8 @@ func initMetrics() {
 			"Duration of the processing of a consumed message", "s"),
 		rejected: monitoring.Counter(monitoring.MetricMessagingRejected,
 			"Number of consumed messages rejected without requeue, left to the broker dead-letter handling", unitMessage),
+		consumeLag: monitoring.Histogram(monitoring.MetricMessagingConsumeLag,
+			"Time between the broker accepting a message and a consumer receiving it", "s"),
 		inFlight: monitoring.ObservableGauge(monitoring.MetricMessagingInFlight,
 			"Number of messages being processed", unitMessage, observeInFlight),
 	}
@@ -138,6 +142,18 @@ func (c *consumer) recordConsumed(ctx context.Context, action, result string, el
 	m.processDuration.RecordAttrs(ctx, elapsed.Seconds(), attrs)
 }
 
+// recordConsumeLag records how long the message waited in the broker. It is skipped when the
+// provider did not report the publish time, and a negative lag, from clock skew between the
+// broker and this host, is recorded as zero.
+func (c *consumer) recordConsumeLag(ctx context.Context, msg *ProviderMessage, receivedAt time.Time) {
+	if msg.publishedAt.IsZero() {
+		return
+	}
+
+	lag := max(receivedAt.Sub(msg.publishedAt), 0)
+	currentMetrics().consumeLag.RecordAttrs(ctx, lag.Seconds(), c.metricAttrs.lag(msg.Action))
+}
+
 // recordRejected counts a message rejected without requeue.
 func (c *consumer) recordRejected(ctx context.Context, action, reason string) {
 	currentMetrics().rejected.AddAttrs(ctx, 1, c.metricAttrs.rejected(action, reason))
@@ -166,6 +182,7 @@ type consumerAttrs struct {
 	mu           sync.RWMutex
 	consumedSets map[attrsKey]colibrimonitoringbase.Attrs
 	rejectedSets map[attrsKey]colibrimonitoringbase.Attrs
+	lagSets      map[attrsKey]colibrimonitoringbase.Attrs
 }
 
 type attrsKey struct {
@@ -179,6 +196,7 @@ func newConsumerAttrs(queue string) *consumerAttrs {
 		queue:        colibrimonitoringbase.NewAttrs(attrQueue, queue),
 		consumedSets: map[attrsKey]colibrimonitoringbase.Attrs{},
 		rejectedSets: map[attrsKey]colibrimonitoringbase.Attrs{},
+		lagSets:      map[attrsKey]colibrimonitoringbase.Attrs{},
 	}
 }
 
@@ -188,6 +206,11 @@ func (a *consumerAttrs) consumed(action, result string) colibrimonitoringbase.At
 
 func (a *consumerAttrs) rejected(action, reason string) colibrimonitoringbase.Attrs {
 	return a.cached(a.rejectedSets, attrsKey{action, reason}, attrReason)
+}
+
+// lag carries no outcome: the message has not been processed yet when the lag is recorded.
+func (a *consumerAttrs) lag(action string) colibrimonitoringbase.Attrs {
+	return a.cached(a.lagSets, attrsKey{action: action}, "")
 }
 
 func (a *consumerAttrs) cached(
@@ -206,7 +229,11 @@ func (a *consumerAttrs) cached(
 	defer a.mu.Unlock()
 
 	if attrs, ok = sets[key]; !ok {
-		attrs = colibrimonitoringbase.NewAttrs(attrQueue, a.queueName, attrAction, key.action, outcomeAttr, key.outcome)
+		kv := []string{attrQueue, a.queueName, attrAction, key.action}
+		if outcomeAttr != "" {
+			kv = append(kv, outcomeAttr, key.outcome)
+		}
+		attrs = colibrimonitoringbase.NewAttrs(kv...)
 		sets[key] = attrs
 	}
 

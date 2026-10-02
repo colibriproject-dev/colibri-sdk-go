@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
@@ -21,6 +22,7 @@ type ProviderMessage struct {
 	n               any
 	attributes      map[string]string
 	deliveryAttempt *int
+	publishedAt     time.Time
 }
 
 // NewProviderMessage returns a new ProviderMessage
@@ -93,6 +95,12 @@ func (msg *ProviderMessage) addOriginBrokerNotification(n any) {
 func (msg *ProviderMessage) setReceiptMetadata(attributes map[string]string, deliveryAttempt *int) {
 	msg.attributes = attributes
 	msg.deliveryAttempt = deliveryAttempt
+}
+
+// setPublishTime records when the broker accepted the message, the start of the consume lag.
+// Providers that cannot tell leave it zero, and the lag is then not recorded.
+func (msg *ProviderMessage) setPublishTime(publishedAt time.Time) {
+	msg.publishedAt = publishedAt
 }
 
 // Attributes returns the broker-level attributes/headers received with the message

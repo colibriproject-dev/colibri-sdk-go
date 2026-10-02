@@ -120,11 +120,14 @@ func executeMessagingTest(t *testing.T, opts messagingProviderOpts) {
 
 	t.Run("Should return nil when process message with success", func(t *testing.T) {
 		chSuccess := make(chan string)
+		var publishedAt time.Time
 
 		qc := queueConsumerTest{
 			fn: func(ctx context.Context, message *ProviderMessage) error {
 				successfulProcessMessage := fmt.Sprintf("processing message: %v", message)
 				logging.Info(ctx).Msgf("Received message: %v", message)
+				// read before the send, which is what orders it before the assertion below
+				publishedAt = message.publishedAt
 				chSuccess <- successfulProcessMessage
 				return nil
 			},
@@ -147,6 +150,8 @@ func executeMessagingTest(t *testing.T, opts messagingProviderOpts) {
 		select {
 		case msgProcessing := <-chSuccess:
 			assert.NotEmpty(t, msgProcessing)
+			// the broker publish time is what the consume lag is measured from
+			assert.WithinDuration(t, time.Now(), publishedAt, time.Minute)
 		case <-timeout:
 			t.Fatal("Test didn't finish after 2s")
 		}

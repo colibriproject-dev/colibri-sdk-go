@@ -44,6 +44,11 @@ translated name.
 Annotations such as `{message}` produce no suffix, and histograms are exposed as the
 `_bucket`, `_sum` and `_count` series of the translated name.
 
+`/metrics` also serves the Go and process collectors of the Prometheus client
+(`go_gc_duration_seconds`, `go_memstats_*`, `process_*`). They are named by the Prometheus
+client itself, are not translated and never reach the OTLP exporter. The catalog lists them
+under the `promclient` origin, so dashboards and alert rules can be checked against them too.
+
 ## Units
 
 Units follow [UCUM](https://ucum.org/ucum), as the OpenTelemetry conventions require.
@@ -222,7 +227,8 @@ unit, attribute keys and origin. `monitoring.Catalog()` and `monitoring.LookupMe
 it to tooling, such as checks that dashboards only query metrics that exist.
 
 - **Origin** is who emits the metric: `sdk` for the SDK's own code, or the third-party
-  instrumentation it wires (`otelhttp`, `otelsql`, `redisotel`, `runtime`).
+  instrumentation it wires (`otelhttp`, `otelsql`, `redisotel`, `runtime`). `promclient`
+  marks the Prometheus client collectors, whose name is already the Prometheus one.
 - **Module** is the SDK package whose setup enables the metric.
 - **Attributes** are the keys a metric may carry. An SDK metric carries all of them; a
   third-party one may leave some out, such as the status code of a request that failed
@@ -238,6 +244,12 @@ The tables at the end of this section are generated from the catalog; do not edi
 - `operation` is `upload`, `download` or `delete`.
 - `http.route` is the route template. A panic raised in a middleware, before the route
   handler sets the template, is recorded with the matched route, `/` for a middleware.
+- `messaging.consume.lag` is measured from the publish time the broker reports (the SNS
+  notification timestamp, or the SQS `SentTimestamp`; the Pub/Sub publish time; the AMQP
+  `timestamp` property, which the SDK producer sets) to the moment the consumer picks the
+  message up. A message without a publish time is not recorded, and clock skew that puts the
+  publish time ahead of the consumer is recorded as zero. It is the SDK signal for a growing
+  backlog; the queue depth itself is reported by the broker.
 - `messaging.rejected` counts messages nacked without requeue. The SDK leaves them to the
   broker dead-letter handling (SQS redrive policy, Pub/Sub dead-letter topic, RabbitMQ DLX),
   so whether one actually reached a DLQ is reported by the broker, not by the SDK.
@@ -267,6 +279,7 @@ The tables at the end of this section are generated from the catalog; do not edi
 | `messaging.process.duration` | histogram | `s` | `queue`, `action`, `result` | messaging | sdk | Duration of the processing of a consumed message |
 | `messaging.rejected` | counter | `{message}` | `queue`, `action`, `reason` | messaging | sdk | Number of consumed messages rejected without requeue, left to the broker dead-letter handling |
 | `messaging.in_flight` | observable_gauge | `{message}` | `queue` | messaging | sdk | Number of messages being processed |
+| `messaging.consume.lag` | histogram | `s` | `queue`, `action` | messaging | sdk | Time between the broker accepting a message and a consumer receiving it |
 | `storage.operation` | counter | `{operation}` | `operation`, `result` | storage | sdk | Number of storage operations |
 | `storage.operation.duration` | histogram | `s` | `operation`, `result` | storage | sdk | Duration of storage operations |
 | `storage.transferred` | histogram | `By` | `operation` | storage | sdk | Size of the files uploaded to and downloaded from the storage |
@@ -306,6 +319,49 @@ The tables at the end of this section are generated from the catalog; do not edi
 | `go.goroutine.count` | observable_updowncounter | `{goroutine}` | — | monitoring | runtime | Count of live goroutines. |
 | `go.processor.limit` | observable_updowncounter | `{thread}` | — | monitoring | runtime | The number of OS threads that can execute user-level Go code simultaneously. |
 | `go.config.gogc` | observable_updowncounter | `%` | — | monitoring | runtime | Heap size target percentage configured by the user, otherwise 100. |
+
+#### Exposed only on `/metrics`, by the Prometheus client collectors
+
+| Metric | Type | Unit | Attributes | Module | Origin | Description |
+|--------|------|------|------------|--------|--------|-------------|
+| `go_gc_duration_seconds` | summary | `s` | `quantile` | restserver | promclient | A summary of the wall-time pause (stop-the-world) duration in garbage collection cycles. |
+| `go_gc_gogc_percent` | gauge | `%` | — | restserver | promclient | Heap size target percentage configured by the user, otherwise 100. This value is set by the GOGC environment variable, and the runtime/debug.SetGCPercent function. Sourced from /gc/gogc:percent. |
+| `go_gc_gomemlimit_bytes` | gauge | `By` | — | restserver | promclient | Go runtime memory limit configured by the user, otherwise math.MaxInt64. This value is set by the GOMEMLIMIT environment variable, and the runtime/debug.SetMemoryLimit function. Sourced from /gc/gomemlimit:bytes. |
+| `go_goroutines` | gauge | `{goroutine}` | — | restserver | promclient | Number of goroutines that currently exist. |
+| `go_info` | gauge | — | `version` | restserver | promclient | Information about the Go environment. |
+| `go_memstats_alloc_bytes` | gauge | `By` | — | restserver | promclient | Number of bytes allocated in heap and currently in use. Equals to /memory/classes/heap/objects:bytes. |
+| `go_memstats_alloc_bytes_total` | counter | `By` | — | restserver | promclient | Total number of bytes allocated in heap until now, even if released already. Equals to /gc/heap/allocs:bytes. |
+| `go_memstats_buck_hash_sys_bytes` | gauge | `By` | — | restserver | promclient | Number of bytes used by the profiling bucket hash table. Equals to /memory/classes/profiling/buckets:bytes. |
+| `go_memstats_frees_total` | counter | `{object}` | — | restserver | promclient | Total number of heap objects frees. Equals to /gc/heap/frees:objects + /gc/heap/tiny/allocs:objects. |
+| `go_memstats_gc_sys_bytes` | gauge | `By` | — | restserver | promclient | Number of bytes used for garbage collection system metadata. Equals to /memory/classes/metadata/other:bytes. |
+| `go_memstats_heap_alloc_bytes` | gauge | `By` | — | restserver | promclient | Number of heap bytes allocated and currently in use, same as go_memstats_alloc_bytes. Equals to /memory/classes/heap/objects:bytes. |
+| `go_memstats_heap_idle_bytes` | gauge | `By` | — | restserver | promclient | Number of heap bytes waiting to be used. Equals to /memory/classes/heap/released:bytes + /memory/classes/heap/free:bytes. |
+| `go_memstats_heap_inuse_bytes` | gauge | `By` | — | restserver | promclient | Number of heap bytes that are in use. Equals to /memory/classes/heap/objects:bytes + /memory/classes/heap/unused:bytes |
+| `go_memstats_heap_objects` | gauge | `{object}` | — | restserver | promclient | Number of currently allocated objects. Equals to /gc/heap/objects:objects. |
+| `go_memstats_heap_released_bytes` | gauge | `By` | — | restserver | promclient | Number of heap bytes released to OS. Equals to /memory/classes/heap/released:bytes. |
+| `go_memstats_heap_sys_bytes` | gauge | `By` | — | restserver | promclient | Number of heap bytes obtained from system. Equals to /memory/classes/heap/objects:bytes + /memory/classes/heap/unused:bytes + /memory/classes/heap/released:bytes + /memory/classes/heap/free:bytes. |
+| `go_memstats_last_gc_time_seconds` | gauge | `s` | — | restserver | promclient | Number of seconds since 1970 of last garbage collection. |
+| `go_memstats_mallocs_total` | counter | `{object}` | — | restserver | promclient | Total number of heap objects allocated, both live and gc-ed. Semantically a counter version for go_memstats_heap_objects gauge. Equals to /gc/heap/allocs:objects + /gc/heap/tiny/allocs:objects. |
+| `go_memstats_mcache_inuse_bytes` | gauge | `By` | — | restserver | promclient | Number of bytes in use by mcache structures. Equals to /memory/classes/metadata/mcache/inuse:bytes. |
+| `go_memstats_mcache_sys_bytes` | gauge | `By` | — | restserver | promclient | Number of bytes used for mcache structures obtained from system. Equals to /memory/classes/metadata/mcache/inuse:bytes + /memory/classes/metadata/mcache/free:bytes. |
+| `go_memstats_mspan_inuse_bytes` | gauge | `By` | — | restserver | promclient | Number of bytes in use by mspan structures. Equals to /memory/classes/metadata/mspan/inuse:bytes. |
+| `go_memstats_mspan_sys_bytes` | gauge | `By` | — | restserver | promclient | Number of bytes used for mspan structures obtained from system. Equals to /memory/classes/metadata/mspan/inuse:bytes + /memory/classes/metadata/mspan/free:bytes. |
+| `go_memstats_next_gc_bytes` | gauge | `By` | — | restserver | promclient | Number of heap bytes when next garbage collection will take place. Equals to /gc/heap/goal:bytes. |
+| `go_memstats_other_sys_bytes` | gauge | `By` | — | restserver | promclient | Number of bytes used for other system allocations. Equals to /memory/classes/other:bytes. |
+| `go_memstats_stack_inuse_bytes` | gauge | `By` | — | restserver | promclient | Number of bytes obtained from system for stack allocator in non-CGO environments. Equals to /memory/classes/heap/stacks:bytes. |
+| `go_memstats_stack_sys_bytes` | gauge | `By` | — | restserver | promclient | Number of bytes obtained from system for stack allocator. Equals to /memory/classes/heap/stacks:bytes + /memory/classes/os-stacks:bytes. |
+| `go_memstats_sys_bytes` | gauge | `By` | — | restserver | promclient | Number of bytes obtained from system. Equals to /memory/classes/total:byte. |
+| `go_sched_gomaxprocs_threads` | gauge | `{thread}` | — | restserver | promclient | The current runtime.GOMAXPROCS setting, or the number of operating system threads that can execute user-level Go code simultaneously. Sourced from /sched/gomaxprocs:threads. |
+| `go_threads` | gauge | `{thread}` | — | restserver | promclient | Number of OS threads created. |
+| `process_cpu_seconds_total` | counter | `s` | — | restserver | promclient | Total user and system CPU time spent in seconds. |
+| `process_max_fds` | gauge | `{file_descriptor}` | — | restserver | promclient | Maximum number of open file descriptors. |
+| `process_network_receive_bytes_total` | counter | `By` | — | restserver | promclient | Number of bytes received by the process over the network. |
+| `process_network_transmit_bytes_total` | counter | `By` | — | restserver | promclient | Number of bytes sent by the process over the network. |
+| `process_open_fds` | gauge | `{file_descriptor}` | — | restserver | promclient | Number of open file descriptors. |
+| `process_resident_memory_bytes` | gauge | `By` | — | restserver | promclient | Resident memory size in bytes. |
+| `process_start_time_seconds` | gauge | `s` | — | restserver | promclient | Start time of the process since unix epoch in seconds. |
+| `process_virtual_memory_bytes` | gauge | `By` | — | restserver | promclient | Virtual memory size in bytes. |
+| `process_virtual_memory_max_bytes` | gauge | `By` | — | restserver | promclient | Maximum amount of virtual memory available in bytes. |
 
 #### Deprecated, emitted only with `OTEL_GO_X_DEPRECATED_RUNTIME_METRICS=true`
 

@@ -10,6 +10,7 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/monitoringtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // setupMetricsTest installs a metric recorder and creates the module instruments against
@@ -88,6 +89,41 @@ func TestMessagingMetrics(t *testing.T) {
 		count, _ := monitoringtest.HistogramCount(t, duration,
 			attrQueue, "metrics-queue", attrAction, "ok", attrResult, resultSuccess)
 		assert.Equal(t, uint64(1), count)
+	})
+
+	t.Run("Should record the consume lag by queue and action", func(t *testing.T) {
+		f, recorder := setupMetricsTest(t)
+		processed := make(chan struct{}, 3)
+
+		c := startFakeConsumer(t, "lag-queue", func(context.Context, *ProviderMessage) error {
+			processed <- struct{}{}
+			return nil
+		})
+
+		waited := NewConsumerMessage("waited", nil, nil, nil)
+		waited.setPublishTime(time.Now().Add(-2 * time.Second))
+		skewed := NewConsumerMessage("skewed", nil, nil, nil)
+		skewed.setPublishTime(time.Now().Add(time.Hour))
+		f.ch <- waited
+		f.ch <- skewed
+		f.ch <- NewConsumerMessage("untimed", nil, nil, nil)
+		waitProcessed(t, processed, 3)
+		closeWithin(t, c, 5*time.Second)
+
+		lag := recorder.Metric(t, monitoring.MetricMessagingConsumeLag)
+		monitoringtest.AssertCataloged(t, lag)
+		monitoringtest.AssertShape(t, lag, "s", attrQueue, attrAction)
+
+		count, sum := monitoringtest.HistogramCount(t, lag, attrQueue, "lag-queue", attrAction, "waited")
+		assert.Equal(t, uint64(1), count)
+		assert.GreaterOrEqual(t, sum, 2.0)
+
+		count, sum = monitoringtest.HistogramCount(t, lag, attrQueue, "lag-queue", attrAction, "skewed")
+		assert.Equal(t, uint64(1), count)
+		assert.Zero(t, sum, "a publish time ahead of the consumer clock is recorded as no lag")
+
+		assert.Len(t, lag.Data.(metricdata.Histogram[float64]).DataPoints, 2,
+			"a message without a publish time records no lag")
 	})
 
 	t.Run("Should count rejected messages by queue, action and reason", func(t *testing.T) {

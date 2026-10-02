@@ -25,8 +25,8 @@ var forbiddenAttributes = []string{
 var (
 	ucumUnits      = []string{"s", "ms", "ns", "By", "1", "%"}
 	ucumAnnotation = regexp.MustCompile(`^\{[a-z_]+\}$`)
-	validKinds     = []MetricKind{KindCounter, KindUpDownCounter, KindHistogram, KindGauge, KindObservableCounter, KindObservableUpDownCounter, KindObservableGauge}
-	validOrigins   = []MetricOrigin{OriginSDK, OriginOtelHTTP, OriginOtelSQL, OriginRedisOtel, OriginRuntime}
+	validKinds     = []MetricKind{KindCounter, KindUpDownCounter, KindHistogram, KindGauge, KindObservableCounter, KindObservableUpDownCounter, KindObservableGauge, KindSummary}
+	validOrigins   = []MetricOrigin{OriginSDK, OriginOtelHTTP, OriginOtelSQL, OriginRedisOtel, OriginRuntime, OriginPromClient}
 )
 
 // Each rule of the catalog is a test of its own, checked against every entry.
@@ -88,6 +88,14 @@ func TestCatalogDeprecatesOnlyLegacyRuntimeMetrics(t *testing.T) {
 	for _, m := range Catalog() {
 		if m.Deprecated {
 			assert.Equalf(t, OriginRuntime, m.Origin, "%s is deprecated", m.Name)
+		}
+	}
+}
+
+func TestCatalogKeepsSummariesToThePrometheusClient(t *testing.T) {
+	for _, m := range Catalog() {
+		if m.Kind == KindSummary {
+			assert.Equalf(t, OriginPromClient, m.Origin, "%s is a summary", m.Name)
 		}
 	}
 }

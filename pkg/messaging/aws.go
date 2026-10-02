@@ -188,6 +188,7 @@ func (m *awsMessaging) handleMessage(ctx context.Context, c *consumer, queueUrl 
 		receiptHandle: msg.ReceiptHandle,
 	})
 	pm.setReceiptMetadata(awsAttributes(msg), awsDeliveryAttempt(msg))
+	pm.setPublishTime(awsPublishTime(n, msg))
 
 	select {
 	case ch <- &pm:
@@ -213,6 +214,20 @@ func awsAttributes(msg *sqstypes.Message) map[string]string {
 		return nil
 	}
 	return attrs
+}
+
+// awsPublishTime is when SNS accepted the message, falling back to when SQS received it for a
+// message sent to the queue directly. It is zero when neither is available.
+func awsPublishTime(n sqsNotification, msg *sqstypes.Message) time.Time {
+	if t, err := time.Parse(time.RFC3339Nano, n.Timestamp); err == nil {
+		return t
+	}
+
+	if ms, err := strconv.ParseInt(msg.Attributes["SentTimestamp"], 10, 64); err == nil {
+		return time.UnixMilli(ms)
+	}
+
+	return time.Time{}
 }
 
 // awsDeliveryAttempt derives the delivery count from the SQS ApproximateReceiveCount

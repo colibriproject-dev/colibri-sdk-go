@@ -71,7 +71,10 @@ var sections = []section{
 		return m.Origin == monitoring.OriginSDK
 	}},
 	{"Emitted by third-party instrumentation", func(m monitoring.MetricDefinition) bool {
-		return m.Origin != monitoring.OriginSDK && !m.Deprecated
+		return m.Origin != monitoring.OriginSDK && m.Origin != monitoring.OriginPromClient && !m.Deprecated
+	}},
+	{"Exposed only on `/metrics`, by the Prometheus client collectors", func(m monitoring.MetricDefinition) bool {
+		return m.Origin == monitoring.OriginPromClient
 	}},
 	{"Deprecated, emitted only with `OTEL_GO_X_DEPRECATED_RUNTIME_METRICS=true`", func(m monitoring.MetricDefinition) bool {
 		return m.Deprecated

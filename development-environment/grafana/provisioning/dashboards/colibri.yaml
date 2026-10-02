@@ -1,0 +1,14 @@
+apiVersion: 1
+
+# Loads observability/dashboards, mounted at /var/lib/grafana/dashboards/colibri. Changes to
+# the JSON files show up in Grafana within the update interval; changes made in the UI are not
+# written back, export the dashboard to keep them.
+providers:
+  - name: colibri-sdk-go
+    folder: Colibri
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/colibri

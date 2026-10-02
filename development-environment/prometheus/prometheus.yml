@@ -1,0 +1,18 @@
+# Scrapes the services under development, running on the host, and evaluates the SDK alert
+# rules against them. Add the ports of your own services to the targets; the defaults are the
+# school-module and finantial-module of colibri-sdk-go-examples.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/rules/rules.yaml
+
+scrape_configs:
+  - job_name: school-module
+    static_configs:
+      - targets: ["host.docker.internal:8080"]
+
+  - job_name: finantial-module
+    static_configs:
+      - targets: ["host.docker.internal:8081"]
