@@ -190,6 +190,7 @@ func processMessage(c *consumer, msg *ProviderMessage) {
 	// the result
 	result := resultSuccess
 	start := time.Now()
+	c.recordConsumeLag(ctx, msg, start)
 	c.inFlight.Add(1)
 	defer func() {
 		c.inFlight.Add(-1)

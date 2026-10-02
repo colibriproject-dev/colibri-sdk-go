@@ -83,6 +83,25 @@ func TestAwsReceiptMetadata(t *testing.T) {
 	})
 }
 
+func TestAwsPublishTime(t *testing.T) {
+	t.Run("Should take the publish time from the SNS notification", func(t *testing.T) {
+		n := sqsNotification{Timestamp: "2026-09-30T12:00:01.500Z"}
+		msg := &sqstypes.Message{Attributes: map[string]string{"SentTimestamp": "1"}}
+
+		assert.Equal(t, time.Date(2026, 9, 30, 12, 0, 1, 500_000_000, time.UTC), awsPublishTime(n, msg))
+	})
+
+	t.Run("Should fall back to the SQS sent timestamp", func(t *testing.T) {
+		msg := &sqstypes.Message{Attributes: map[string]string{"SentTimestamp": "1790000000000"}}
+
+		assert.Equal(t, time.UnixMilli(1790000000000), awsPublishTime(sqsNotification{}, msg))
+	})
+
+	t.Run("Should return zero when the message carries no timestamp", func(t *testing.T) {
+		assert.True(t, awsPublishTime(sqsNotification{}, &sqstypes.Message{}).IsZero())
+	})
+}
+
 func TestRabbitMQReceiptMetadata(t *testing.T) {
 	t.Run("Should stringify headers and derive the delivery attempt from x-death", func(t *testing.T) {
 		d := amqp.Delivery{

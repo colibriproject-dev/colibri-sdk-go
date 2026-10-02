@@ -1,0 +1,40 @@
+{
+  "title": "Broken on purpose",
+  "description": "Fixture of the catalog check: the latency panel and the queue variable query metrics the SDK does not emit, and the check must report both.",
+  "templating": {
+    "list": [
+      {
+        "name": "job",
+        "type": "query",
+        "query": { "query": "label_values(target_info, job)", "refId": "PrometheusVariableQueryEditor-VariableQuery" }
+      },
+      {
+        "name": "queue",
+        "type": "query",
+        "query": "label_values(messaging_queue_depth{job=\"$job\"}, queue)"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "title": "Requests",
+      "type": "timeseries",
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(http_server_request_duration_seconds_count{job=\"$job\"}[$__rate_interval]))" }
+      ]
+    },
+    {
+      "title": "Details",
+      "type": "row",
+      "panels": [
+        {
+          "title": "Latency",
+          "type": "timeseries",
+          "targets": [
+            { "refId": "A", "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_latency_seconds_bucket{job=\"$job\"}[$__rate_interval])))" }
+          ]
+        }
+      ]
+    }
+  ]
+}

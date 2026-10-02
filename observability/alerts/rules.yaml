@@ -1,0 +1,129 @@
+# Prometheus alert rules for services built on colibri-sdk-go.
+#
+# The rules query the metric names /metrics exposes, the ones listed in
+# docs/observability/metrics.md, and aggregate by the job and instance labels of the scrape.
+# The thresholds are starting points: tune them per service, see observability/README.md.
+#
+# Checked in CI by `promtool check rules`, by the unit tests in rules_test.yaml and by the
+# metric catalog check in observability/check.
+
+groups:
+  - name: colibri-http
+    rules:
+      - alert: ColibriHTTPHighErrorRate
+        expr: |
+          (
+            sum by (job) (rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m]))
+            /
+            sum by (job) (rate(http_server_request_duration_seconds_count[5m]))
+          ) > 0.05
+          and
+          sum by (job) (rate(http_server_request_duration_seconds_count[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} answers more than 5% of its requests with a 5xx status"
+          description: "{{ $value | humanizePercentage }} of the HTTP requests of {{ $labels.job }} failed with a 5xx status over the last 5 minutes."
+
+      - alert: ColibriHTTPHighLatency
+        expr: |
+          histogram_quantile(0.99,
+            sum by (job, le) (rate(http_server_request_duration_seconds_bucket[5m]))
+          ) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.job }} p99 HTTP latency is above 1s"
+          description: "The 99th percentile of the HTTP request duration of {{ $labels.job }} is {{ $value | humanizeDuration }}."
+
+      - alert: ColibriHTTPPanicRecovered
+        expr: |
+          sum by (job, http_route) (increase(http_server_panic_recovered_total[5m])) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.job }} recovered a panic serving {{ $labels.http_route }}"
+          description: "Panics recovered serving {{ $labels.http_route }} over the last 5 minutes: {{ $value | humanize }}. The requests failed with a 500; see the error logs for the stack trace."
+
+  - name: colibri-messaging
+    rules:
+      - alert: ColibriMessagingPublishFailures
+        expr: |
+          (
+            sum by (job, topic) (rate(messaging_published_total{result="error"}[5m]))
+            /
+            sum by (job, topic) (rate(messaging_published_total[5m]))
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} fails to publish to {{ $labels.topic }}"
+          description: "{{ $value | humanizePercentage }} of the messages {{ $labels.job }} published to {{ $labels.topic }} failed over the last 5 minutes."
+
+      - alert: ColibriMessagingConsumerBacklog
+        expr: |
+          histogram_quantile(0.99,
+            sum by (job, queue, le) (rate(messaging_consume_lag_seconds_bucket[5m]))
+          ) > 60
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Messages wait more than a minute in {{ $labels.queue }}"
+          description: "The 99th percentile of the time messages wait in {{ $labels.queue }} before {{ $labels.job }} consumes them is {{ $value | humanizeDuration }}. The consumers are not keeping up with the publishers."
+
+      - alert: ColibriMessagingConsumerPanics
+        expr: |
+          sum by (job, queue, action) (increase(messaging_consumed_total{result="panic"}[5m])) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.job }} panicked processing {{ $labels.action }} from {{ $labels.queue }}"
+          description: "Messages that panicked over the last 5 minutes: {{ $value | humanize }}. They were rejected and left to the broker dead-letter handling; see the error logs for the stack trace."
+
+  - name: colibri-database
+    rules:
+      - alert: ColibriSQLPoolSaturated
+        expr: |
+          sum by (job, instance) (rate(db_sql_connections_wait_count_total[5m])) > 0
+          and
+          (
+            sum by (job, instance) (db_sql_connections_active_ratio)
+            /
+            sum by (job, instance) (db_sql_connections_open_ratio)
+          ) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "The SQL connection pool of {{ $labels.instance }} is saturated"
+          description: "Queries of {{ $labels.job }} on {{ $labels.instance }} wait for a free connection, {{ $value | humanize }} times per second, with more than 90% of the open connections in use. Raise the pool size or look for slow queries holding connections."
+
+  - name: colibri-runtime
+    rules:
+      - alert: ColibriGoMemoryNearLimit
+        expr: |
+          (
+            sum by (job, instance) (go_memory_used_bytes)
+            /
+            sum by (job, instance) (go_memory_limit_bytes)
+          ) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} uses more than 90% of its Go memory limit"
+          description: "The Go runtime of {{ $labels.instance }} uses {{ $value | humanizePercentage }} of GOMEMLIMIT. Close to the limit the GC runs back to back and the process may run out of memory."
+
+      - alert: ColibriGoGCPressure
+        expr: |
+          sum by (job, instance) (rate(go_gc_duration_seconds_sum[5m])) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} spends more than 5% of its time in GC pauses"
+          description: "{{ $labels.instance }} spent {{ $value | humanizePercentage }} of the wall time in stop-the-world GC pauses over the last 5 minutes. Look at the allocation rate on the runtime dashboard."

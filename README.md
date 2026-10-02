@@ -129,6 +129,12 @@ business metrics — building `Attrs` once, observable gauges, testing with
 `monitoringtest` — are documented in
 [docs/observability/metrics.md](docs/observability/metrics.md).
 
+### Dashboards and alerts
+
+Grafana dashboards (HTTP, messaging, data stores, Go runtime) and Prometheus alert rules for
+the metrics above ship in [observability/](observability/README.md), versioned with the code
+that emits the metrics. CI fails when one of them queries a metric the SDK does not emit.
+
 ## Contributing
 
 Contributions are welcome! Please read the [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.

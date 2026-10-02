@@ -60,6 +60,19 @@ func TestAttrsRecording(t *testing.T) {
 		assert.Equal(t, uint64(1), data.DataPoints[0].Count)
 	})
 
+	t.Run("Should bucket a histogram in seconds with the duration boundaries", func(t *testing.T) {
+		m, _, reader := newTestMonitoring(t)
+
+		m.Histogram("seconds.histogram", "A test histogram", "s").Record(context.Background(), 0.2, nil)
+		m.Histogram("millis.histogram", "A test histogram", "ms").Record(context.Background(), 0.2, nil)
+
+		metrics := collect(t, reader)
+		seconds := metrics["seconds.histogram"].Data.(metricdata.Histogram[float64])
+		assert.Equal(t, colibrimonitoringbase.DurationBucketsSeconds, seconds.DataPoints[0].Bounds)
+		millis := metrics["millis.histogram"].Data.(metricdata.Histogram[float64])
+		assert.NotEqual(t, colibrimonitoringbase.DurationBucketsSeconds, millis.DataPoints[0].Bounds)
+	})
+
 	t.Run("Should record a gauge under the Attrs attributes", func(t *testing.T) {
 		m, _, reader := newTestMonitoring(t)
 

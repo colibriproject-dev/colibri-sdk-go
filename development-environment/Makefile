@@ -13,3 +13,7 @@ clean:
 
 logs:
 	docker-compose -p ${STACK_NAME} logs -f
+
+# Prometheus and Grafana only, with the dashboards and alert rules of observability/ mounted.
+observability:
+	docker-compose -p ${STACK_NAME} up -d prometheus grafana

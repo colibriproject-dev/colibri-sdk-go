@@ -129,6 +129,13 @@ registrar métricas de negócio — construindo `Attrs` uma vez, gauges observá
 `monitoringtest` — estão documentadas, em inglês, em
 [docs/observability/metrics.md](docs/observability/metrics.md).
 
+### Dashboards e alertas
+
+Dashboards do Grafana (HTTP, mensageria, armazenamento de dados, runtime Go) e regras de
+alerta do Prometheus para essas métricas estão em [observability/](observability/README.md),
+versionados junto com o código que emite as métricas. O CI falha quando algum deles consulta
+uma métrica que o SDK não emite.
+
 ## Contribuições
 
 Contribuições são bem-vindas! Por favor, leia o [Código de Conduta](CODE_OF_CONDUCT.md) antes de contribuir.

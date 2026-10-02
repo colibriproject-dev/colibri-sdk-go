@@ -83,6 +83,8 @@ func (m *rabbitMQMessaging) producer(ctx context.Context, p *Producer, msg *Prov
 			Body:         body,
 			DeliveryMode: amqp.Persistent,
 			MessageId:    msg.ID.String(),
+			// read back by the consumer as the start of the consume lag
+			Timestamp: time.Now(),
 		},
 	)
 }
@@ -148,6 +150,7 @@ func (m *rabbitMQMessaging) handleMessage(ctx context.Context, c *consumer, d am
 
 	pm.addOriginBrokerNotification(rabbitMQOriginalMessage{d: d})
 	pm.setReceiptMetadata(rabbitMQAttributes(d), rabbitMQDeliveryAttempt(d))
+	pm.setPublishTime(d.Timestamp)
 
 	select {
 	case providerMsgs <- &pm:

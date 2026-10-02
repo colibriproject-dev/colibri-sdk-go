@@ -463,10 +463,14 @@ func (m *MonitoringOpenTelemetry) Histogram(name, description, unit string) coli
 	if h, ok := m.histograms[name]; ok {
 		return h
 	}
-	h, err := m.meter.Float64Histogram(name,
+	options := []metric.Float64HistogramOption{
 		metric.WithDescription(description),
 		metric.WithUnit(unit),
-	)
+	}
+	if unit == "s" {
+		options = append(options, metric.WithExplicitBucketBoundaries(colibrimonitoringbase.DurationBucketsSeconds...))
+	}
+	h, err := m.meter.Float64Histogram(name, options...)
 	if err != nil {
 		logging.Warn(context.Background()).Msgf("Creating histogram %s: %v", name, err)
 		return colibrimonitoringbase.NoopHistogram()

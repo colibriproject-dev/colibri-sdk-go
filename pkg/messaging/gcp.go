@@ -92,6 +92,7 @@ func (m *gcpMessaging) handleMessage(ctx context.Context, c *consumer, msg *pubs
 
 	pm.addOriginBrokerNotification(gcpOriginalMessage{msg: msg})
 	pm.setReceiptMetadata(msg.Attributes, msg.DeliveryAttempt)
+	pm.setPublishTime(msg.PublishTime)
 
 	select {
 	case ch <- &pm:

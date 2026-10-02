@@ -1,0 +1,224 @@
+# Unit tests of rules.yaml, run with `promtool test rules rules_test.yaml`.
+#
+# Each alert is fed series that should fire it and, where the expression has a guard, series
+# that should not.
+
+rule_files:
+  - rules.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - name: HTTP error rate
+    interval: 1m
+    input_series:
+      # 1 request per second answered 200 and 0.2 per second answered 500
+      - series: 'http_server_request_duration_seconds_count{job="api", http_route="/users", http_response_status_code="200"}'
+        values: '0+60x20'
+      - series: 'http_server_request_duration_seconds_count{job="api", http_route="/users", http_response_status_code="500"}'
+        values: '0+12x20'
+      # a handful of requests, all failed, below the traffic guard
+      - series: 'http_server_request_duration_seconds_count{job="quiet", http_route="/users", http_response_status_code="500"}'
+        values: '0+1x20'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ColibriHTTPHighErrorRate
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: ColibriHTTPHighErrorRate
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              job: api
+            exp_annotations:
+              summary: "api answers more than 5% of its requests with a 5xx status"
+              description: "16.67% of the HTTP requests of api failed with a 5xx status over the last 5 minutes."
+
+  - name: HTTP latency
+    interval: 1m
+    input_series:
+      # every request takes between 1s and 2.5s
+      - series: 'http_server_request_duration_seconds_bucket{job="api", le="0.5"}'
+        values: '0x20'
+      - series: 'http_server_request_duration_seconds_bucket{job="api", le="1"}'
+        values: '0x20'
+      - series: 'http_server_request_duration_seconds_bucket{job="api", le="2.5"}'
+        values: '0+60x20'
+      - series: 'http_server_request_duration_seconds_bucket{job="api", le="+Inf"}'
+        values: '0+60x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: ColibriHTTPHighLatency
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: api
+            exp_annotations:
+              summary: "api p99 HTTP latency is above 1s"
+              description: "The 99th percentile of the HTTP request duration of api is 2.485s."
+
+  - name: HTTP panics
+    interval: 1m
+    input_series:
+      - series: 'http_server_panic_recovered_total{job="api", http_route="/boom", http_request_method="GET"}'
+        values: '0 0 1 1 1 1 1 1 1 1 1'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: ColibriHTTPPanicRecovered
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: ColibriHTTPPanicRecovered
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: api
+              http_route: /boom
+            exp_annotations:
+              summary: "api recovered a panic serving /boom"
+              description: "Panics recovered serving /boom over the last 5 minutes: 1. The requests failed with a 500; see the error logs for the stack trace."
+      - eval_time: 10m
+        alertname: ColibriHTTPPanicRecovered
+        exp_alerts: []
+
+  - name: Publish failures
+    interval: 1m
+    input_series:
+      - series: 'messaging_published_total{job="api", topic="orders", result="success"}'
+        values: '0+90x20'
+      - series: 'messaging_published_total{job="api", topic="orders", result="error"}'
+        values: '0+10x20'
+      - series: 'messaging_published_total{job="api", topic="invoices", result="success"}'
+        values: '0+100x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: ColibriMessagingPublishFailures
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              job: api
+              topic: orders
+            exp_annotations:
+              summary: "api fails to publish to orders"
+              description: "10% of the messages api published to orders failed over the last 5 minutes."
+
+  - name: Consumer backlog
+    interval: 1m
+    input_series:
+      # messages of orders wait between 60s and 300s, those of invoices less than a second
+      - series: 'messaging_consume_lag_seconds_bucket{job="worker", queue="orders", action="created", le="1"}'
+        values: '0x20'
+      - series: 'messaging_consume_lag_seconds_bucket{job="worker", queue="orders", action="created", le="60"}'
+        values: '0x20'
+      - series: 'messaging_consume_lag_seconds_bucket{job="worker", queue="orders", action="created", le="300"}'
+        values: '0+30x20'
+      - series: 'messaging_consume_lag_seconds_bucket{job="worker", queue="orders", action="created", le="+Inf"}'
+        values: '0+30x20'
+      - series: 'messaging_consume_lag_seconds_bucket{job="worker", queue="invoices", action="created", le="1"}'
+        values: '0+30x20'
+      - series: 'messaging_consume_lag_seconds_bucket{job="worker", queue="invoices", action="created", le="+Inf"}'
+        values: '0+30x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: ColibriMessagingConsumerBacklog
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: worker
+              queue: orders
+            exp_annotations:
+              summary: "Messages wait more than a minute in orders"
+              description: "The 99th percentile of the time messages wait in orders before worker consumes them is 4m 57s. The consumers are not keeping up with the publishers."
+
+  - name: Consumer panics
+    interval: 1m
+    input_series:
+      - series: 'messaging_consumed_total{job="worker", queue="orders", action="created", result="success"}'
+        values: '0+10x10'
+      - series: 'messaging_consumed_total{job="worker", queue="orders", action="created", result="panic"}'
+        values: '0 0 2 2 2 2 2 2 2 2 2'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ColibriMessagingConsumerPanics
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: worker
+              queue: orders
+              action: created
+            exp_annotations:
+              summary: "worker panicked processing created from orders"
+              description: "Messages that panicked over the last 5 minutes: 2. They were rejected and left to the broker dead-letter handling; see the error logs for the stack trace."
+
+  - name: SQL pool saturation
+    interval: 1m
+    input_series:
+      # db-1 waits with every connection in use; db-2 waits once in a while with room to spare
+      - series: 'db_sql_connections_wait_count_total{job="api", instance="db-1:8080", db_system_name="postgresql"}'
+        values: '0+30x20'
+      - series: 'db_sql_connections_active_ratio{job="api", instance="db-1:8080", db_system_name="postgresql"}'
+        values: '10x20'
+      - series: 'db_sql_connections_open_ratio{job="api", instance="db-1:8080", db_system_name="postgresql"}'
+        values: '10x20'
+      - series: 'db_sql_connections_wait_count_total{job="api", instance="db-2:8080", db_system_name="postgresql"}'
+        values: '0+30x20'
+      - series: 'db_sql_connections_active_ratio{job="api", instance="db-2:8080", db_system_name="postgresql"}'
+        values: '2x20'
+      - series: 'db_sql_connections_open_ratio{job="api", instance="db-2:8080", db_system_name="postgresql"}'
+        values: '10x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: ColibriSQLPoolSaturated
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: api
+              instance: db-1:8080
+            exp_annotations:
+              summary: "The SQL connection pool of db-1:8080 is saturated"
+              description: "Queries of api on db-1:8080 wait for a free connection, 500m times per second, with more than 90% of the open connections in use. Raise the pool size or look for slow queries holding connections."
+
+  - name: Memory near the limit
+    interval: 1m
+    input_series:
+      - series: 'go_memory_used_bytes{job="api", instance="a:8080", go_memory_type="other"}'
+        values: '400x20'
+      - series: 'go_memory_used_bytes{job="api", instance="a:8080", go_memory_type="stack"}'
+        values: '560x20'
+      - series: 'go_memory_limit_bytes{job="api", instance="a:8080"}'
+        values: '1000x20'
+      # no GOMEMLIMIT set: the runtime reports the largest int64
+      - series: 'go_memory_used_bytes{job="api", instance="b:8080", go_memory_type="other"}'
+        values: '960x20'
+      - series: 'go_memory_limit_bytes{job="api", instance="b:8080"}'
+        values: '9223372036854775807x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: ColibriGoMemoryNearLimit
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: api
+              instance: a:8080
+            exp_annotations:
+              summary: "a:8080 uses more than 90% of its Go memory limit"
+              description: "The Go runtime of a:8080 uses 96% of GOMEMLIMIT. Close to the limit the GC runs back to back and the process may run out of memory."
+
+  - name: GC pressure
+    interval: 1m
+    input_series:
+      # 6s of pause per minute, 10% of the wall time
+      - series: 'go_gc_duration_seconds_sum{job="api", instance="a:8080"}'
+        values: '0+6x20'
+      - series: 'go_gc_duration_seconds_sum{job="api", instance="b:8080"}'
+        values: '0+0.6x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: ColibriGoGCPressure
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: api
+              instance: a:8080
+            exp_annotations:
+              summary: "a:8080 spends more than 5% of its time in GC pauses"
+              description: "a:8080 spent 10% of the wall time in stop-the-world GC pauses over the last 5 minutes. Look at the allocation rate on the runtime dashboard."

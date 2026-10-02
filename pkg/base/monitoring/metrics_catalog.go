@@ -14,6 +14,8 @@ const (
 	KindObservableCounter       MetricKind = "observable_counter"
 	KindObservableUpDownCounter MetricKind = "observable_updowncounter"
 	KindObservableGauge         MetricKind = "observable_gauge"
+	// KindSummary is a Prometheus summary, only exposed by the Prometheus client collectors.
+	KindSummary MetricKind = "summary"
 )
 
 // MetricOrigin is who emits a metric: the SDK itself or the third-party instrumentation it
@@ -26,6 +28,10 @@ const (
 	OriginOtelSQL   MetricOrigin = "otelsql"
 	OriginRedisOtel MetricOrigin = "redisotel"
 	OriginRuntime   MetricOrigin = "runtime"
+	// OriginPromClient marks the Go and process collectors of the Prometheus client, which
+	// /metrics serves next to the OpenTelemetry metrics. They never reach the OTLP exporter,
+	// and their name is the Prometheus name, not translated from an OpenTelemetry one.
+	OriginPromClient MetricOrigin = "promclient"
 )
 
 // MetricDefinition describes a metric the SDK emits.
@@ -59,6 +65,7 @@ const (
 	MetricMessagingProcessDuration = "messaging.process.duration"
 	MetricMessagingRejected        = "messaging.rejected"
 	MetricMessagingInFlight        = "messaging.in_flight"
+	MetricMessagingConsumeLag      = "messaging.consume.lag"
 
 	MetricStorageOperation         = "storage.operation"
 	MetricStorageOperationDuration = "storage.operation.duration"
@@ -133,6 +140,20 @@ const (
 	moduleStorage    = "storage"
 )
 
+// Names of the Go and process collectors of the Prometheus client used by the dashboards and
+// alert rules. The rest of them are cataloged by name only.
+const (
+	MetricPromGoGCDurationSeconds         = "go_gc_duration_seconds"
+	MetricPromProcessResidentMemoryBytes  = "process_resident_memory_bytes"
+	MetricPromProcessCPUSecondsTotal      = "process_cpu_seconds_total"
+	MetricPromProcessOpenFDs              = "process_open_fds"
+	MetricPromProcessMaxFDs               = "process_max_fds"
+	MetricPromGoMemstatsHeapInuseBytes    = "go_memstats_heap_inuse_bytes"
+	MetricPromGoMemstatsNextGCBytes       = "go_memstats_next_gc_bytes"
+	MetricPromGoMemstatsAllocBytesTotal   = "go_memstats_alloc_bytes_total"
+	MetricPromGoMemstatsLastGCTimeSeconds = "go_memstats_last_gc_time_seconds"
+)
+
 var (
 	httpServerRequestAttrs  = []string{attrHTTPRequestMethod, attrServerAddress, attrURLScheme}
 	httpServerResponseAttrs = []string{attrHTTPRequestMethod, attrHTTPResponseStatusCode, attrHTTPRoute, attrServerAddress, attrURLScheme}
@@ -176,6 +197,8 @@ var catalog = []MetricDefinition{
 		KindCounter, unitMessage, moduleMessaging, attrQueue, attrAction, "reason"),
 	sdkMetric(MetricMessagingInFlight, "Number of messages being processed",
 		KindObservableGauge, unitMessage, moduleMessaging, attrQueue),
+	sdkMetric(MetricMessagingConsumeLag, "Time between the broker accepting a message and a consumer receiving it",
+		KindHistogram, unitSeconds, moduleMessaging, attrQueue, attrAction),
 
 	// ── storage ───────────────────────────────────────────────────────────────
 	sdkMetric(MetricStorageOperation, "Number of storage operations",
@@ -291,6 +314,112 @@ var catalog = []MetricDefinition{
 		KindObservableCounter, unitNanoseconds),
 	deprecatedRuntimeMetric("process.runtime.go.gc.pause_ns", "Amount of nanoseconds in GC stop-the-world pauses",
 		KindHistogram, unitNanoseconds),
+
+	// ── Prometheus client collectors, only on /metrics ────────────────────────
+	promClientMetric(MetricPromGoGCDurationSeconds,
+		"A summary of the wall-time pause (stop-the-world) duration in garbage collection cycles.",
+		KindSummary, unitSeconds, "quantile"),
+	promClientMetric("go_gc_gogc_percent",
+		"Heap size target percentage configured by the user, otherwise 100. This value is set by the GOGC environment variable, and the runtime/debug.SetGCPercent function. Sourced from /gc/gogc:percent.",
+		KindGauge, "%"),
+	promClientMetric("go_gc_gomemlimit_bytes",
+		"Go runtime memory limit configured by the user, otherwise math.MaxInt64. This value is set by the GOMEMLIMIT environment variable, and the runtime/debug.SetMemoryLimit function. Sourced from /gc/gomemlimit:bytes.",
+		KindGauge, unitBytes),
+	promClientMetric("go_goroutines", "Number of goroutines that currently exist.",
+		KindGauge, "{goroutine}"),
+	promClientMetric("go_info", "Information about the Go environment.",
+		KindGauge, "", "version"),
+	promClientMetric("go_memstats_alloc_bytes",
+		"Number of bytes allocated in heap and currently in use. Equals to /memory/classes/heap/objects:bytes.",
+		KindGauge, unitBytes),
+	promClientMetric(MetricPromGoMemstatsAllocBytesTotal,
+		"Total number of bytes allocated in heap until now, even if released already. Equals to /gc/heap/allocs:bytes.",
+		KindCounter, unitBytes),
+	promClientMetric("go_memstats_buck_hash_sys_bytes",
+		"Number of bytes used by the profiling bucket hash table. Equals to /memory/classes/profiling/buckets:bytes.",
+		KindGauge, unitBytes),
+	promClientMetric("go_memstats_frees_total",
+		"Total number of heap objects frees. Equals to /gc/heap/frees:objects + /gc/heap/tiny/allocs:objects.",
+		KindCounter, "{object}"),
+	promClientMetric("go_memstats_gc_sys_bytes",
+		"Number of bytes used for garbage collection system metadata. Equals to /memory/classes/metadata/other:bytes.",
+		KindGauge, unitBytes),
+	promClientMetric("go_memstats_heap_alloc_bytes",
+		"Number of heap bytes allocated and currently in use, same as go_memstats_alloc_bytes. Equals to /memory/classes/heap/objects:bytes.",
+		KindGauge, unitBytes),
+	promClientMetric("go_memstats_heap_idle_bytes",
+		"Number of heap bytes waiting to be used. Equals to /memory/classes/heap/released:bytes + /memory/classes/heap/free:bytes.",
+		KindGauge, unitBytes),
+	promClientMetric(MetricPromGoMemstatsHeapInuseBytes,
+		"Number of heap bytes that are in use. Equals to /memory/classes/heap/objects:bytes + /memory/classes/heap/unused:bytes",
+		KindGauge, unitBytes),
+	promClientMetric("go_memstats_heap_objects",
+		"Number of currently allocated objects. Equals to /gc/heap/objects:objects.",
+		KindGauge, "{object}"),
+	promClientMetric("go_memstats_heap_released_bytes",
+		"Number of heap bytes released to OS. Equals to /memory/classes/heap/released:bytes.",
+		KindGauge, unitBytes),
+	promClientMetric("go_memstats_heap_sys_bytes",
+		"Number of heap bytes obtained from system. Equals to /memory/classes/heap/objects:bytes + /memory/classes/heap/unused:bytes + /memory/classes/heap/released:bytes + /memory/classes/heap/free:bytes.",
+		KindGauge, unitBytes),
+	promClientMetric(MetricPromGoMemstatsLastGCTimeSeconds,
+		"Number of seconds since 1970 of last garbage collection.",
+		KindGauge, unitSeconds),
+	promClientMetric("go_memstats_mallocs_total",
+		"Total number of heap objects allocated, both live and gc-ed. Semantically a counter version for go_memstats_heap_objects gauge. Equals to /gc/heap/allocs:objects + /gc/heap/tiny/allocs:objects.",
+		KindCounter, "{object}"),
+	promClientMetric("go_memstats_mcache_inuse_bytes",
+		"Number of bytes in use by mcache structures. Equals to /memory/classes/metadata/mcache/inuse:bytes.",
+		KindGauge, unitBytes),
+	promClientMetric("go_memstats_mcache_sys_bytes",
+		"Number of bytes used for mcache structures obtained from system. Equals to /memory/classes/metadata/mcache/inuse:bytes + /memory/classes/metadata/mcache/free:bytes.",
+		KindGauge, unitBytes),
+	promClientMetric("go_memstats_mspan_inuse_bytes",
+		"Number of bytes in use by mspan structures. Equals to /memory/classes/metadata/mspan/inuse:bytes.",
+		KindGauge, unitBytes),
+	promClientMetric("go_memstats_mspan_sys_bytes",
+		"Number of bytes used for mspan structures obtained from system. Equals to /memory/classes/metadata/mspan/inuse:bytes + /memory/classes/metadata/mspan/free:bytes.",
+		KindGauge, unitBytes),
+	promClientMetric(MetricPromGoMemstatsNextGCBytes,
+		"Number of heap bytes when next garbage collection will take place. Equals to /gc/heap/goal:bytes.",
+		KindGauge, unitBytes),
+	promClientMetric("go_memstats_other_sys_bytes",
+		"Number of bytes used for other system allocations. Equals to /memory/classes/other:bytes.",
+		KindGauge, unitBytes),
+	promClientMetric("go_memstats_stack_inuse_bytes",
+		"Number of bytes obtained from system for stack allocator in non-CGO environments. Equals to /memory/classes/heap/stacks:bytes.",
+		KindGauge, unitBytes),
+	promClientMetric("go_memstats_stack_sys_bytes",
+		"Number of bytes obtained from system for stack allocator. Equals to /memory/classes/heap/stacks:bytes + /memory/classes/os-stacks:bytes.",
+		KindGauge, unitBytes),
+	promClientMetric("go_memstats_sys_bytes",
+		"Number of bytes obtained from system. Equals to /memory/classes/total:byte.",
+		KindGauge, unitBytes),
+	promClientMetric("go_sched_gomaxprocs_threads",
+		"The current runtime.GOMAXPROCS setting, or the number of operating system threads that can execute user-level Go code simultaneously. Sourced from /sched/gomaxprocs:threads.",
+		KindGauge, "{thread}"),
+	promClientMetric("go_threads", "Number of OS threads created.",
+		KindGauge, "{thread}"),
+	promClientMetric(MetricPromProcessCPUSecondsTotal, "Total user and system CPU time spent in seconds.",
+		KindCounter, unitSeconds),
+	promClientMetric(MetricPromProcessMaxFDs, "Maximum number of open file descriptors.",
+		KindGauge, "{file_descriptor}"),
+	promClientMetric("process_network_receive_bytes_total",
+		"Number of bytes received by the process over the network.",
+		KindCounter, unitBytes),
+	promClientMetric("process_network_transmit_bytes_total",
+		"Number of bytes sent by the process over the network.",
+		KindCounter, unitBytes),
+	promClientMetric(MetricPromProcessOpenFDs, "Number of open file descriptors.",
+		KindGauge, "{file_descriptor}"),
+	promClientMetric(MetricPromProcessResidentMemoryBytes, "Resident memory size in bytes.",
+		KindGauge, unitBytes),
+	promClientMetric("process_start_time_seconds", "Start time of the process since unix epoch in seconds.",
+		KindGauge, unitSeconds),
+	promClientMetric("process_virtual_memory_bytes", "Virtual memory size in bytes.",
+		KindGauge, unitBytes),
+	promClientMetric("process_virtual_memory_max_bytes", "Maximum amount of virtual memory available in bytes.",
+		KindGauge, unitBytes),
 }
 
 func sdkMetric(name, description string, kind MetricKind, unit, module string, attributes ...string) MetricDefinition {
@@ -311,6 +440,11 @@ func redisMetric(name, description string, kind MetricKind, unit string, attribu
 func runtimeMetric(name, description string, kind MetricKind, unit string, attributes ...string) MetricDefinition {
 	return MetricDefinition{Name: name, Description: description, Kind: kind, Unit: unit,
 		Attributes: attributes, Origin: OriginRuntime, Module: "monitoring"}
+}
+
+func promClientMetric(name, description string, kind MetricKind, unit string, attributes ...string) MetricDefinition {
+	return MetricDefinition{Name: name, Description: description, Kind: kind, Unit: unit,
+		Attributes: attributes, Origin: OriginPromClient, Module: moduleRestServer}
 }
 
 func deprecatedRuntimeMetric(name, description string, kind MetricKind, unit string) MetricDefinition {
