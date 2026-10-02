@@ -2,12 +2,14 @@ package check
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/otlptranslator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	otelprometheus "go.opentelemetry.io/otel/exporters/prometheus"
@@ -103,6 +105,7 @@ func TestVariableExpr(t *testing.T) {
 		`"query_result(topk(5, go_goroutines))"`:                  "topk(5, go_goroutines)",
 		`"label_values(job)"`:                                     "",
 		`{"query": "", "refId": "PrometheusVariableQueryEditor"}`: "",
+		`42`: "",
 	} {
 		assert.Equal(t, expected, variableExpr([]byte(query)), query)
 	}
@@ -187,4 +190,67 @@ func record(t *testing.T, meter metric.Meter, m monitoring.MetricDefinition) {
 		t.Fatalf("%s has kind %s, which the check cannot record", m.Name, m.Kind)
 	}
 	require.NoErrorf(t, err, "creating %s", m.Name)
+}
+
+func TestSeriesNames(t *testing.T) {
+	t.Run("Should expose the sum and count of a Prometheus client summary", func(t *testing.T) {
+		names, err := SeriesNames(monitoring.MetricDefinition{Name: "go_gc_duration_seconds",
+			Kind: monitoring.KindSummary, Origin: monitoring.OriginPromClient})
+
+		require.NoError(t, err)
+		assert.Equal(t, []string{"go_gc_duration_seconds", "go_gc_duration_seconds_sum", "go_gc_duration_seconds_count"}, names)
+	})
+
+	t.Run("Should fail a name the translation leaves empty", func(t *testing.T) {
+		_, err := SeriesNames(monitoring.MetricDefinition{Kind: monitoring.KindGauge, Origin: monitoring.OriginSDK})
+
+		assert.ErrorContains(t, err, "translating")
+	})
+}
+
+func TestMetricType(t *testing.T) {
+	assert.Equal(t, otlptranslator.MetricType(otlptranslator.MetricTypeSummary), metricType(monitoring.KindSummary))
+	assert.Equal(t, otlptranslator.MetricType(otlptranslator.MetricTypeUnknown), metricType("unknown"))
+}
+
+func TestProblemString(t *testing.T) {
+	problem := Problem{Query{File: "http.json", Location: `panel "Latency", target A`, Expr: "up"}, "metric up is missing"}
+
+	assert.Equal(t, "http.json (panel \"Latency\", target A): metric up is missing\n\tup", problem.String())
+}
+
+func TestDashboardQueriesFails(t *testing.T) {
+	t.Run("Should fail a missing file", func(t *testing.T) {
+		_, err := DashboardQueries(filepath.Join(t.TempDir(), "missing.json"))
+
+		assert.Error(t, err)
+	})
+
+	t.Run("Should fail a file that is not JSON", func(t *testing.T) {
+		_, err := DashboardQueries(writeFile(t, "dashboard.json", "{"))
+
+		assert.ErrorContains(t, err, "dashboard.json")
+	})
+}
+
+func TestRuleQueriesFails(t *testing.T) {
+	t.Run("Should fail a missing file", func(t *testing.T) {
+		_, err := RuleQueries(filepath.Join(t.TempDir(), "missing.yaml"))
+
+		assert.Error(t, err)
+	})
+
+	t.Run("Should fail a file that is not YAML", func(t *testing.T) {
+		_, err := RuleQueries(writeFile(t, "rules.yaml", "groups: ["))
+
+		assert.ErrorContains(t, err, "rules.yaml")
+	})
+}
+
+func writeFile(t *testing.T, name, content string) string {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), name)
+	require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+	return path
 }

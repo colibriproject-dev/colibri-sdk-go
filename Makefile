@@ -8,6 +8,8 @@ mock:
 test: mock
 	mkdir -p coverage
 	go test -timeout 10m -cover ./... -args -test.gocoverdir="${PWD}/coverage/"
+	# observability is a module of its own, which ./... does not reach
+	cd observability && go test -cover ./... -args -test.gocoverdir="${PWD}/coverage/"
 
 metrics-doc:
 	go run ./internal/tools/metricsdoc
