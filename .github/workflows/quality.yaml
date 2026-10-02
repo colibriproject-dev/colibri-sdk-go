@@ -73,10 +73,20 @@ jobs:
     name: observability
     runs-on: ubuntu-24.04
     steps:
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.26'
+          cache: 'true'
+          cache-dependency-path: observability/go.sum
+
       - name: Checkout
         uses: actions/checkout@v3
 
-      # The metric catalog check of the dashboards and alert rules runs in "make test" of the
-      # quality job, so its coverage reaches Sonar.
+      # The dashboards and alert rules may only query metrics listed in the SDK metric catalog.
+      - name: Metric catalog check
+        working-directory: observability
+        run: go test ./...
+
       - name: Check alert rules
         run: make observability-rules
