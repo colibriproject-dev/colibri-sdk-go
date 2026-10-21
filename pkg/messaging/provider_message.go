@@ -5,11 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"time"
+	"uuid"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/validator"
-	"github.com/google/uuid"
 )
 
 type ProviderMessage struct {

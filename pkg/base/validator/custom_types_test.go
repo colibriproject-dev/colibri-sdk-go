@@ -2,9 +2,9 @@ package validator
 
 import (
 	"testing"
+	"uuid"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/types"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 

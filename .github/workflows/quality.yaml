@@ -14,7 +14,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.26'
+          go-version: '1.27'
           cache: 'true'
 
       - name: Checkout
@@ -76,7 +76,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.26'
+          go-version: '1.27'
           cache: 'true'
           cache-dependency-path: observability/go.sum
 

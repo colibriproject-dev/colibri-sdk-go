@@ -1,8 +1,9 @@
 package validator
 
 import (
+	"uuid"
+
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/types"
-	"github.com/google/uuid"
 )
 
 // registerCustomTypes registers all custom types.
