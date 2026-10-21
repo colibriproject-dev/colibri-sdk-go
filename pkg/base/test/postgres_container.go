@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"uuid"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
-	"github.com/google/uuid"
 
 	_ "github.com/lib/pq"
 	"github.com/moby/moby/api/types/network"

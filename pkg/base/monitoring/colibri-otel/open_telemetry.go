@@ -7,11 +7,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"uuid"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	colibrimonitoringbase "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
-	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.nhat.io/otelsql"
 	"go.opentelemetry.io/contrib"
@@ -365,8 +365,7 @@ func buildPrometheusReader(ctx context.Context, registerer prometheus.Registerer
 
 	exporter, err := otelprometheus.New(otelprometheus.WithRegisterer(registerer))
 	if err != nil {
-		var alreadyRegistered prometheus.AlreadyRegisteredError
-		if errors.As(err, &alreadyRegistered) {
+		if _, ok := errors.AsType[prometheus.AlreadyRegisteredError](err); ok {
 			logging.Warn(ctx).Msg("Prometheus metrics collector already registered, skipping")
 			return nil
 		}

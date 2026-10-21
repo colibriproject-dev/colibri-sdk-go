@@ -3,11 +3,11 @@ package messaging
 import (
 	"context"
 	"testing"
+	"uuid"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/test"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,7 +26,7 @@ func TestNewProviderMessage(t *testing.T) {
 
 		providerMessage := NewProviderMessage(ctx, action, message)
 
-		assert.NotEqual(t, uuid.Nil, providerMessage.ID)
+		assert.NotEqual(t, uuid.Nil(), providerMessage.ID)
 		assert.EqualValues(t, config.APP_NAME, providerMessage.Origin)
 		assert.EqualValues(t, action, providerMessage.Action)
 		assert.EqualValues(t, message, providerMessage.Message)

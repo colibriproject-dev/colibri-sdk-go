@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"context"
+	"uuid"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
@@ -9,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
-	"github.com/google/uuid"
 )
 
 func newAwsConfig() *aws.Config {
@@ -26,7 +26,7 @@ func newAwsConfig() *aws.Config {
 		awsconfig.WithRegion(config.CLOUD_REGION),
 		awsconfig.WithBaseEndpoint(config.CLOUD_HOST),
 		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
-			uuid.NewString(), config.CLOUD_SECRET, config.CLOUD_TOKEN,
+			uuid.New().String(), config.CLOUD_SECRET, config.CLOUD_TOKEN,
 		)),
 	)
 }

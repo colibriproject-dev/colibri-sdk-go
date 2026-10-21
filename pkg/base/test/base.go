@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"sync"
+	"uuid"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/cloud"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
@@ -13,7 +14,6 @@ import (
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/observer"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/validator"
-	"github.com/google/uuid"
 )
 
 type key string

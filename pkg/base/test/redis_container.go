@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"uuid"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
-	"github.com/google/uuid"
 	"github.com/moby/moby/api/types/network"
 	"github.com/redis/go-redis/v9"
 	"github.com/testcontainers/testcontainers-go"

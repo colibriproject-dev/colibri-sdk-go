@@ -3,9 +3,9 @@ package test
 import (
 	"context"
 	"fmt"
+	"uuid"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
-	"github.com/google/uuid"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/mount"
 	"github.com/testcontainers/testcontainers-go"

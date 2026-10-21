@@ -2,13 +2,13 @@ package messaging
 
 import (
 	"context"
+	"uuid"
 
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/config"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/logging"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring"
 	colibrimonitoringbase "github.com/colibriproject-dev/colibri-sdk-go/pkg/base/monitoring/colibri-monitoring-base"
 	"github.com/colibriproject-dev/colibri-sdk-go/pkg/base/security"
-	"github.com/google/uuid"
 )
 
 type Producer struct {
