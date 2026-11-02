@@ -51,6 +51,9 @@ func TestParseSQL(t *testing.T) {
 		{"empty", "", "", ""},
 		{"only a comment", "-- nada", "", ""},
 		{"unterminated literal", "SELECT 'abc", "SELECT", ""},
+		{"unterminated quoted identifier", `SELECT * FROM "plans`, "SELECT", "plans"},
+		{"unterminated block comment", "SELECT * FROM plans /* x", "SELECT", "plans"},
+		{"numbers are skipped", "SELECT 1.5e3 FROM plans", "SELECT", "plans"},
 	}
 
 	for _, tt := range tests {

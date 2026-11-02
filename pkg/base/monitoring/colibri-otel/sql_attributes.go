@@ -182,30 +182,20 @@ func tokenizeSQL(query string) []sqlToken {
 	)
 
 	for i := 0; i < len(query); {
+		if end, ok := skipComment(query, i); ok {
+			i = end
+			continue
+		}
+
 		c := query[i]
 
 		switch {
-		case c == '-' && strings.HasPrefix(query[i:], "--"):
-			end := strings.IndexByte(query[i:], '\n')
-			if end < 0 {
-				return tokens
-			}
-			i += end + 1
-
-		case c == '/' && strings.HasPrefix(query[i:], "/*"):
-			end := strings.Index(query[i+2:], "*/")
-			if end < 0 {
-				return tokens
-			}
-			i += 2 + end + 2
-
 		case c == '\'':
 			i = skipQuoted(query, i, '\'')
 
 		case c == '"':
 			end := skipQuoted(query, i, '"')
-			name := strings.ReplaceAll(query[i+1:max(i+1, end-1)], `""`, `"`)
-			tokens = append(tokens, sqlToken{text: name, depth: depth, quoted: true})
+			tokens = append(tokens, sqlToken{text: unquoteIdent(query[i:end]), depth: depth, quoted: true})
 			i = end
 
 		case c == '$':
@@ -222,17 +212,12 @@ func tokenizeSQL(query string) []sqlToken {
 			i++
 
 		case isWordStart(c):
-			end := i + 1
-			for end < len(query) && isWordPart(query[end]) {
-				end++
-			}
+			end := scanWhile(query, i+1, isWordPart)
 			tokens = append(tokens, sqlToken{text: query[i:end], depth: depth, word: true})
 			i = end
 
-		case c >= '0' && c <= '9':
-			for i < len(query) && (isWordPart(query[i]) || query[i] == '.') {
-				i++
-			}
+		case isDigit(c):
+			i = scanWhile(query, i, isNumberPart)
 
 		case unicode.IsSpace(rune(c)):
 			i++
@@ -244,6 +229,46 @@ func tokenizeSQL(query string) []sqlToken {
 	}
 
 	return tokens
+}
+
+// skipComment returns the index right after the comment at query[i], if one starts
+// there. An unterminated comment runs to the end.
+func skipComment(query string, i int) (int, bool) {
+	var end, closeLen int
+
+	switch {
+	case strings.HasPrefix(query[i:], "--"):
+		end, closeLen = strings.IndexByte(query[i:], '\n'), 1
+	case strings.HasPrefix(query[i:], "/*"):
+		end, closeLen = strings.Index(query[i:], "*/"), 2
+	default:
+		return i, false
+	}
+
+	if end < 0 {
+		return len(query), true
+	}
+
+	return i + end + closeLen, true
+}
+
+// unquoteIdent strips the quotes of a "quoted" identifier and unescapes doubled ones.
+func unquoteIdent(quoted string) string {
+	name := strings.TrimPrefix(quoted, `"`)
+	if len(name) > 0 && strings.Count(name, `"`)%2 == 1 {
+		name = strings.TrimSuffix(name, `"`)
+	}
+
+	return strings.ReplaceAll(name, `""`, `"`)
+}
+
+// scanWhile returns the index of the first byte from start that does not satisfy match.
+func scanWhile(query string, start int, match func(byte) bool) int {
+	for start < len(query) && match(query[start]) {
+		start++
+	}
+
+	return start
 }
 
 // skipQuoted returns the index right after the literal opened at query[start], where a
@@ -269,12 +294,8 @@ func skipQuoted(query string, start int, quote byte) int {
 // string ($$…$$, $tag$…$tag$). It returns the index right after it.
 func skipDollar(query string, start int) int {
 	i := start + 1
-	if i < len(query) && query[i] >= '0' && query[i] <= '9' {
-		for i < len(query) && query[i] >= '0' && query[i] <= '9' {
-			i++
-		}
-
-		return i
+	if i < len(query) && isDigit(query[i]) {
+		return scanWhile(query, i, isDigit)
 	}
 
 	for i < len(query) && query[i] != '$' && isWordPart(query[i]) {
@@ -298,5 +319,9 @@ func isWordStart(c byte) bool {
 }
 
 func isWordPart(c byte) bool {
-	return isWordStart(c) || (c >= '0' && c <= '9') || c == '$'
+	return isWordStart(c) || isDigit(c) || c == '$'
 }
+
+func isDigit(c byte) bool { return c >= '0' && c <= '9' }
+
+func isNumberPart(c byte) bool { return isWordPart(c) || c == '.' }
