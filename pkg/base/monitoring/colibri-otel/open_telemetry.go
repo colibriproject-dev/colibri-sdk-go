@@ -286,6 +286,7 @@ func buildTracerProvider(
 	return sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(res),
+		sdktrace.WithSpanProcessor(sqlSpanProcessor{}),
 		sdktrace.WithSpanProcessor(sdktrace.NewBatchSpanProcessor(exporter)),
 	)
 }
@@ -411,18 +412,26 @@ func (m *MonitoringOpenTelemetry) NoticeError(transaction any, err error) {
 
 func (m *MonitoringOpenTelemetry) GetSQLDBDriverName() string {
 	driverName, err := otelsql.Register("postgres",
-		otelsql.AllowRoot(),
-		otelsql.TraceQueryWithoutArgs(),
-		otelsql.TraceRowsClose(),
-		otelsql.TraceRowsAffected(),
-		otelsql.WithDatabaseName(os.Getenv(config.SQL_DB_NAME)),
-		otelsql.WithSystem(semconv.DBSystemNamePostgreSQL),
-		otelsql.WithMeterProvider(m.sqlMeterProvider()),
+		append(sqlDriverOptions(os.Getenv(config.SQL_DB_NAME)),
+			otelsql.WithMeterProvider(m.sqlMeterProvider()),
+		)...,
 	)
 	if err != nil {
 		logging.Fatal(context.Background()).Msgf("could not get sql db driver name: %v", err)
 	}
 	return driverName
+}
+
+// sqlDriverOptions returns the otelsql options for the postgres driver, except the meter provider.
+func sqlDriverOptions(dbName string) []otelsql.DriverOption {
+	return []otelsql.DriverOption{
+		otelsql.AllowRoot(),
+		otelsql.TraceQuery(sqlQueryTracer(dbName)),
+		otelsql.TraceRowsClose(),
+		otelsql.TraceRowsAffected(),
+		otelsql.WithDatabaseName(dbName),
+		otelsql.WithSystem(semconv.DBSystemNamePostgreSQL),
+	}
 }
 
 // sqlMeterProvider returns the provider the SQL instrumentation should report to. The
