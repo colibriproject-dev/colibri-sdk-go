@@ -46,7 +46,10 @@ func (sqlSpanProcessor) OnStart(parent context.Context, s sdktrace.ReadWriteSpan
 	s.SetAttributes(sqlSpanAttributes(otelsql.QueryFromContext(parent), s.Name())...)
 }
 
-func (sqlSpanProcessor) OnEnd(sdktrace.ReadOnlySpan)      {}
+func (sqlSpanProcessor) OnEnd(sdktrace.ReadOnlySpan) {
+	// Attributes are set on start; nothing to do once the span ends.
+}
+
 func (sqlSpanProcessor) Shutdown(context.Context) error   { return nil }
 func (sqlSpanProcessor) ForceFlush(context.Context) error { return nil }
 
