@@ -8,6 +8,7 @@ import (
 
 type Container struct {
 	dependencies map[string]DependencyBean
+	order        []string // bean names in registration order, for deterministic iteration
 }
 
 func NewContainer() Container {
@@ -16,16 +17,18 @@ func NewContainer() Container {
 
 func (c *Container) AddDependencies(deps []any) {
 	// Generates the array with dependencies
-	ReflectTypeArray := generateDependenciesArray(deps, false)
+	ReflectTypeArray, order := generateDependenciesArray(deps, false)
 	c.checkingNameUnit(ReflectTypeArray)
 	c.dependencies = ReflectTypeArray
+	c.order = order
 }
 
 func (c *Container) AddGlobalDependencies(deps []any) {
 	// Generates the array with dependencies
-	ReflectTypeArray := generateDependenciesArray(deps, true)
+	ReflectTypeArray, order := generateDependenciesArray(deps, true)
 	c.checkingNameUnit(ReflectTypeArray)
 	c.dependencies = ReflectTypeArray
+	c.order = order
 }
 
 func (c *Container) StartApp(startFunc any) {
@@ -110,7 +113,8 @@ func (c *Container) searchInjectableDependencies(paramType reflect.Type, returnT
 
 func (c *Container) searchTypes(paramType reflect.Type) []DependencyBean {
 	dependenciesFound := []DependencyBean{}
-	for fnName, dependency := range c.dependencies {
+	for _, fnName := range c.order {
+		dependency := c.dependencies[fnName]
 		for returnType := range dependency.constructorType.Outs() {
 			if returnType == paramType {
 				fmt.Println("parameter: ", paramType, " compatible => ", fnName, " type ", returnType)
@@ -123,7 +127,8 @@ func (c *Container) searchTypes(paramType reflect.Type) []DependencyBean {
 
 func (c *Container) searchImplementations(paramType reflect.Type) []DependencyBean {
 	dependenciesFound := []DependencyBean{}
-	for fnName, dependency := range c.dependencies {
+	for _, fnName := range c.order {
+		dependency := c.dependencies[fnName]
 		for returnType := range dependency.constructorType.Outs() {
 			implements := implementsInterface(returnType, paramType)
 			if implements {
