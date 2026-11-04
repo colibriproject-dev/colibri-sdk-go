@@ -29,6 +29,8 @@ type fakeChannel struct {
 	mu sync.Mutex
 
 	qosCalls int
+	// qosErr makes Qos fail, so startConsumingOn surfaces it
+	qosErr error
 
 	// deliveries feeds Consume: the fake returns the channel queued for the name,
 	// or a closed one so processMessages follows the connection-lost branch
@@ -56,7 +58,7 @@ func (f *fakeChannel) Qos(int, int, bool) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.qosCalls++
-	return nil
+	return f.qosErr
 }
 
 func (f *fakeChannel) Consume(queue, _ string, _, _, _, _ bool, _ amqp.Table) (<-chan amqp.Delivery, error) {
@@ -442,5 +444,253 @@ func TestRabbitMQReconnectResubscribesLiveSubs(t *testing.T) {
 		assert.Nil(t, m.ch)
 		assert.False(t, newCh.closed)
 		assert.False(t, newConn.closed)
+	})
+}
+
+// closeFakes ends the watchReturns and watchClose goroutines registered on the fakes
+func closeFakes(t *testing.T, chs []*fakeChannel, conns []*fakeConnection) {
+	t.Helper()
+	t.Cleanup(func() {
+		for _, ch := range chs {
+			ch.mu.Lock()
+			for _, c := range ch.returnsChans {
+				close(c)
+			}
+			ch.returnsChans = nil
+			ch.mu.Unlock()
+		}
+		for _, conn := range conns {
+			conn.mu.Lock()
+			for _, c := range conn.closeNotifies {
+				close(c)
+			}
+			conn.closeNotifies = nil
+			conn.mu.Unlock()
+		}
+	})
+}
+
+func TestRabbitMQDialError(t *testing.T) {
+	t.Run("Should return an error when the broker is unreachable", func(t *testing.T) {
+		conn, ch, err := dialRabbitMQ("amqp://guest:guest@127.0.0.1:1/")
+
+		assert.Error(t, err)
+		assert.Nil(t, conn)
+		assert.Nil(t, ch)
+	})
+}
+
+func TestRabbitMQWatchReturns(t *testing.T) {
+	t.Run("Should drain the returned messages until the channel closes", func(t *testing.T) {
+		logging.Initialize()
+		ch := &fakeChannel{}
+		m := &rabbitMQMessaging{stop: make(chan struct{})}
+
+		m.watchReturns(ch)
+		require.Len(t, ch.returnsChans, 1)
+		returns := ch.returnsChans[0]
+
+		returns <- amqp.Return{Exchange: "topic", RoutingKey: "topic", ReplyText: "NO_ROUTE", MessageId: "id"}
+		returns <- amqp.Return{Exchange: "topic", RoutingKey: "topic", ReplyText: "NO_ROUTE", MessageId: "id2"}
+
+		// the buffer drains once the goroutine has logged both returns
+		assert.Eventually(t, func() bool { return len(returns) == 0 }, time.Second, 10*time.Millisecond)
+		close(returns)
+	})
+}
+
+func TestRabbitMQWatchClose(t *testing.T) {
+	t.Run("Should reconnect when the connection is lost", func(t *testing.T) {
+		logging.Initialize()
+
+		oldConn := &fakeConnection{}
+		newConn := &fakeConnection{}
+		newCh := &fakeChannel{}
+		closeFakes(t, []*fakeChannel{newCh}, []*fakeConnection{oldConn, newConn})
+
+		m := &rabbitMQMessaging{url: "amqp://fake", conn: oldConn, stop: make(chan struct{})}
+		m.dial = func(string) (rabbitConnection, rabbitChannel, error) {
+			return newConn, newCh, nil
+		}
+
+		m.watchClose(oldConn)
+		require.Len(t, oldConn.closeNotifies, 1)
+		oldConn.closeNotifies[0] <- &amqp.Error{Code: amqp.ConnectionForced, Reason: "broker down"}
+
+		assert.Eventually(t, func() bool {
+			m.mu.RLock()
+			defer m.mu.RUnlock()
+			return m.ch == rabbitChannel(newCh) && m.conn == rabbitConnection(newConn)
+		}, time.Second, 10*time.Millisecond)
+	})
+
+	t.Run("Should not reconnect when the provider is closing", func(t *testing.T) {
+		logging.Initialize()
+
+		conn := &fakeConnection{}
+		closeFakes(t, nil, []*fakeConnection{conn})
+
+		var mu sync.Mutex
+		dials := 0
+		m := &rabbitMQMessaging{url: "amqp://fake", conn: conn, closing: true, stop: make(chan struct{})}
+		m.dial = func(string) (rabbitConnection, rabbitChannel, error) {
+			mu.Lock()
+			defer mu.Unlock()
+			dials++
+			return nil, nil, errors.New("must not dial")
+		}
+
+		m.watchClose(conn)
+		require.Len(t, conn.closeNotifies, 1)
+		notify := conn.closeNotifies[0]
+		notify <- &amqp.Error{Reason: "shutdown"}
+
+		// the goroutine consumed the event and returned without dialing
+		assert.Eventually(t, func() bool { return len(notify) == 0 }, time.Second, 10*time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
+		mu.Lock()
+		assert.Zero(t, dials)
+		mu.Unlock()
+	})
+
+	t.Run("Should return when the notify channel is closed", func(t *testing.T) {
+		conn := &fakeConnection{}
+		m := &rabbitMQMessaging{stop: make(chan struct{})}
+
+		m.watchClose(conn)
+		require.Len(t, conn.closeNotifies, 1)
+		close(conn.closeNotifies[0])
+	})
+
+	t.Run("Should return when the provider is stopped", func(t *testing.T) {
+		conn := &fakeConnection{}
+		m := &rabbitMQMessaging{stop: make(chan struct{})}
+
+		m.watchClose(conn)
+		close(m.stop)
+	})
+}
+
+func TestRabbitMQReconnectEdgeCases(t *testing.T) {
+	t.Run("Should return immediately when the provider was already stopped", func(t *testing.T) {
+		logging.Initialize()
+		m := &rabbitMQMessaging{url: "amqp://fake", stop: make(chan struct{})}
+		m.dial = func(string) (rabbitConnection, rabbitChannel, error) {
+			t.Fatal("must not dial after stop")
+			return nil, nil, nil
+		}
+		close(m.stop)
+
+		m.reconnect()
+
+		assert.Nil(t, m.ch)
+	})
+
+	t.Run("Should fall back to the real dial when none is set", func(t *testing.T) {
+		logging.Initialize()
+		// nothing listens on port 1, so the real dial fails and the loop parks in
+		// the backoff wait that the stop interrupts
+		m := &rabbitMQMessaging{url: "amqp://guest:guest@127.0.0.1:1/", stop: make(chan struct{})}
+
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			m.reconnect()
+		}()
+
+		time.Sleep(100 * time.Millisecond)
+		close(m.stop)
+
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatal("reconnect did not stop")
+		}
+		assert.Nil(t, m.ch)
+	})
+
+	t.Run("Should close the replacement when the provider closed during the dial", func(t *testing.T) {
+		logging.Initialize()
+		newConn := &fakeConnection{}
+		newCh := &fakeChannel{}
+
+		m := &rabbitMQMessaging{url: "amqp://fake", stop: make(chan struct{})}
+		m.dial = func(string) (rabbitConnection, rabbitChannel, error) {
+			// the shutdown lands while the dial is in flight
+			m.mu.Lock()
+			m.closing = true
+			m.mu.Unlock()
+			return newConn, newCh, nil
+		}
+
+		m.reconnect()
+
+		assert.Nil(t, m.ch)
+		assert.Nil(t, m.conn)
+		assert.True(t, newCh.closed)
+		assert.True(t, newConn.closed)
+	})
+
+	t.Run("Should keep the subscription when re-subscribing fails", func(t *testing.T) {
+		logging.Initialize()
+		newConn := &fakeConnection{}
+		newCh := &fakeChannel{qosErr: errors.New("channel closed")}
+		closeFakes(t, []*fakeChannel{newCh}, []*fakeConnection{newConn})
+
+		c := &consumer{queue: "test-queue", done: make(chan any)}
+		m := &rabbitMQMessaging{
+			url:  "amqp://fake",
+			stop: make(chan struct{}),
+			subs: []*rabbitSubscription{{c: c, ctx: context.Background(), providerMsgs: make(chan *ProviderMessage, 1)}},
+		}
+		m.dial = func(string) (rabbitConnection, rabbitChannel, error) {
+			return newConn, newCh, nil
+		}
+
+		m.reconnect()
+
+		assert.Equal(t, newCh, m.ch)
+		assert.Empty(t, newCh.consumedQueues())
+		assert.Len(t, m.subs, 1)
+	})
+}
+
+func TestRabbitMQCloseAndConsumerWhenClosing(t *testing.T) {
+	t.Run("Should close the channel and connection once", func(t *testing.T) {
+		logging.Initialize()
+		conn := &fakeConnection{}
+		ch := &fakeChannel{}
+		m := &rabbitMQMessaging{conn: conn, ch: ch, stop: make(chan struct{})}
+
+		require.NoError(t, m.close())
+		assert.True(t, ch.closed)
+		assert.True(t, conn.closed)
+
+		// a second notification from the observer is a no-op
+		assert.NoError(t, m.close())
+	})
+
+	t.Run("Should refuse a new consumer while closing", func(t *testing.T) {
+		logging.Initialize()
+		ch := &fakeChannel{}
+		m := &rabbitMQMessaging{ch: ch, closing: true, stop: make(chan struct{})}
+
+		msgs, err := m.consumer(context.Background(), &consumer{queue: "test-queue", done: make(chan any)})
+
+		assert.EqualError(t, err, rabbitMQClosing)
+		assert.Nil(t, msgs)
+		assert.Empty(t, ch.consumedQueues())
+	})
+
+	t.Run("Should return the error when the consume cannot start", func(t *testing.T) {
+		logging.Initialize()
+		ch := &fakeChannel{qosErr: errors.New("qos refused")}
+		m := &rabbitMQMessaging{ch: ch, stop: make(chan struct{})}
+
+		msgs, err := m.consumer(context.Background(), &consumer{queue: "test-queue", done: make(chan any)})
+
+		assert.EqualError(t, err, "qos refused")
+		assert.Nil(t, msgs)
+		assert.Empty(t, m.subs)
 	})
 }
