@@ -48,6 +48,9 @@ func (p *Producer) Publish(ctx context.Context, action string, message any) erro
 		CorrelationID: correlationID.(string),
 	}
 
+	system, _ := brokerSystems()
+	addMessagingAttributes(txn, system, p.topic, operationTypeSend, operationNamePublish, msg.ID.String())
+
 	err := provider.producer(ctx, p, msg)
 	p.recordPublished(ctx, err)
 	if err != nil {
