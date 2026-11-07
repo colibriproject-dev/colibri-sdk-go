@@ -47,7 +47,7 @@ type Request[T ResponseSuccessData, E ResponseErrorData] struct {
 // Returns the response data.
 func (rc Request[T, E]) Call() (response ResponseData[T, E]) {
 	var tx any
-	tx, rc.Ctx = monitoring.StartTransaction(rc.Ctx, "HTTP Client", colibrimonitoringbase.SpanKindClient)
+	tx, rc.Ctx = monitoring.StartTransaction(rc.Ctx, "HTTP Client", colibrimonitoringbase.SpanKindInternal)
 	defer monitoring.EndTransaction(tx)
 
 	if err := rc.validate(); err != nil {

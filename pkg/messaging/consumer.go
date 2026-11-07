@@ -184,6 +184,8 @@ func processMessage(c *consumer, msg *ProviderMessage) {
 	monitoring.AddTransactionAttribute(txn, "action", msg.Action)
 	monitoring.AddTransactionAttribute(txn, "messageId", msg.ID.String())
 	monitoring.AddTransactionAttribute(txn, "span.kind", "CONSUMER")
+	_, system := brokerSystems()
+	addMessagingAttributes(txn, system, c.queue, operationTypeProcess, operationNameProcess, msg.ID.String())
 	defer monitoring.EndTransactionSegment(txn)
 
 	// registered before the recover defer so it runs after it, once the panic has settled
