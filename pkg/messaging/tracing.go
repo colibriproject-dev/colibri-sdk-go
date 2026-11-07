@@ -6,14 +6,19 @@ import (
 )
 
 // OpenTelemetry messaging semantic conventions. Backends name producer and consumer
-// transactions from these attributes, not from the span name: without
-// messaging.destination.name New Relic reports every consumer as
-// "OtherTransaction/consumer/unknown".
+// transactions from these attributes, not from the span name.
+//
+// messaging.operation is the semconv 1.24 attribute, since split into
+// messaging.operation.type and .name. New Relic still names consumer transactions from it,
+// as OtherTransaction/consumer/<messaging.operation>/<messaging.destination.name>, and
+// reports "OtherTransaction/consumer/unknown" when it is missing, whatever else the span
+// carries. Both are sent until New Relic reads the current attributes.
 const (
 	attrMessagingSystem          = "messaging.system"
 	attrMessagingDestinationName = "messaging.destination.name"
 	attrMessagingOperationType   = "messaging.operation.type"
 	attrMessagingOperationName   = "messaging.operation.name"
+	attrMessagingOperationLegacy = "messaging.operation"
 	attrMessagingMessageID       = "messaging.message.id"
 
 	operationTypeSend    = "send"
@@ -54,5 +59,6 @@ func addMessagingAttributes(txn any, system, destination, operationType, operati
 	monitoring.AddTransactionAttribute(txn, attrMessagingDestinationName, destination)
 	monitoring.AddTransactionAttribute(txn, attrMessagingOperationType, operationType)
 	monitoring.AddTransactionAttribute(txn, attrMessagingOperationName, operationName)
+	monitoring.AddTransactionAttribute(txn, attrMessagingOperationLegacy, operationName)
 	monitoring.AddTransactionAttribute(txn, attrMessagingMessageID, messageID)
 }
