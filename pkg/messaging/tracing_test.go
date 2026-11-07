@@ -146,6 +146,7 @@ func TestConsumerTransactionCarriesMessagingAttributes(t *testing.T) {
 		assert.Equal(t, "orders-queue", attrs[attrMessagingDestinationName])
 		assert.Equal(t, operationTypeProcess, attrs[attrMessagingOperationType])
 		assert.Equal(t, operationNameProcess, attrs[attrMessagingOperationName])
+		assert.Equal(t, operationNameProcess, attrs[attrMessagingOperationLegacy], "New Relic names the transaction from the legacy attribute")
 		assert.Equal(t, msg.ID.String(), attrs[attrMessagingMessageID])
 	})
 }
@@ -163,6 +164,7 @@ func TestProducerTransactionCarriesMessagingAttributes(t *testing.T) {
 		assert.Equal(t, "orders-topic", attrs[attrMessagingDestinationName])
 		assert.Equal(t, operationTypeSend, attrs[attrMessagingOperationType])
 		assert.Equal(t, operationNamePublish, attrs[attrMessagingOperationName])
+		assert.Equal(t, operationNamePublish, attrs[attrMessagingOperationLegacy], "New Relic names the transaction from the legacy attribute")
 		assert.NotEmpty(t, attrs[attrMessagingMessageID])
 	})
 
